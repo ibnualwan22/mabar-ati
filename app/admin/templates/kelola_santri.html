@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kelola Santri: {{ rombongan.nama_rombongan }}</title>
+    <style>
+        body { font-family: sans-serif; margin: 2em; }
+        .container { max-width: 1200px; margin: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px;}
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        h1, h2 { border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .btn { padding: 10px 15px; border: none; color: white; cursor: pointer; text-decoration: none; display: inline-block;}
+        .btn-primary { background-color: #007bff; }
+        .btn-secondary { background-color: #6c757d; }
+        .header-area { display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-area">
+            <h1>Kelola Santri</h1>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">&larr; Kembali ke Dashboard</a>
+        </div>
+        <h2>Rombongan: <strong>{{ rombongan.nama_rombongan }}</strong></h2>
+
+        <hr>
+        <h3>Area Filter & Aksi</h3>
+        <p>[Filter akan muncul di sini]</p>
+        <button class="btn btn-primary">[+ Tambah/Impor Santri]</button>
+        <button class="btn btn-secondary">[Sinkronkan Data]</button>
+        <hr>
+
+        <h3>Daftar Santri Terdaftar</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>No.</th>
+                    <th>Nama Santri</th>
+                    <th>NIS</th>
+                    <th>Asrama</th>
+                    <th>Status Rombongan</th>
+                    <th>Status Pembayaran</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for santri in peserta %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ santri.nama }}</td>
+                    <td>{{ santri.nis }}</td>
+                    <td>{{ santri.asrama }}</td>
+                    <td><span class="status">{{ santri.status_rombongan }}</span></td>
+                    <td><span class="status">{{ santri.status_pembayaran }}</span></td>
+                    <td>
+                        [Edit] [Hapus]
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center;">Belum ada santri yang terdaftar di rombongan ini.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

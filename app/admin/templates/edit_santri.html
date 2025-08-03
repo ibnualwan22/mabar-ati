@@ -1,0 +1,30 @@
+{% extends "_admin_layout.html" %}
+
+{% block title %}Edit Santri: {{ santri.nama }}{% endblock %}
+
+{% block content %}
+    <h1>Edit Santri</h1>
+    <h2>{{ santri.nama }} <small style="font-weight: normal; color: #666;">(NIS: {{ santri.nis }})</small></h2>
+    <a href="{{ url_for('admin.manajemen_santri') }}">&larr; Kembali ke Manajemen Santri</a>
+
+    <form method="POST" action="" style="margin-top: 2rem;">
+        {{ form.hidden_tag() }}
+
+        <div class="form-group">
+            {{ form.rombongan.label }}
+            {{ form.rombongan(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.status_rombongan.label }}
+            {{ form.status_rombongan(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.status_pembayaran.label }}
+            {{ form.status_pembayaran(class="form-control") }}
+        </div>
+
+        <div class="form-group" style="margin-top: 2em;">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+{% endblock %}

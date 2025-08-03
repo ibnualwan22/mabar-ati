@@ -1,0 +1,215 @@
+{% extends "_admin_layout.html" %}
+
+{% block title %}Manajemen Santri{% endblock %}
+
+{% block content %}
+<style>
+    /* CSS untuk Modal */
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
+    .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 60%; border-radius: 8px; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px;}
+    .close-btn { color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
+    .search-results { max-height: 400px; overflow-y: auto; margin-top: 15px; border: 1px solid #eee; }
+    .result-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+    .result-item:last-child { border-bottom: none; }
+    .result-item button:disabled { background-color: #28a745; cursor: not-allowed; }
+    /* Styling untuk status pembayaran */
+    .status-lunas { color: #155724; background-color: #d4edda; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
+    .status-belum { color: #721c24; background-color: #f8d7da; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
+    .filter-form { margin-bottom: 20px; }
+    .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: center; }
+    .filter-grid input, .filter-grid select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+    .action-buttons { margin-top: 20px; }
+</style>
+
+<div style="display: flex; justify-content: space-between; align-items: center;">
+    <h1>Manajemen Santri</h1>
+</div>
+<p>Halaman ini berisi semua data santri yang sudah diimpor ke dalam sistem.</p>
+
+<hr>
+<h3>Filter & Aksi</h3>
+<form method="GET" action="{{ url_for('admin.manajemen_santri') }}" class="filter-form">
+    <div class="filter-grid">
+        <input type="text" name="nama" placeholder="Cari Nama Santri..." value="{{ request.args.get('nama', '') }}">
+        <input type="text" name="alamat" placeholder="Cari Alamat (Kabupaten)..." value="{{ request.args.get('alamat', '') }}">
+        <input type="text" name="asrama" placeholder="Cari Asrama..." value="{{ request.args.get('asrama', '') }}">
+        <select name="status">
+            <option value="">-- Semua Status Rombongan --</option>
+            <option value="Ikut Rombongan" {% if request.args.get('status') == 'Ikut Rombongan' %}selected{% endif %}>Ikut Rombongan</option>
+            <option value="Tidak Ikut Rombongan" {% if request.args.get('status') == 'Tidak Ikut Rombongan' %}selected{% endif %}>Tidak Ikut Rombongan</option>
+            <option value="Izin" {% if request.args.get('status') == 'Izin' %}selected{% endif %}>Izin</option>
+            <option value="Partisipan" {% if request.args.get('status') == 'Partisipan' %}selected{% endif %}>Partisipan</option>
+            <option value="Wisuda" {% if request.args.get('status') == 'Wisuda' %}selected{% endif %}>Wisuda</option>
+        </select>
+        <button type="submit" class="btn btn-primary">Filter</button>
+        <a href="{{ url_for('admin.manajemen_santri') }}" class="btn btn-secondary">Reset</a>
+    </div>
+</form>
+<div class="action-buttons">
+    <button id="open-impor-modal" class="btn btn-primary">[+ Impor Santri Individual]</button>
+    <form method="POST" action="{{ url_for('admin.impor_semua_santri') }}" style="display: inline-block;" onsubmit="return confirm('Proses ini akan mengambil semua data dari server induk dan mungkin membutuhkan waktu. Lanjutkan?');">
+        <button type="submit" class="btn btn-secondary">[Impor & Sinkronkan Semua Santri]</button>
+    </form>
+</div>
+<hr>
+
+<h3>Daftar Santri Tersimpan</h3>
+<div style="overflow-x: auto;">
+    <table style="width: 100%; min-width: 1300px;">
+        <colgroup>
+            <col style="width: 3%;">
+            <col style="width: 18%;">
+            <col style="width: 11%;">
+            <col style="width: 10%;">
+            <col style="width: 9%;">
+            <col style="width: 11%;">
+            <col style="width: 12%;">
+            <col style="width: 16%;">
+            <col style="width: 10%;">
+        </colgroup>
+        <thead>
+            <tr>
+                <th>No.</th>
+                <th>Nama Santri</th>
+                <th>NIS</th>
+                <th>Asrama</th>
+                <th>Jenis Kelamin</th>
+                <th>No. HP Wali</th>
+                <th>Status Pembayaran</th>
+                <th>Rombongan Saat Ini</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for santri in semua_santri %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ santri.nama }}</td>
+                <td>{{ santri.nis }}</td>
+                <td>{{ santri.asrama }}</td>
+                <td>{{ santri.jenis_kelamin }}</td>
+                <td>{{ santri.no_hp_wali or '-' }}</td>
+                <td>
+                    {% if santri.status_pembayaran == 'Lunas' %}
+                        <span class="status-lunas">Lunas</span>
+                    {% else %}
+                        <span class="status-belum">Belum Lunas</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if santri.rombongan %}
+                        <span style="font-weight: bold; color: green;">{{ santri.rombongan.nama_rombongan }}</span>
+                    {% else %}
+                        <span style="color: #888;">{{ santri.status_rombongan }}</span>
+                    {% endif %}
+                </td>
+                <td>
+    <a href="{{ url_for('admin.edit_santri', id=santri.id) }}" class="btn btn-secondary action-btn">Edit</a>
+    <form method="POST" action="{{ url_for('admin.hapus_santri', id=santri.id) }}" style="display:inline;" onsubmit="return confirm('Anda yakin ingin menghapus santri \'{{ santri.nama }}\' dari sistem lokal?');">
+        <button type="submit" class="btn btn-danger action-btn">Hapus</button>
+    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="9" style="text-align: center;">Belum ada santri yang diimpor ke dalam sistem.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div id="impor-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Cari & Impor Santri</h2>
+            <span class="close-btn">&times;</span>
+        </div>
+        <div>
+            <input type="text" id="search-santri-input" placeholder="Ketik nama santri..." style="width: 100%; padding: 10px; font-size: 1em;">
+            <div class="search-results" id="search-results-container">
+                <p style="text-align: center; color: #888;">Ketik nama untuk memulai pencarian.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const modal = document.getElementById('impor-modal');
+    const openModalBtn = document.getElementById('open-impor-modal');
+    const closeModalBtn = modal.querySelector('.close-btn');
+    const searchInput = document.getElementById('search-santri-input');
+    const resultsContainer = document.getElementById('search-results-container');
+    let debounceTimer;
+
+    openModalBtn.onclick = () => { modal.style.display = 'block'; searchInput.focus(); };
+    closeModalBtn.onclick = () => { modal.style.display = 'none'; };
+    window.onclick = (event) => { if (event.target == modal) { modal.style.display = 'none'; } };
+
+    searchInput.addEventListener('keyup', (e) => {
+        clearTimeout(debounceTimer);
+        const query = e.target.value;
+        if (query.length < 3) {
+            resultsContainer.innerHTML = '<p style="text-align: center; color: #888;">Ketik minimal 3 huruf.</p>';
+            return;
+        }
+        resultsContainer.innerHTML = '<p style="text-align: center; color: #888;">Mencari...</p>';
+        debounceTimer = setTimeout(() => {
+            fetch(`/admin/api/search-student?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    renderResults(data.data);
+                });
+        }, 500);
+    });
+
+    function renderResults(santriList) {
+        resultsContainer.innerHTML = '';
+        if (!santriList || santriList.length === 0) {
+            resultsContainer.innerHTML = '<p style="text-align: center; color: #888;">Santri tidak ditemukan.</p>';
+            return;
+        }
+        santriList.forEach(santri => {
+            const item = document.createElement('div');
+            item.className = 'result-item';
+            item.innerHTML = `
+                <div>
+                    <strong>${santri.name}</strong><br>
+                    <small>NIS: ${santri.nis || 'N/A'} | Asrama: ${santri.activeDormitory || 'N/A'}</small>
+                </div>
+                <button class="btn btn-primary impor-btn">+ Impor</button>
+            `;
+            item.querySelector('.impor-btn').dataset.santri = JSON.stringify(santri);
+            resultsContainer.appendChild(item);
+        });
+    }
+    
+    resultsContainer.addEventListener('click', function(e) {
+        if (e.target && e.target.classList.contains('impor-btn')) {
+            const btn = e.target;
+            const santriData = JSON.parse(btn.dataset.santri);
+            btn.textContent = 'Memproses...';
+            btn.disabled = true;
+
+            fetch('/admin/santri/impor', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(santriData)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    btn.textContent = 'Berhasil';
+                    btn.style.backgroundColor = '#28a745';
+                } else {
+                    btn.textContent = result.message;
+                    btn.style.backgroundColor = '#dc3545';
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - Mabar-Ati</title>
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    <style>
+        body { font-family: sans-serif; margin: 2em; max-width: 800px; margin-left: auto; margin-right: auto;}
+        .form-group { margin-bottom: 1em; }
+        .form-group label { display: block; margin-bottom: 0.5em; font-weight: bold; }
+        .form-group input, .form-group textarea { width: 100%; padding: 8px; box-sizing: border-box; }
+        .tarif-header, .tarif-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center;}
+        .tarif-header div, .tarif-row > div { flex: 1; }
+        .tarif-header div:last-child { flex: 0 0 70px; }
+        .tarif-row > .action-col { flex: 0 0 70px; }
+        .btn { padding: 10px 15px; border: none; color: white; cursor: pointer; }
+        .btn-primary { background-color: #007bff; }
+        .btn-secondary { background-color: #6c757d; }
+        .btn-danger { background-color: #dc3545; }
+        fieldset { border: 1px solid #ddd; padding: 1em; margin-top: 2em; }
+        legend { font-weight: bold; padding: 0 0.5em; }
+        h1 { border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        a { text-decoration: none; color: #007bff; }
+    </style>
+</head>
+<body>
+    <h1>{{ title }}</h1>
+    <a href="{{ url_for('admin.dashboard') }}">&larr; Kembali ke Dashboard</a>
+    
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+
+        <div class="form-group">
+            {{ form.nama_rombongan.label }}
+            {{ form.nama_rombongan(size=32) }}
+        </div>
+        <div class="form-group">
+            {{ form.penanggung_jawab.label }}
+            {{ form.penanggung_jawab(size=32) }}
+        </div>
+        <div class="form-group">
+            {{ form.kontak_person.label }}
+            {{ form.kontak_person(size=32) }}
+        </div>
+        <div class="form-group">
+            {{ form.nomor_rekening.label }}
+            {{ form.nomor_rekening(size=32) }}
+        </div>
+        <div class="form-group">
+            {{ form.jadwal_keberangkatan.label }}
+            {{ form.jadwal_keberangkatan() }}
+        </div>
+        <div class="form-group">
+            {{ form.titik_kumpul.label }}
+            {{ form.titik_kumpul(size=32) }}
+        </div>
+        <div class="form-group">
+            {{ form.nama_armada.label }}
+            {{ form.nama_armada(size=32) }}
+        </div>
+        <div class="form-group">
+            {{ form.keterangan_armada.label }}
+            {{ form.keterangan_armada(rows=3) }}
+        </div>
+
+        <div class="form-group">
+    <label for="select-wilayah">Cakupan Wilayah</label>
+    <select id="select-wilayah" name="select-wilayah-dummy" multiple></select>
+    {{ form.cakupan_wilayah() }}
+</div>
+
+<fieldset>
+            <legend>{{ form.tarifs.label }}</legend>
+            <div id="tarif-list">
+                <div class="tarif-header">
+                    <div>Titik Turun</div>
+                    <div>Harga Bus (Rp)</div>
+                    <div>Fee Korda (Rp)</div>
+                    <div></div>
+                </div>
+                {% for tarif_form in form.tarifs %}
+                    <div class="tarif-row">
+                        <div>{{ tarif_form.titik_turun(placeholder="Contoh: Surabaya") }}</div>
+                        <div>{{ tarif_form.harga_bus(placeholder="Contoh: 250000") }}</div>
+                        <div>{{ tarif_form.fee_korda(placeholder="Contoh: 15000") }}</div>
+                        <div class="action-col">
+                            <button type="button" class="btn btn-danger remove-tarif">Hapus</button>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            <button type="button" id="add-tarif" class="btn btn-secondary" style="margin-top: 10px;">+ Tambah Titik Turun</button>
+        </fieldset>
+        
+        <div class="form-group" style="margin-top: 2em;">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- LOGIKA UNTUK DROPDOWN WILAYAH ---
+
+    // Ambil data awal jika ada (untuk mode edit) dan parse menjadi objek JS
+    const initialWilayahData = JSON.parse({{ form.cakupan_wilayah.data or "'[]'"|safe }});
+    const hiddenWilayahInput = document.getElementById('cakupan_wilayah');
+
+    const tomSelect = new TomSelect('#select-wilayah', {
+        valueField: 'id',
+        labelField: 'label',
+        searchField: 'label',
+        create: false,
+        // Pre-load options and items for edit mode
+        options: initialWilayahData,
+        items: initialWilayahData.map(item => item.id),
+
+        // Fungsi untuk memuat data dari API saat user mengetik
+        load: (query, callback) => {
+            const url = `/admin/api/search-wilayah?q=${encodeURIComponent(query)}`;
+            fetch(url)
+                .then(response => response.json())
+                .then(json => {
+                    // API mengembalikan { query, results }, kita butuh results
+                    callback(json.results);
+                }).catch(() => {
+                    callback();
+                });
+        },
+        // Update hidden input saat pilihan berubah
+        onChange: (values) => {
+            const selectedItems = values.map(value => {
+                const option = tomSelect.options[value];
+                // Pastikan option ada sebelum mengakses propertinya
+                if (option) {
+                    return {id: option.id, label: option.label};
+                }
+                return null;
+            }).filter(item => item !== null); // Hapus item null jika ada
+            hiddenWilayahInput.value = JSON.stringify(selectedItems);
+        },
+    });
+
+    // --- LOGIKA UNTUK TARIF (tetap sama seperti sebelumnya) ---
+    const tarifList = document.getElementById('tarif-list');
+    const addTarifBtn = document.getElementById('add-tarif');
+    addTarifBtn.addEventListener('click', function() {
+        const entryCount = tarifList.querySelectorAll('.tarif-row').length;
+        const newRow = tarifList.querySelector('.tarif-row').cloneNode(true);
+        newRow.querySelectorAll('input').forEach(input => {
+            const name = input.name;
+            const newName = name.replace(/-\d+-/, `-${entryCount}-`);
+            input.name = newName;
+            input.id = newName;
+            input.value = '';
+        });
+        tarifList.appendChild(newRow);
+        updateRemoveButtons();
+    });
+    tarifList.addEventListener('click', function(e) {
+        if (e.target && e.target.classList.contains('remove-tarif')) {
+            e.target.closest('.tarif-row').remove();
+            updateRemoveButtons();
+        }
+    });
+    function updateRemoveButtons() {
+        const removeButtons = tarifList.querySelectorAll('.remove-tarif');
+        removeButtons.forEach(btn => btn.style.display = (removeButtons.length <= 1) ? 'none' : 'inline-block');
+    }
+    updateRemoveButtons();
+});
+</script>
+</body>
+</html>
