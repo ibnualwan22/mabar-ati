@@ -3,7 +3,9 @@ from wtforms import StringField, TextAreaField, IntegerField, DateTimeLocalField
 from wtforms.validators import DataRequired, Optional
 from wtforms_sqlalchemy.fields import QuerySelectField
 from wtforms import SelectField
-from app.models import Rombongan
+from app.models import Rombongan, Santri
+from wtforms.fields import DateField
+
 
 
 # Fee Pondok adalah nilai tetap, kita definisikan di sini
@@ -77,3 +79,70 @@ class SantriEditForm(FlaskForm):
     )
     
     submit = SubmitField('Simpan Perubahan')
+
+def rombongan_query():
+    return Rombongan.query.order_by(Rombongan.nama_rombongan).all()
+
+def santri_query():
+    # Hanya tampilkan santri yang statusnya 'Aktif' dan belum terdaftar
+    return Santri.query.filter(Santri.status_santri == 'Aktif', Santri.pendaftaran == None).order_by(Santri.nama).all()
+
+class PendaftaranForm(FlaskForm):
+    rombongan = QuerySelectField(
+        'Pilih Rombongan',
+        query_factory=rombongan_query,
+        get_label='nama_rombongan',
+        allow_blank=True,
+        blank_text='-- Pilih Rombongan --',
+        validators=[DataRequired()]
+    )
+    # Cukup gunakan HiddenField untuk menampung ID santri yang dipilih
+    santri = HiddenField('Pilih Santri', validators=[DataRequired()])
+    titik_turun = SelectField('Pilih Titik Turun', choices=[], validators=[DataRequired()])
+    jenis_perjalanan = SelectField(
+        'Jenis Perjalanan',
+        choices=[('Pulang Saja', 'Pulang Saja'), ('Pulang Pergi', 'Pulang Pergi')],
+        validators=[DataRequired()]
+    )
+    status_pembayaran = SelectField(
+        'Status Pembayaran',
+        choices=[('Belum Lunas', 'Belum Lunas'), ('Lunas', 'Lunas')],
+        validators=[DataRequired()]
+    )
+    metode_pembayaran = SelectField(
+        'Metode Pembayaran',
+        choices=[('', '-- Pilih Metode --'), ('Cash', 'Cash'), ('Transfer', 'Transfer')],
+        validators=[Optional()]
+    )
+
+    nomor_bus = StringField('Nomor Bus', validators=[Optional()])
+    submit = SubmitField('Daftarkan Santri')
+
+class PendaftaranEditForm(FlaskForm):
+    titik_turun = SelectField('Titik Turun', validators=[DataRequired()])
+    jenis_perjalanan = SelectField(
+        'Jenis Perjalanan',
+        choices=[('Pulang Saja', 'Pulang Saja'), ('Pulang Pergi', 'Pulang Pergi')],
+        validators=[DataRequired()]
+    )
+    status_pembayaran = SelectField(
+        'Status Pembayaran',
+        choices=[('Belum Lunas', 'Belum Lunas'), ('Lunas', 'Lunas')],
+        validators=[DataRequired()]
+    )
+    metode_pembayaran = SelectField(
+        'Metode Pembayaran',
+        choices=[('', '-- Pilih Metode --'), ('Cash', 'Cash'), ('Transfer', 'Transfer')],
+        validators=[Optional()]
+    )
+    nomor_bus = StringField('Nomor Bus', validators=[Optional()])
+    submit = SubmitField('Simpan Perubahan')
+
+def santri_aktif_query():
+    return Santri.query.filter_by(status_santri='Aktif', izin=None).order_by(Santri.nama).all()
+
+class IzinForm(FlaskForm):
+    santri = HiddenField('Pilih Santri', validators=[DataRequired()])
+    tanggal_berakhir = DateField('Izin Sampai Tanggal', format='%Y-%m-%d', validators=[DataRequired()])
+    keterangan = TextAreaField('Keterangan Keperluan', validators=[DataRequired()])
+    submit = SubmitField('Simpan Izin')

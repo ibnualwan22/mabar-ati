@@ -1,0 +1,67 @@
+{% extends "_admin_layout.html" %}
+
+{% block title %}Peserta {{ rombongan.nama_rombongan }}{% endblock %}
+
+{% block content %}
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h1>Daftar Peserta</h1>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">&larr; Kembali ke Manajemen Rombongan</a>
+    </div>
+    <h2>Rombongan: <strong>{{ rombongan.nama_rombongan }}</strong></h2>
+    <p>Total Peserta: <strong>{{ rombongan.pendaftar|length }}</strong></p>
+    <hr>
+    
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; min-width: 1200px;">
+            <thead>
+                <tr>
+                    <th>No.</th>
+                    <th>Nama Santri</th>
+                    <th>NIS</th>
+                    <th>Asrama</th>
+                    <th>Alamat</th>
+                    <th>No. HP Wali</th>
+                    <th>Titik Turun</th>
+                    <th>No. Bus</th>
+                    <th>Status Bayar</th>
+                    <th>Metode Bayar</th>
+                    <th>Total Biaya</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pendaftaran in rombongan.pendaftar|sort(attribute='santri.nama') %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ pendaftaran.santri.nama }}</td>
+                    <td>{{ pendaftaran.santri.nis }}</td>
+                    <td>{{ pendaftaran.santri.asrama }}</td>
+                    <td>{{ pendaftaran.santri.kabupaten }}</td>
+                    <td>{{ pendaftaran.santri.no_hp_wali }}</td>
+                    <td>{{ pendaftaran.titik_turun }}</td>
+                    <td>{{ pendaftaran.nomor_bus or '-' }}</td>
+                    <td>
+                        {% if pendaftaran.status_pembayaran == 'Lunas' %}
+                            <span class="status-lunas">Lunas</span>
+                        {% else %}
+                            <span class="status-belum">Belum Lunas</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ pendaftaran.metode_pembayaran or '-' }}</td>
+                    <td>Rp {{ pendaftaran.total_biaya|abs|round|int|format(grouping=true) }}</td>
+                    <td>
+    <a href="{{ url_for('admin.edit_pendaftaran', pendaftaran_id=pendaftaran.id) }}" class="btn btn-secondary action-btn">Edit</a>
+    <form method="POST" action="{{ url_for('admin.hapus_pendaftaran', pendaftaran_id=pendaftaran.id) }}" style="display:inline;" onsubmit="return confirm('Anda yakin ingin menghapus pendaftaran untuk \'{{ pendaftaran.santri.nama }}\'?');">
+        <button type="submit" class="btn btn-danger action-btn">Hapus</button>
+    </form>
+</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="11" style="text-align: center;">Belum ada peserta di rombongan ini.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

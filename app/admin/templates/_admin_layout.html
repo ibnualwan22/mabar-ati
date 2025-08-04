@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Admin Panel{% endblock %} - Mabar-Ati</title>
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
     <style>
         body { font-family: sans-serif; margin: 0; background-color: #f8f9fa; }
         .navbar { background-color: #343a40; padding: 1rem; }
@@ -22,12 +24,32 @@
         .alert { padding: 15px; margin-bottom: 20px; border: 1px solid transparent; border-radius: 4px; }
         .alert-success { color: #155724; background-color: #d4edda; border-color: #c3e6cb; }
         .alert-info { color: #0c5460; background-color: #d1ecf1; border-color: #bee5eb; }
+        .form-grid {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 15px;
+    align-items: center;
+}
+.form-group label {
+    font-weight: bold;
+    text-align: right;
+}
+.form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
     </style>
 </head>
 <body>
     <nav class="navbar">
         <a href="{{ url_for('admin.dashboard') }}" class="{{ 'active' if request.endpoint == 'admin.dashboard' else '' }}">Manajemen Rombongan</a>
         <a href="{{ url_for('admin.manajemen_santri') }}" class="{{ 'active' if request.endpoint == 'admin.manajemen_santri' else '' }}">Manajemen Santri</a>
+        <a href="{{ url_for('admin.pendaftaran_rombongan') }}" class="{{ 'active' if request.endpoint == 'admin.pendaftaran_rombongan' else '' }}">Pendaftaran Rombongan</a>
+        <a href="{{ url_for('admin.perizinan') }}" class="{{ 'active' if request.endpoint == 'admin.perizinan' else '' }}">Manajemen Perizinan</a>
+        <a href="{{ url_for('admin.daftar_peserta_global') }}" class="{{ 'active' if request.endpoint == 'admin.daftar_peserta_global' else '' }}">Data Peserta Global</a>
     </nav>
 
     <main class="container">

@@ -1,0 +1,85 @@
+{% extends "_admin_layout.html" %}
+
+{% block title %}Data Peserta Global{% endblock %}
+
+{% block content %}
+    <h1>Data Peserta Global</h1>
+    <p>Halaman ini menampilkan semua santri yang telah terdaftar di semua rombongan.</p>
+    <p>Total Peserta Terdaftar: <strong>{{ semua_pendaftar|length }}</strong></p>
+
+    <hr>
+    <h3>Filter Data Peserta</h3>
+    <form method="GET" action="{{ url_for('admin.daftar_peserta_global') }}" class="filter-form">
+        <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+            <select name="rombongan_id">
+                <option value="">-- Semua Rombongan --</option>
+                {% for rombongan in all_rombongan %}
+                    <option value="{{ rombongan.id }}" {% if request.args.get('rombongan_id')|int == rombongan.id %}selected{% endif %}>
+                        {{ rombongan.nama_rombongan }}
+                    </option>
+                {% endfor %}
+            </select>
+            
+            <input type="text" name="nama" placeholder="Cari Nama Santri..." value="{{ request.args.get('nama', '') }}">
+            <input type="text" name="alamat" placeholder="Cari Alamat..." value="{{ request.args.get('alamat', '') }}">
+            <input type="text" name="titik_turun" placeholder="Cari Titik Turun..." value="{{ request.args.get('titik_turun', '') }}">
+            <select name="status_bayar">
+                <option value="">-- Semua Status Bayar --</option>
+                <option value="Lunas" {% if request.args.get('status_bayar') == 'Lunas' %}selected{% endif %}>Lunas</option>
+                <option value="Belum Lunas" {% if request.args.get('status_bayar') == 'Belum Lunas' %}selected{% endif %}>Belum Lunas</option>
+            </select>
+            <select name="metode_bayar">
+                <option value="">-- Semua Metode Bayar --</option>
+                <option value="Cash" {% if request.args.get('metode_bayar') == 'Cash' %}selected{% endif %}>Cash</option>
+                <option value="Transfer" {% if request.args.get('metode_bayar') == 'Transfer' %}selected{% endif %}>Transfer</option>
+            </select>
+            <button type="submit" class="btn btn-primary">Filter</button>
+            <a href="{{ url_for('admin.daftar_peserta_global') }}" class="btn btn-secondary">Reset</a>
+        </div>
+    </form>
+    <hr>
+
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; min-width: 1200px;">
+            <thead>
+                <tr>
+                    <th>No.</th>
+                    <th>Nama Santri</th>
+                    <th>Rombongan</th>
+                    <th>Titik Turun</th>
+                    <th>Status Bayar</th>
+                    <th>Metode Bayar</th>
+                    <th>Total Biaya</th>
+                    <th>No. Bus</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pendaftaran in semua_pendaftar %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>
+                        <strong>{{ pendaftaran.santri.nama }}</strong><br>
+                        <small>NIS: {{ pendaftaran.santri.nis }}</small>
+                    </td>
+                    <td>{{ pendaftaran.rombongan.nama_rombongan }}</td>
+                    <td>{{ pendaftaran.titik_turun }}</td>
+                    <td>
+                        {% if pendaftaran.status_pembayaran == 'Lunas' %}
+                            <span class="status-lunas">Lunas</span>
+                        {% else %}
+                            <span class="status-belum">Belum Lunas</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ pendaftaran.metode_pembayaran or '-' }}</td>
+                    <td>Rp {{ pendaftaran.total_biaya|abs|round|int|format(grouping=true) }}</td>
+                    <td>{{ pendaftaran.nomor_bus or '-' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align: center;">Tidak ada data yang cocok dengan filter Anda.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

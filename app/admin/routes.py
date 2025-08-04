@@ -1,7 +1,7 @@
 from . import admin_bp
 from flask import render_template, redirect, url_for, flash, request
-from app.models import Rombongan, Tarif, Santri
-from app.admin.forms import RombonganForm, SantriEditForm
+from app.models import Rombongan, Tarif, Santri, Pendaftaran, Izin
+from app.admin.forms import RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm
 from app import db # Import db dari level atas
 import json, requests
 from flask import request, jsonify
@@ -314,3 +314,268 @@ def hapus_santri(id):
     db.session.commit()
     flash(f"Santri '{nama_santri}' berhasil dihapus dari sistem.", "info")
     return redirect(url_for('admin.manajemen_santri'))
+
+# Ganti route pendaftaran_rombongan yang lama dengan ini
+@admin_bp.route('/pendaftaran', methods=['GET', 'POST'])
+def pendaftaran_rombongan():
+    form = PendaftaranForm()
+    
+    # --- BLOK KODE BARU UNTUK MENGATASI VALIDASI ---
+    # Ambil rombongan_id dari form yang disubmit
+    if request.method == 'POST':
+        rombongan_id_from_form = request.form.get('rombongan')
+        if rombongan_id_from_form:
+            selected_rombongan = Rombongan.query.get(rombongan_id_from_form)
+            if selected_rombongan:
+                # Isi choices untuk titik_turun SEBELUM validasi
+                form.titik_turun.choices = [(t.titik_turun, t.titik_turun) for t in selected_rombongan.tarifs]
+    # --- AKHIR BLOK KODE BARU ---
+
+    if form.validate_on_submit():
+        # 1. Ambil ID santri dari form
+        santri_id = form.santri.data
+        # 2. Ambil objek santri lengkap dari database menggunakan ID
+        santri = Santri.query.get(santri_id)
+
+        if not santri:
+            flash(f"ERROR: Santri dengan ID {santri_id} tidak ditemukan.", "danger")
+            return redirect(url_for('admin.pendaftaran_rombongan'))
+
+        # 3. Sekarang kita bisa cek statusnya dengan aman
+        if santri.status_santri == 'Izin':
+            flash(f"ERROR: {santri.nama} sedang Izin dan tidak bisa didaftarkan.", "danger")
+            return redirect(url_for('admin.pendaftaran_rombongan'))
+
+        selected_tarif = Tarif.query.filter_by(rombongan_id=form.rombongan.data.id, titik_turun=form.titik_turun.data).first()
+        if not selected_tarif:
+            flash("Terjadi error: Titik turun tidak valid.", "danger")
+            return redirect(url_for('admin.pendaftaran_rombongan'))
+        
+        total_biaya = selected_tarif.harga_bus + selected_tarif.fee_korda + 10000
+        if form.jenis_perjalanan.data == 'Pulang Pergi':
+            total_biaya *= 2
+
+        pendaftaran = Pendaftaran(
+            santri=santri, rombongan=form.rombongan.data, titik_turun=form.titik_turun.data,
+            jenis_perjalanan=form.jenis_perjalanan.data, status_pembayaran=form.status_pembayaran.data,
+            metode_pembayaran=form.metode_pembayaran.data, # <-- TAMBAHKAN INI
+            nomor_bus=form.nomor_bus.data, total_biaya=total_biaya
+        )
+        db.session.add(pendaftaran)
+        db.session.commit()
+        flash(f"{santri.nama} berhasil didaftarkan!", "success")
+        return redirect(url_for('admin.daftar_peserta', rombongan_id=pendaftaran.rombongan.id))
+    
+    peserta_terdaftar = []
+    rombongan_id_get = request.args.get('rombongan_id', type=int)
+    if rombongan_id_get:
+        rombongan_terpilih = Rombongan.query.get(rombongan_id_get)
+        if rombongan_terpilih:
+            peserta_terdaftar = rombongan_terpilih.pendaftar
+
+    return render_template('pendaftaran_rombongan.html', form=form, peserta=peserta_terdaftar)
+
+@admin_bp.route('/pendaftaran/edit/<int:pendaftaran_id>', methods=['GET', 'POST'])
+def edit_pendaftaran(pendaftaran_id):
+    pendaftaran = Pendaftaran.query.get_or_404(pendaftaran_id)
+    form = PendaftaranEditForm(obj=pendaftaran)
+    
+    # Isi pilihan titik turun secara dinamis berdasarkan rombongan pendaftaran
+    form.titik_turun.choices = [(t.titik_turun, t.titik_turun) for t in pendaftaran.rombongan.tarifs]
+
+    if form.validate_on_submit():
+        # Update data pendaftaran dari form
+        pendaftaran.titik_turun = form.titik_turun.data
+        pendaftaran.jenis_perjalanan = form.jenis_perjalanan.data
+        pendaftaran.status_pembayaran = form.status_pembayaran.data
+        pendaftaran.metode_pembayaran = form.metode_pembayaran.data
+        pendaftaran.nomor_bus = form.nomor_bus.data
+        
+        # Hitung ulang total biaya jika ada perubahan
+        selected_tarif = Tarif.query.filter_by(rombongan_id=pendaftaran.rombongan_id, titik_turun=pendaftaran.titik_turun).first()
+        total_biaya = selected_tarif.harga_bus + selected_tarif.fee_korda + 10000
+        if pendaftaran.jenis_perjalanan == 'Pulang Pergi':
+            total_biaya *= 2
+        pendaftaran.total_biaya = total_biaya
+
+        db.session.commit()
+        flash(f"Data pendaftaran untuk {pendaftaran.santri.nama} berhasil diperbarui.", "success")
+        return redirect(url_for('admin.daftar_peserta', rombongan_id=pendaftaran.rombongan_id))
+
+    return render_template('edit_pendaftaran.html', form=form, pendaftaran=pendaftaran)
+
+
+@admin_bp.route('/pendaftaran/hapus/<int:pendaftaran_id>', methods=['POST'])
+def hapus_pendaftaran(pendaftaran_id):
+    pendaftaran = Pendaftaran.query.get_or_404(pendaftaran_id)
+    rombongan_id = pendaftaran.rombongan_id # Simpan ID rombongan untuk redirect
+    nama_santri = pendaftaran.santri.nama
+    
+    db.session.delete(pendaftaran)
+    db.session.commit()
+    
+    flash(f"Pendaftaran untuk '{nama_santri}' telah berhasil dihapus.", "info")
+    return redirect(url_for('admin.daftar_peserta', rombongan_id=rombongan_id))
+
+# Route API helper BARU untuk mengambil detail rombongan
+@admin_bp.route('/api/rombongan-detail/<int:id>')
+def rombongan_detail(id):
+    rombongan = Rombongan.query.get_or_404(id)
+    tarifs = [{'titik_turun': t.titik_turun, 'harga': t.harga_bus + t.fee_korda + 10000} for t in rombongan.tarifs]
+    
+    # Ambil data pendaftar untuk ditampilkan di tabel
+    pendaftar_data = []
+    for p in rombongan.pendaftar:
+        pendaftar_data.append({
+            'nama': p.santri.nama,
+            'nis': p.santri.nis,
+            'titik_turun': p.titik_turun,
+            'total_biaya': p.total_biaya
+        })
+
+    return jsonify({
+        'cakupan_wilayah': rombongan.cakupan_wilayah,
+        'tarifs': tarifs,
+        'pendaftar': pendaftar_data
+    })
+
+@admin_bp.route('/api/search-santri')
+def search_santri_api():
+    query = request.args.get('q', '')
+    if len(query) < 3:
+        return jsonify({'results': []})
+
+    # Cari santri yang namanya cocok DAN belum terdaftar di pendaftaran manapun
+    santri_results = Santri.query.filter(
+        Santri.nama.ilike(f'%{query}%'),
+        Santri.pendaftaran == None
+    ).limit(20).all()
+
+    results = [
+        {
+            'id': santri.id,
+            'nama': santri.nama,
+            'asrama': santri.asrama,
+            'kabupaten': santri.kabupaten,
+            'jenis_kelamin': santri.jenis_kelamin,
+            'status_santri': santri.status_santri
+        } for santri in santri_results
+    ]
+    return jsonify({'results': results})
+
+@admin_bp.route('/rombongan/<int:rombongan_id>/peserta')
+def daftar_peserta(rombongan_id):
+    rombongan = Rombongan.query.get_or_404(rombongan_id)
+    # `rombongan.pendaftar` adalah backref yang kita buat di model Pendaftaran
+    # Ini akan berisi semua data pendaftaran untuk rombongan ini
+    return render_template('daftar_peserta.html', rombongan=rombongan)
+
+@admin_bp.route('/peserta')
+def daftar_peserta_global():
+    # Query dasar yang menghubungkan Pendaftaran dengan Santri
+    query = db.session.query(Pendaftaran).join(Santri)
+
+    # Ambil semua parameter filter dari URL
+    f_nama = request.args.get('nama')
+    f_alamat = request.args.get('alamat')
+    f_titik_turun = request.args.get('titik_turun')
+    f_status_bayar = request.args.get('status_bayar')
+    f_metode_bayar = request.args.get('metode_bayar')
+    f_rombongan_id = request.args.get('rombongan_id', type=int) # <-- FILTER BARU
+
+    # Terapkan filter ke query jika ada
+    if f_nama:
+        query = query.filter(Santri.nama.ilike(f'%{f_nama}%'))
+    if f_alamat:
+        query = query.filter(Santri.kabupaten.ilike(f'%{f_alamat}%'))
+    if f_titik_turun:
+        query = query.filter(Pendaftaran.titik_turun.ilike(f'%{f_titik_turun}%'))
+    if f_status_bayar:
+        query = query.filter(Pendaftaran.status_pembayaran == f_status_bayar)
+    if f_metode_bayar:
+        query = query.filter(Pendaftaran.metode_pembayaran == f_metode_bayar)
+    if f_rombongan_id: # <-- LOGIKA FILTER BARU
+        query = query.filter(Pendaftaran.rombongan_id == f_rombongan_id)
+
+    # Eksekusi query final dan urutkan berdasarkan nama santri
+    semua_pendaftar = query.order_by(Santri.nama).all()
+
+    # Ambil semua rombongan untuk mengisi dropdown filter
+    all_rombongan = Rombongan.query.order_by(Rombongan.nama_rombongan).all()
+
+    return render_template('daftar_peserta_global.html', 
+                           semua_pendaftar=semua_pendaftar, 
+                           all_rombongan=all_rombongan)
+
+@admin_bp.route('/perizinan', methods=['GET', 'POST'])
+def perizinan():
+    form = IzinForm()
+    if form.validate_on_submit():
+        # 1. Ambil ID santri dari form
+        santri_id = form.santri.data
+        # 2. Ambil objek santri lengkap dari database
+        santri = Santri.query.get(santri_id)
+
+        if not santri:
+            flash(f"ERROR: Santri dengan ID {santri_id} tidak ditemukan.", "danger")
+            return redirect(url_for('admin.perizinan'))
+
+        # 3. Buat record izin baru menggunakan objek santri yang sudah diambil
+        new_izin = Izin(
+            santri=santri,
+            tanggal_berakhir=form.tanggal_berakhir.data,
+            keterangan=form.keterangan.data
+        )
+        # Update status santri menjadi 'Izin'
+        santri.status_santri = 'Izin'
+        
+        db.session.add(new_izin)
+        db.session.commit()
+        flash(f"Izin untuk {santri.nama} telah berhasil dicatat.", "success")
+        return redirect(url_for('admin.perizinan'))
+
+    # Logika untuk filter
+    query = Izin.query
+    search_nama = request.args.get('nama')
+    if search_nama:
+        query = query.join(Santri).filter(Santri.nama.ilike(f'%{search_nama}%'))
+    
+    semua_izin = query.order_by(Izin.tanggal_berakhir).all()
+
+    return render_template('perizinan.html', form=form, semua_izin=semua_izin)
+
+@admin_bp.route('/api/search-active-santri')
+def search_active_santri_api():
+    query = request.args.get('q', '')
+    if len(query) < 3:
+        return jsonify({'results': []})
+
+    # Cari santri yang namanya cocok DAN statusnya 'Aktif'
+    santri_results = Santri.query.filter(
+        Santri.nama.ilike(f'%{query}%'),
+        Santri.status_santri == 'Aktif'
+    ).limit(20).all()
+
+    results = [{'id': s.id, 'nama': s.nama} for s in santri_results]
+    return jsonify({'results': results})
+
+@admin_bp.route('/izin/cabut/<int:izin_id>', methods=['POST'])
+def cabut_izin(izin_id):
+    # 1. Cari data izin berdasarkan ID-nya
+    izin = Izin.query.get_or_404(izin_id)
+    
+    # 2. Ambil data santri yang terhubung
+    santri = izin.santri
+    nama_santri = santri.nama
+    
+    # 3. Kembalikan status santri menjadi 'Aktif'
+    santri.status_santri = 'Aktif'
+    
+    # 4. Hapus record izin dari database
+    db.session.delete(izin)
+    
+    # 5. Simpan semua perubahan
+    db.session.commit()
+    
+    flash(f"Izin untuk santri '{nama_santri}' telah berhasil dicabut.", "success")
+    return redirect(url_for('admin.perizinan'))

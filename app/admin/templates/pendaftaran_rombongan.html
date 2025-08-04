@@ -1,0 +1,188 @@
+{% extends "_admin_layout.html" %}
+
+{% block title %}Pendaftaran Rombongan{% endblock %}
+
+{% block content %}
+<style>
+    .info-box { background-color: #e9ecef; border: 1px solid #ced4da; padding: 15px; border-radius: 5px; margin-top: 10px; }
+    .info-box h4 { margin-top: 0; }
+    #total-biaya { font-size: 1.5em; font-weight: bold; color: #007bff; }
+    .ts-control { padding: 4px 8px !important; } /* Fix padding for Tom Select */
+    .form-group { margin-bottom: 1em; } /* Menimpa grid agar form-group tetap punya margin */
+</style>
+
+<h1>Pendaftaran Rombongan</h1>
+<p>Gunakan form ini untuk mendaftarkan santri ke rombongan yang tersedia.</p>
+
+<form method="POST" id="pendaftaran-form">
+    {{ form.hidden_tag() }}
+    
+    <h4>Langkah 1: Pilih Rombongan</h4>
+    <div class="form-group form-grid">
+        {{ form.rombongan.label }}
+        {{ form.rombongan() }}
+    </div>
+
+    <div id="info-rombongan" class="info-box" style="display: none;"></div>
+    <hr>
+    
+    <h4>Langkah 2: Pilih Santri & Detail</h4>
+    <div class="form-group form-grid">
+        <label for="select-santri">Pilih Santri</label>
+        <div>
+             <select id="select-santri" placeholder="-- Cari dan Pilih Santri --"></select>
+             {{ form.santri() }} </div>
+    </div>
+
+    <div class="form-group form-grid">
+        {{ form.titik_turun.label }}
+        {{ form.titik_turun(disabled=true) }}
+    </div>
+
+    <div class="form-group form-grid">
+        {{ form.jenis_perjalanan.label }}
+        {{ form.jenis_perjalanan() }}
+    </div>
+
+    <div class="form-group form-grid">
+        {{ form.status_pembayaran.label }}
+        {{ form.status_pembayaran() }}
+    </div>
+
+    <div class="form-group form-grid">
+    {{ form.metode_pembayaran.label }}
+    {{ form.metode_pembayaran() }}
+    </div>
+
+    <div class="form-group form-grid">
+        {{ form.nomor_bus.label }}
+        {{ form.nomor_bus(placeholder="Opsional") }}
+    </div>
+
+    <div class="info-box">
+        <h4>Total Biaya</h4>
+        <p id="total-biaya">Rp 0</p>
+    </div>
+
+    <div class="form-group" style="margin-top: 2em; padding-left: 165px;">
+        {{ form.submit(class="btn btn-primary") }}
+    </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const rombonganSelect = document.getElementById('rombongan');
+    const titikTurunSelect = document.getElementById('titik_turun');
+    const jenisPerjalananSelect = document.getElementById('jenis_perjalanan');
+    const hiddenSantriInput = document.getElementById('santri'); // <-- BARIS YANG DIPERBAIKI
+    
+    const infoRombonganDiv = document.getElementById('info-rombongan');
+    const totalBiayaP = document.getElementById('total-biaya');    
+    let tarifData = [];
+
+    // --- Inisialisasi Tom Select untuk Santri ---
+    const tomSelectSantri = new TomSelect('#select-santri',{
+        valueField: 'id',
+        searchField: 'nama',
+        render: {
+            option: function(data, escape) {
+                return `<div>
+                            <strong>${escape(data.nama)}</strong><br>
+                            <small class="text-muted">${escape(data.asrama || '')} - ${escape(data.kabupaten || '')}</small>
+                        </div>`;
+            },
+            item: function(data, escape) {
+                return `<div>${escape(data.nama)}</div>`;
+            }
+        },
+        load: (query, callback) => {
+            const url = `/admin/api/search-santri?q=${encodeURIComponent(query)}`;
+            fetch(url)
+                .then(response => response.json())
+                .then(json => {
+                    callback(json.results);
+                }).catch(() => {
+                    callback();
+                });
+        },
+        onChange: (value) => {
+            hiddenSantriInput.value = value; // <-- BARIS YANG DIPERBAIKI
+            const selectedSantriData = tomSelectSantri.options[value];
+            if (selectedSantriData) {
+                if (selectedSantriData.status_santri === 'Izin') {
+                    alert(`ERROR: ${selectedSantriData.nama} sedang Izin dan tidak bisa didaftarkan.`);
+                    tomSelectSantri.clear();
+                } else if (selectedSantriData.status_santri === 'Wisuda' || selectedSantriData.status_santri === 'Partisipan') {
+                    alert(`PERINGATAN: ${selectedSantriData.nama} berstatus ${selectedSantriData.status_santri}.`);
+                }
+            }
+        }
+    });
+    // --- EVENT LISTENER UTAMA ---
+    rombonganSelect.addEventListener('change', function() {
+        const rombonganId = this.value;
+        if (!rombonganId) {
+            resetForm();
+            return;
+        }
+        fetch(`/admin/api/rombongan-detail/${rombonganId}`)
+            .then(response => response.json())
+            .then(data => {
+                updateInfoRombongan(data.cakupan_wilayah, data.tarifs);
+                updateTitikTurun(data.tarifs);
+                tarifData = data.tarifs;
+                calculateBiaya();
+            });
+    });
+
+    titikTurunSelect.addEventListener('change', calculateBiaya);
+    jenisPerjalananSelect.addEventListener('change', calculateBiaya);
+    
+    // --- FUNGSI-FUNGSI HELPER ---
+    function updateInfoRombongan(wilayah, tarifs) {
+        let wilayahText = wilayah.map(w => w.label).join(', ');
+        let hargaHtml = '<ul>';
+        tarifs.forEach(t => {
+            hargaHtml += `<li>${t.titik_turun}: Rp ${t.harga.toLocaleString('id-ID')}</li>`;
+        });
+        hargaHtml += '</ul>';
+        
+        infoRombonganDiv.innerHTML = `<h4>Cakupan: ${wilayahText}</h4><h4>Daftar Harga:</h4>${hargaHtml}`;
+        infoRombonganDiv.style.display = 'block';
+    }
+
+    function updateTitikTurun(tarifs) {
+        titikTurunSelect.innerHTML = '<option value="">-- Pilih Titik Turun --</option>';
+        tarifs.forEach(t => {
+            const option = new Option(t.titik_turun, t.titik_turun);
+            titikTurunSelect.add(option);
+        });
+        titikTurunSelect.disabled = false;
+    }
+
+    function calculateBiaya() {
+        const selectedTitik = titikTurunSelect.value;
+        const selectedTarif = tarifData.find(t => t.titik_turun === selectedTitik);
+        
+        if (selectedTarif) {
+            let total = selectedTarif.harga;
+            if (jenisPerjalananSelect.value === 'Pulang Pergi') {
+                total *= 2;
+            }
+            totalBiayaP.textContent = `Rp ${total.toLocaleString('id-ID')}`;
+        } else {
+            totalBiayaP.textContent = 'Rp 0';
+        }
+    }
+
+
+    function resetForm() {
+        infoRombonganDiv.style.display = 'none';
+        titikTurunSelect.innerHTML = '';
+        titikTurunSelect.disabled = true;
+        totalBiayaP.textContent = 'Rp 0';
+    }
+
+});
+</script>
+{% endblock %}

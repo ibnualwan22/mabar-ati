@@ -1,0 +1,99 @@
+{% extends "_admin_layout.html" %}
+
+{% block title %}Manajemen Perizinan{% endblock %}
+
+{% block content %}
+    <h1>Manajemen Perizinan Santri</h1>
+    <p>Gunakan form di bawah untuk mencatat santri yang izin tidak mengikuti kegiatan perpulangan.</p>
+    
+    <hr>
+    <h3>Form Izin Baru</h3>
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        <div class="form-group form-grid">
+            <label for="select-santri-izin">Pilih Santri</label>
+            <div>
+                <select id="select-santri-izin" placeholder="-- Cari Santri Aktif --"></select>
+                {{ form.santri() }} </div>
+        </div>
+        <div class="form-group form-grid">
+            {{ form.tanggal_berakhir.label }}
+            {{ form.tanggal_berakhir() }}
+        </div>
+        <div class="form-group form-grid">
+            {{ form.keterangan.label }}
+            {{ form.keterangan(rows=3) }}
+        </div>
+        <div class="form-group" style="padding-left: 165px;">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+    <hr>
+
+    <h3>Daftar Santri yang Sedang Izin</h3>
+    <form method="GET" class="filter-form">
+        <div class="filter-grid">
+            <input type="text" name="nama" placeholder="Filter nama santri..." value="{{ request.args.get('nama', '') }}">
+            <button type="submit" class="btn btn-primary">Filter</button>
+        </div>
+    </form>
+
+    <table style="margin-top: 20px;">
+        <thead>
+            <tr>
+                <th>No.</th>
+                <th>Nama Santri</th>
+                <th>Asrama</th>
+                <th>Alamat</th>
+                <th>Izin Sampai</th>
+                <th>Keterangan</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for izin in semua_izin %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ izin.santri.nama }}</td>
+                <td>{{ izin.santri.asrama }}</td>
+                <td>{{ izin.santri.kabupaten }}</td>
+                <td>{{ izin.tanggal_berakhir.strftime('%d %b %Y') }}</td>
+                <td>{{ izin.keterangan }}</td>
+                <td>
+    <form method="POST" action="{{ url_for('admin.cabut_izin', izin_id=izin.id) }}" onsubmit="return confirm('Anda yakin ingin mencabut izin untuk santri \'{{ izin.santri.nama }}\'?');">
+        <button type="submit" class="btn btn-danger action-btn">Cabut Izin</button>
+    </form>
+</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" style="text-align: center;">Tidak ada data santri yang sedang izin.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const hiddenSantriInput = document.getElementById('santri');
+
+    new TomSelect('#select-santri-izin', {
+        valueField: 'id',
+        labelField: 'nama',
+        searchField: 'nama',
+        load: (query, callback) => {
+            const url = `/admin/api/search-active-santri?q=${encodeURIComponent(query)}`;
+            fetch(url)
+                .then(response => response.json())
+                .then(json => {
+                    callback(json.results);
+                }).catch(() => {
+                    callback();
+                });
+        },
+        onChange: (value) => {
+            hiddenSantriInput.value = value;
+        }
+    });
+});
+</script>
+{% endblock %}

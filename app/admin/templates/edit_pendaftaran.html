@@ -1,0 +1,41 @@
+{% extends "_admin_layout.html" %}
+
+{% block title %}Edit Pendaftaran{% endblock %}
+
+{% block content %}
+    <h1>Edit Detail Pendaftaran</h1>
+    <p>
+        <strong>Santri:</strong> {{ pendaftaran.santri.nama }}<br>
+        <strong>Rombongan:</strong> {{ pendaftaran.rombongan.nama_rombongan }}
+    </p>
+    <a href="{{ url_for('admin.daftar_peserta', rombongan_id=pendaftaran.rombongan_id) }}">&larr; Kembali ke Daftar Peserta</a>
+
+    <form method="POST" action="" style="margin-top: 2rem;">
+        {{ form.hidden_tag() }}
+
+        <div class="form-group form-grid">
+            {{ form.titik_turun.label }}
+            {{ form.titik_turun() }}
+        </div>
+        <div class="form-group form-grid">
+            {{ form.jenis_perjalanan.label }}
+            {{ form.jenis_perjalanan() }}
+        </div>
+        <div class="form-group form-grid">
+            {{ form.status_pembayaran.label }}
+            {{ form.status_pembayaran() }}
+        </div>
+        <div class="form-group form-grid">
+            {{ form.metode_pembayaran.label }}
+            {{ form.metode_pembayaran() }}
+        </div>
+        <div class="form-group form-grid">
+            {{ form.nomor_bus.label }}
+            {{ form.nomor_bus() }}
+        </div>
+
+        <div class="form-group" style="margin-top: 2em; padding-left: 165px;">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+{% endblock %}

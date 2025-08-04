@@ -27,6 +27,7 @@
                 <td>{{ rombongan.jadwal_keberangkatan.strftime('%d %b %Y %H:%M') }}</td>
                 <td>{{ rombongan.nama_armada }}</td>
                 <td>
+                    <a href="{{ url_for('admin.daftar_peserta', rombongan_id=rombongan.id) }}" class="btn btn-primary action-btn">Lihat Peserta ({{ rombongan.pendaftar|length }})</a>
                     <a href="{{ url_for('admin.edit_rombongan', id=rombongan.id) }}" class="btn btn-secondary action-btn">Edit Rombongan</a>
                     <form method="POST" action="{{ url_for('admin.hapus_rombongan', id=rombongan.id) }}" style="display:inline;" onsubmit="return confirm('Anda yakin ingin menghapus rombongan \'{{ rombongan.nama_rombongan }}\'?');">
                         <button type="submit" class="btn btn-danger action-btn">Hapus</button>
