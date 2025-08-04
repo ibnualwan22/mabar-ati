@@ -13,13 +13,14 @@
     .result-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
     .result-item:last-child { border-bottom: none; }
     .result-item button:disabled { background-color: #28a745; cursor: not-allowed; }
-    /* Styling untuk status pembayaran */
-    .status-lunas { color: #155724; background-color: #d4edda; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
-    .status-belum { color: #721c24; background-color: #f8d7da; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
+    
+    /* CSS untuk Filter & Tabel */
     .filter-form { margin-bottom: 20px; }
-    .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: center; }
+    .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; align-items: center; }
     .filter-grid input, .filter-grid select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-    .action-buttons { margin-top: 20px; }
+    .action-buttons { margin-top: 20px; margin-bottom: 20px; }
+    tbody tr:nth-child(even) { background-color: #f9f9f9; }
+    .pagination { margin-top: 20px; text-align: center; }
 </style>
 
 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -31,17 +32,26 @@
 <h3>Filter & Aksi</h3>
 <form method="GET" action="{{ url_for('admin.manajemen_santri') }}" class="filter-form">
     <div class="filter-grid">
-        <input type="text" name="nama" placeholder="Cari Nama Santri..." value="{{ request.args.get('nama', '') }}">
-        <input type="text" name="alamat" placeholder="Cari Alamat (Kabupaten)..." value="{{ request.args.get('alamat', '') }}">
+        <input type="text" name="nama" placeholder="Cari Nama..." value="{{ request.args.get('nama', '') }}">
         <input type="text" name="asrama" placeholder="Cari Asrama..." value="{{ request.args.get('asrama', '') }}">
         <select name="status">
-            <option value="">-- Semua Status Rombongan --</option>
-            <option value="Ikut Rombongan" {% if request.args.get('status') == 'Ikut Rombongan' %}selected{% endif %}>Ikut Rombongan</option>
-            <option value="Tidak Ikut Rombongan" {% if request.args.get('status') == 'Tidak Ikut Rombongan' %}selected{% endif %}>Tidak Ikut Rombongan</option>
+            <option value="">-- Semua Status Santri --</option>
+            <option value="Aktif" {% if request.args.get('status') == 'Aktif' %}selected{% endif %}>Aktif</option>
             <option value="Izin" {% if request.args.get('status') == 'Izin' %}selected{% endif %}>Izin</option>
             <option value="Partisipan" {% if request.args.get('status') == 'Partisipan' %}selected{% endif %}>Partisipan</option>
             <option value="Wisuda" {% if request.args.get('status') == 'Wisuda' %}selected{% endif %}>Wisuda</option>
         </select>
+        
+        <select name="rombongan_id">
+            <option value="">-- Semua Rombongan --</option>
+            <option value="belum_terdaftar" {% if request.args.get('rombongan_id') == 'belum_terdaftar' %}selected{% endif %}>Belum Terdaftar</option>
+            {% for rombongan in all_rombongan %}
+                <option value="{{ rombongan.id }}" {% if request.args.get('rombongan_id')|int == rombongan.id %}selected{% endif %}>
+                    {{ rombongan.nama_rombongan }}
+                </option>
+            {% endfor %}
+        </select>
+        
         <button type="submit" class="btn btn-primary">Filter</button>
         <a href="{{ url_for('admin.manajemen_santri') }}" class="btn btn-secondary">Reset</a>
     </div>
@@ -54,9 +64,9 @@
 </div>
 <hr>
 
-<h3>Daftar Santri Tersimpan</h3>
-<div style="overflow-x: auto;"> <table style="width: 100%; min-width: 1400px;"> <colgroup>
-            <col style="width: 3%;">  <col style="width: 17%;"> <col style="width: 10%;"> <col style="width: 10%;"> <col style="width: 12%;"> <col style="width: 8%;">  <col style="width: 10%;"> <col style="width: 10%;"> <col style="width: 12%;"> <col style="width: 8%;">  </colgroup>
+<h3>Daftar Santri Tersimpan (Total: {{ pagination.total }})</h3>
+<div style="overflow-x: auto;">
+    <table style="width: 100%; min-width: 1400px;">
         <thead>
             <tr>
                 <th>No.</th>
@@ -64,51 +74,76 @@
                 <th>NIS</th>
                 <th>Asrama</th>
                 <th>Alamat</th>
-                <th>Jenis Kelamin</th>
-                <th>No. HP Wali</th>
-                <th>Status Pembayaran</th>
-                <th>Rombongan Saat Ini</th>
+                <th>Kelas Formal</th>
+                <th>Kelas Ngaji</th>
+                <th>Status Santri</th>
+                <th>Rombongan</th>
                 <th>Aksi</th>
             </tr>
         </thead>
         <tbody>
-            {% for santri in semua_santri %}
+            {% for santri in pagination.items %}
             <tr>
-                <td>{{ loop.index }}</td>
+                <td>{{ loop.index + (pagination.page - 1) * pagination.per_page }}</td>
                 <td>{{ santri.nama }}</td>
                 <td>{{ santri.nis }}</td>
-                <td>{{ santri.asrama }}</td>
+                <td>{{ santri.asrama or '-' }}</td>
                 <td>{{ santri.kabupaten or '-' }}</td>
-                <td>{{ santri.jenis_kelamin }}</td>
-                <td>{{ santri.no_hp_wali or '-' }}</td>
+                <td>{{ santri.kelas_formal or '-' }}</td>
+                <td>{{ santri.kelas_ngaji or '-' }}</td>
+                <td>{{ santri.status_santri }}</td>
                 <td>
-                    {% if santri.status_pembayaran == 'Lunas' %}
-                        <span class="status-lunas">Lunas</span>
+                    {% if santri.pendaftaran %}
+                        <span style="font-weight: bold; color: green;">{{ santri.pendaftaran.rombongan.nama_rombongan }}</span>
                     {% else %}
-                        <span class="status-belum">Belum Lunas</span>
+                        <span style="color: #888;">Belum Terdaftar</span>
                     {% endif %}
                 </td>
                 <td>
-                    {% if santri.rombongan %}
-                        <span style="font-weight: bold; color: green;">{{ santri.rombongan.nama_rombongan }}</span>
-                    {% else %}
-                        <span style="color: #888;">{{ santri.status_rombongan }}</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <a href="{{ url_for('admin.edit_santri', id=santri.id) }}" class="btn btn-secondary action-btn">Edit</a>
-                    <form method="POST" action="{{ url_for('admin.hapus_santri', id=santri.id) }}" style="display:inline;" onsubmit="return confirm('Anda yakin ingin menghapus santri \'{{ santri.nama }}\' dari sistem lokal?');">
-                        <button type="submit" class="btn btn-danger action-btn">Hapus</button>
-                    </form>
-                </td>
+    {% if santri.pendaftaran %}
+        <a href="{{ url_for('admin.edit_pendaftaran', pendaftaran_id=santri.pendaftaran.id) }}" class="btn btn-secondary action-btn">Edit Pendaftaran</a>
+    {% else %}
+        <a href="{{ url_for('admin.pendaftaran_rombongan', santri_id=santri.id) }}" class="btn btn-primary action-btn">+ Daftarkan</a>
+    {% endif %}
+    
+    <form method="POST" action="{{ url_for('admin.hapus_santri', id=santri.id) }}" style="display:inline;" onsubmit="return confirm('Anda yakin ingin menghapus \'{{ santri.nama }}\' dari sistem lokal?');">
+        <button type="submit" class="btn btn-danger action-btn">Hapus</button>
+    </form>
+</td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="10" style="text-align: center;">Belum ada santri yang diimpor ke dalam sistem.</td>
+                <td colspan="10" style="text-align: center;">Tidak ada santri yang cocok dengan filter Anda.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+</div>
+
+<div class="pagination" style="margin-top: 20px; text-align: center;">
+    {# Siapkan argumen filter tanpa 'page' #}
+    {% set args = request.args.to_dict() %}
+    {% do args.pop('page', None) %}
+
+    {% if pagination.has_prev %}
+        <a href="{{ url_for('admin.manajemen_santri', page=pagination.prev_num, **args) }}" class="btn btn-secondary">&laquo; Sebelumnya</a>
+    {% endif %}
+
+    {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+        {% if page_num %}
+            {% if pagination.page == page_num %}
+                <a href="#" class="btn btn-primary">{{ page_num }}</a>
+            {% else %}
+                <a href="{{ url_for('admin.manajemen_santri', page=page_num, **args) }}" class="btn btn-secondary">{{ page_num }}</a>
+            {% endif %}
+        {% else %}
+            ...
+        {% endif %}
+    {% endfor %}
+
+    {% if pagination.has_next %}
+        <a href="{{ url_for('admin.manajemen_santri', page=pagination.next_num, **args) }}" class="btn btn-secondary">Berikutnya &raquo;</a>
+    {% endif %}
 </div>
 
 <div id="impor-modal" class="modal">

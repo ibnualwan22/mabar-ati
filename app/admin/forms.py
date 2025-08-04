@@ -146,3 +146,15 @@ class IzinForm(FlaskForm):
     tanggal_berakhir = DateField('Izin Sampai Tanggal', format='%Y-%m-%d', validators=[DataRequired()])
     keterangan = TextAreaField('Keterangan Keperluan', validators=[DataRequired()])
     submit = SubmitField('Simpan Izin')
+
+def santri_bisa_jadi_partisipan_query():
+    return Santri.query.filter(
+        Santri.status_santri == 'Aktif', 
+        Santri.izin == None, 
+        Santri.partisipan == None
+    ).order_by(Santri.nama).all()
+
+class PartisipanForm(FlaskForm):
+    santri = HiddenField('Pilih Santri', validators=[DataRequired()])
+    kategori = StringField('Kategori Partisipan', validators=[DataRequired()], description="Contoh: Panitia, Peserta Lomba, Khotmil Qur'an")
+    submit = SubmitField('Simpan Status Partisipan')

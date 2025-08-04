@@ -15,6 +15,9 @@ def create_app(config_name):
     """
     app = Flask(__name__)
 
+    app.jinja_env.add_extension('jinja2.ext.do')
+    
+
     # Memuat konfigurasi dari objek config
     app.config.from_object(config_by_name[config_name])
 

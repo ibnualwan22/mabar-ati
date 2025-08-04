@@ -1,36 +1,40 @@
 import os
+from dotenv import load_dotenv
 
-# === KONFIGURASI DATABASE PRODUKSI ===
-PROD_DB_IP = '165.22.106.176'
-PROD_DB_USER = 'alan'
-PROD_DB_PASS = 'alan'
-PROD_DB_PORT = '3306'
-PROD_DB_NAME = 'mabar_ati_prod'
-
-# === KONFIGURASI DATABASE DEVELOPMENT (LOKAL) ===
-DEV_DB_HOST = '165.22.106.176'
-DEV_DB_USER = 'alan'
-DEV_DB_PASS = 'alan'
-DEV_DB_PORT = '3306'
-DEV_DB_NAME = 'mabar_ati_dev'
-
+# Baris ini akan mencari file .env dan memuat variabelnya
+load_dotenv()
 
 class Config:
     """Konfigurasi dasar."""
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'kunci-rahasia-yang-sulit-ditebak'
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'default-secret-key-for-emergency'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 class DevelopmentConfig(Config):
     """Konfigurasi untuk Development (MySQL Lokal)."""
     DEBUG = True
-    # Menggunakan database MySQL di komputer lokal Anda
-    SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{DEV_DB_USER}:{DEV_DB_PASS}@{DEV_DB_HOST}:{DEV_DB_PORT}/{DEV_DB_NAME}"
+    
+    # Membaca variabel database development dari environment (.env)
+    USER = os.environ.get('DEV_DB_USER')
+    PASS = os.environ.get('DEV_DB_PASS')
+    HOST = os.environ.get('DEV_DB_HOST')
+    PORT = os.environ.get('DEV_DB_PORT')
+    NAME = os.environ.get('DEV_DB_NAME')
+
+    SQLALCHEMY_DATABASE_URI = f"mysql+mysqlconnector://{USER}:{PASS}@{HOST}:{PORT}/{NAME}"
     MODE = 'Development'
 
 class ProductionConfig(Config):
     """Konfigurasi untuk Produksi."""
     DEBUG = False
-    SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{PROD_DB_USER}:{PROD_DB_PASS}@{PROD_DB_IP}:{PROD_DB_PORT}/{PROD_DB_NAME}"
+
+    # Membaca variabel database produksi dari environment (.env)
+    USER = os.environ.get('PROD_DB_USER')
+    PASS = os.environ.get('PROD_DB_PASS')
+    HOST = os.environ.get('PROD_DB_HOST')
+    PORT = os.environ.get('PROD_DB_PORT')
+    NAME = os.environ.get('PROD_DB_NAME')
+
+    SQLALCHEMY_DATABASE_URI = f"mysql+mysqlconnector://{USER}:{PASS}@{HOST}:{PORT}/{NAME}"
     MODE = 'Produksi'
 
 # Dictionary untuk mempermudah pemilihan konfigurasi

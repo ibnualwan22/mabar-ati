@@ -1,10 +1,13 @@
 from . import admin_bp
-from flask import render_template, redirect, url_for, flash, request
-from app.models import Rombongan, Tarif, Santri, Pendaftaran, Izin
-from app.admin.forms import RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm
-from app import db # Import db dari level atas
+from flask import render_template, redirect, url_for, flash, request, jsonify
+from app.models import Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan
+from app.admin.forms import RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm
+from app import db
 import json, requests
-from flask import request, jsonify
+from collections import defaultdict
+from sqlalchemy import update, text
+
+
 
 
 @admin_bp.route('/')
@@ -157,29 +160,44 @@ def kelola_santri(rombongan_id):
 
 @admin_bp.route('/santri')
 def manajemen_santri():
-    # Mulai dengan query dasar untuk semua santri
+    page = request.args.get('page', 1, type=int)
+    
+    # Query dasar, kita akan join dengan Pendaftaran jika diperlukan
     query = Santri.query
 
-    # Ambil parameter filter dari URL
+    # Ambil parameter filter
     search_nama = request.args.get('nama')
-    search_alamat = request.args.get('alamat')
     search_asrama = request.args.get('asrama')
     search_status = request.args.get('status')
+    f_rombongan_id = request.args.get('rombongan_id') # Ambil sebagai string dulu
 
-    # Terapkan filter ke query jika ada
+    # Terapkan filter
     if search_nama:
         query = query.filter(Santri.nama.ilike(f'%{search_nama}%'))
-    if search_alamat:
-        query = query.filter(Santri.kabupaten.ilike(f'%{search_alamat}%'))
     if search_asrama:
         query = query.filter(Santri.asrama.ilike(f'%{search_asrama}%'))
     if search_status:
-        query = query.filter(Santri.status_rombongan == search_status)
+        query = query.filter(Santri.status_santri == search_status)
 
-    # Eksekusi query yang sudah difilter
-    semua_santri = query.order_by(Santri.nama).all()
+    # --- LOGIKA FILTER ROMBONGAN BARU ---
+    if f_rombongan_id:
+        if f_rombongan_id == 'belum_terdaftar':
+            # Gunakan outerjoin untuk mencari santri yang tidak punya record pendaftaran
+            query = query.outerjoin(Pendaftaran).filter(Pendaftaran.id == None)
+        else:
+            # Gunakan join biasa untuk mencari santri di rombongan spesifik
+            query = query.join(Pendaftaran).filter(Pendaftaran.rombongan_id == f_rombongan_id)
+
+    pagination = query.order_by(Santri.nama).paginate(
+        page=page, per_page=20, error_out=False
+    )
     
-    return render_template('manajemen_santri.html', semua_santri=semua_santri)
+    # Ambil semua rombongan untuk mengisi dropdown filter
+    all_rombongan = Rombongan.query.order_by(Rombongan.nama_rombongan).all()
+    
+    return render_template('manajemen_santri.html', 
+                           pagination=pagination, 
+                           all_rombongan=all_rombongan)
 
 @admin_bp.route('/api/search-student')
 def search_student_proxy():
@@ -231,53 +249,64 @@ def impor_santri():
 @admin_bp.route('/santri/impor-semua', methods=['POST'])
 def impor_semua_santri():
     try:
-        # 1. Ambil semua data dari API Induk
-        api_url = "https://dev.amtsilatipusat.com/api/student?limit=2000" # Ambil hingga 2000 data
-        response = requests.get(api_url, timeout=30) # Tambah timeout karena data besar
+        api_url = "https://dev.amtsilatipusat.com/api/student?limit=2000"
+        response = requests.get(api_url, timeout=60)
         response.raise_for_status()
         santri_from_api = response.json().get('data', [])
 
-        # 2. Ambil semua santri yang sudah ada di DB lokal untuk perbandingan
-        # Gunakan dictionary untuk pencarian cepat: {api_id: santri_objek}
-        existing_santri_map = {s.api_student_id: s for s in Santri.query.all()}
+        existing_ids = {s.api_student_id for s in Santri.query.with_entities(Santri.api_student_id).all()}
         
         new_count = 0
         updated_count = 0
+        to_create = []
 
-        # 3. Loop melalui data dari API
         for data in santri_from_api:
             api_id = data.get('id')
             if not api_id:
                 continue
 
-            # Cek apakah santri sudah ada di map kita
-            if api_id in existing_santri_map:
-                # Jika ADA, update datanya (Sinkronisasi)
-                santri_to_update = existing_santri_map[api_id]
-                santri_to_update.nis = data.get('nis', santri_to_update.nis)
-                santri_to_update.nama = data.get('name', santri_to_update.nama)
-                santri_to_update.kabupaten = data.get('regency', santri_to_update.kabupaten)
-                santri_to_update.asrama = data.get('activeDormitory', santri_to_update.asrama)
-                santri_to_update.no_hp_wali = data.get('parrentPhone', santri_to_update.no_hp_wali)
-                santri_to_update.jenis_kelamin = data.get('gender') or 'Putra'
+            if api_id in existing_ids:
+                # --- METODE UPDATE DENGAN RAW SQL ---
+                sql = text("""
+                    UPDATE santri SET
+                        nama = :nama, nis = :nis, kabupaten = :kabupaten, asrama = :asrama,
+                        no_hp_wali = :no_hp_wali, jenis_kelamin = :jenis_kelamin,
+                        kelas_formal = :kelas_formal, kelas_ngaji = :kelas_ngaji
+                    WHERE api_student_id = :api_id
+                """)
+                
+                db.session.execute(sql, {
+                    'nama': data.get('name', 'Tanpa Nama'),
+                    'nis': data.get('nis', 'N/A'),
+                    'kabupaten': data.get('regency'),
+                    'asrama': data.get('activeDormitory'),
+                    'no_hp_wali': data.get('parrentPhone'),
+                    'jenis_kelamin': data.get('gender') or 'Putra',
+                    'kelas_formal': data.get('formalClass'),
+                    'kelas_ngaji': data.get('activeClass'),
+                    'api_id': api_id
+                })
                 updated_count += 1
             else:
-                # Jika TIDAK ADA, buat record baru (Impor)
-                new_santri = Santri(
-                    api_student_id=api_id,
-                    nis=data.get('nis', 'N/A'),
-                    nama=data.get('name', 'Tanpa Nama'),
-                    kabupaten=data.get('regency'),
-                    asrama=data.get('activeDormitory'),
-                    no_hp_wali=data.get('parrentPhone'),
-                    jenis_kelamin=data.get('gender') or 'Putra'
-                )
-                db.session.add(new_santri)
-                new_count += 1
+                # Logika 'create' tetap menggunakan bulk insert karena efisien dan sudah terbukti bekerja
+                new_santri_data = {
+                    'api_student_id': api_id,
+                    'nis': data.get('nis', 'N/A'),
+                    'nama': data.get('name', 'Tanpa Nama'),
+                    'kabupaten': data.get('regency'),
+                    'asrama': data.get('activeDormitory'),
+                    'no_hp_wali': data.get('parrentPhone'),
+                    'jenis_kelamin': data.get('gender') or 'Putra',
+                    'kelas_formal': data.get('formalClass'),
+                    'kelas_ngaji': data.get('activeClass')
+                }
+                to_create.append(new_santri_data)
         
-        # 4. Simpan semua perubahan ke database
+        if to_create:
+            db.session.bulk_insert_mappings(Santri, to_create)
+            new_count = len(to_create)
+
         db.session.commit()
-        
         flash(f"Proses selesai! Berhasil mengimpor {new_count} santri baru dan memperbarui {updated_count} data santri.", "success")
 
     except requests.exceptions.RequestException as e:
@@ -285,26 +314,17 @@ def impor_semua_santri():
     except Exception as e:
         db.session.rollback()
         flash(f"Terjadi error saat memproses data: {e}", "danger")
+        print(f"Error detail: {e}")
 
     return redirect(url_for('admin.manajemen_santri'))
 
 @admin_bp.route('/santri/edit/<int:id>', methods=['GET', 'POST'])
 def edit_santri(id):
+    # Fungsi ini sekarang hanya untuk mengedit data minor, pendaftaran dipindah
+    # Anda bisa kembangkan ini nanti jika perlu edit data snapshot
     santri = Santri.query.get_or_404(id)
-    form = SantriEditForm(obj=santri) # 'obj=santri' akan mengisi form dengan data awal
-
-    if form.validate_on_submit():
-        # Daftarkan santri ke rombongan yang dipilih
-        santri.rombongan = form.rombongan.data
-        # Update status-statusnya
-        santri.status_rombongan = form.status_rombongan.data
-        santri.status_pembayaran = form.status_pembayaran.data
-        
-        db.session.commit()
-        flash(f"Data {santri.nama} berhasil diperbarui.", "success")
-        return redirect(url_for('admin.manajemen_santri'))
-
-    return render_template('edit_santri.html', form=form, santri=santri)
+    flash("Fungsi edit santri akan dikembangkan lebih lanjut.", "info")
+    return redirect(url_for('admin.manajemen_santri'))
 
 @admin_bp.route('/santri/hapus/<int:id>', methods=['POST'])
 def hapus_santri(id):
@@ -442,14 +462,17 @@ def rombongan_detail(id):
 @admin_bp.route('/api/search-santri')
 def search_santri_api():
     query = request.args.get('q', '')
-    if len(query) < 3:
-        return jsonify({'results': []})
+    query_id = request.args.get('q_id', type=int)
 
-    # Cari santri yang namanya cocok DAN belum terdaftar di pendaftaran manapun
-    santri_results = Santri.query.filter(
-        Santri.nama.ilike(f'%{query}%'),
-        Santri.pendaftaran == None
-    ).limit(20).all()
+    if query_id:
+        santri_results = Santri.query.filter_by(id=query_id).all()
+    elif len(query) < 3:
+        return jsonify({'results': []})
+    else:
+        santri_results = Santri.query.filter(
+            Santri.nama.ilike(f'%{query}%'),
+            Santri.pendaftaran == None
+        ).limit(20).all()
 
     results = [
         {
@@ -579,3 +602,67 @@ def cabut_izin(izin_id):
     
     flash(f"Izin untuk santri '{nama_santri}' telah berhasil dicabut.", "success")
     return redirect(url_for('admin.perizinan'))
+
+@admin_bp.route('/partisipan')
+def data_partisipan():
+    # 1. Ambil semua data partisipan
+    semua_partisipan = Partisipan.query.all()
+    
+    # 2. Kelompokkan data berdasarkan kategori
+    grouped_partisipan = defaultdict(list)
+    for p in semua_partisipan:
+        grouped_partisipan[p.kategori].append(p)
+        
+    return render_template('data_partisipan.html', grouped_partisipan=grouped_partisipan)
+
+# Buat route placeholder untuk form tambah agar link-nya tidak error
+@admin_bp.route('/partisipan/tambah', methods=['GET', 'POST'])
+def tambah_partisipan():
+    form = PartisipanForm()
+    if form.validate_on_submit():
+        santri_id = form.santri.data
+        santri = Santri.query.get(santri_id)
+
+        if santri and santri.status_santri == 'Aktif':
+            # Buat record partisipan baru
+            new_partisipan = Partisipan(
+                santri=santri,
+                kategori=form.kategori.data
+            )
+            # Update status santri
+            santri.status_santri = 'Partisipan'
+            
+            db.session.add(new_partisipan)
+            db.session.commit()
+            flash(f"Status partisipan untuk {santri.nama} berhasil ditambahkan.", "success")
+            return redirect(url_for('admin.data_partisipan'))
+        else:
+            flash("Santri tidak valid atau statusnya bukan 'Aktif'.", "danger")
+
+    return render_template('tambah_partisipan.html', form=form)
+
+
+# Tambahkan API Helper baru ini
+@admin_bp.route('/api/search-santri-for-partisipan')
+def search_santri_for_partisipan_api():
+    query = request.args.get('q', '')
+    if len(query) < 3:
+        return jsonify({'results': []})
+
+    # Cari santri yang namanya cocok DAN statusnya 'Aktif'
+    santri_results = Santri.query.filter(
+        Santri.nama.ilike(f'%{query}%'),
+        Santri.status_santri == 'Aktif'
+    ).limit(20).all()
+
+    results = [
+        {
+            'id': s.id, 
+            'nama': s.nama,
+            'asrama': s.asrama,
+            'kabupaten': s.kabupaten,
+            'kelas_formal': s.kelas_formal,
+            'kelas_ngaji': s.kelas_ngaji
+        } for s in santri_results
+    ]
+    return jsonify({'results': results})

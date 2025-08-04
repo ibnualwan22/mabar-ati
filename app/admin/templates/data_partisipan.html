@@ -1,0 +1,46 @@
+{% extends "_admin_layout.html" %}
+
+{% block title %}Data Partisipan{% endblock %}
+
+{% block content %}
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h1>Data Partisipan</h1>
+        <a href="{{ url_for('admin.tambah_partisipan') }}" class="btn btn-primary">+ Tambah Partisipan Baru</a>
+    </div>
+    <p>Halaman ini menampilkan semua santri yang berstatus sebagai partisipan, dikelompokkan berdasarkan kategorinya.</p>
+    <hr>
+    
+    {% if not grouped_partisipan %}
+        <p style="text-align: center; color: #888;">Belum ada data partisipan yang ditambahkan.</p>
+    {% else %}
+        {% for kategori, partisipan_list in grouped_partisipan.items()|sort %}
+            <div class="info-box" style="margin-bottom: 2rem;">
+                <h3>Kategori: {{ kategori }} (Jumlah: {{ partisipan_list|length }} orang)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No.</th>
+                            <th>Nama Santri</th>
+                            <th>Alamat</th>
+                            <th>Asrama</th>
+                            <th>Kelas Formal</th>
+                            <th>Kelas Ngaji</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for partisipan in partisipan_list|sort(attribute='santri.nama') %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ partisipan.santri.nama }}</td>
+                            <td>{{ partisipan.santri.kabupaten or '-' }}</td>
+                            <td>{{ partisipan.santri.asrama }}</td>
+                            <td>{{ partisipan.santri.kelas_formal or '-' }}</td>
+                            <td>{{ partisipan.santri.kelas_ngaji or '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endblock %}

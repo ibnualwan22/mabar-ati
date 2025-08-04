@@ -1,0 +1,24 @@
+# Environment variables
+.env
+
+# Virtual Environment
+venv/
+/venv
+*.venv
+env/
+/env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local database file (jika suatu saat pakai sqlite lagi)
+*.db
+*.sqlite3
+
+# IDE / Editor specific files
+.vscode/
+.idea/
+*.DS_Store

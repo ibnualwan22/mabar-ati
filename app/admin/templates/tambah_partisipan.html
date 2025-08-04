@@ -1,0 +1,74 @@
+{% extends "_admin_layout.html" %}
+
+{% block title %}Tambah Partisipan Baru{% endblock %}
+
+{% block content %}
+    <h1>Tambah Partisipan Baru</h1>
+    <a href="{{ url_for('admin.data_partisipan') }}">&larr; Kembali ke Data Partisipan</a>
+
+    <form method="POST" style="margin-top: 2rem;">
+        {{ form.hidden_tag() }}
+        <div class="form-group form-grid">
+            <label for="select-santri-partisipan">Pilih Santri</label>
+            <div>
+                <select id="select-santri-partisipan" placeholder="-- Cari Santri Aktif --"></select>
+                {{ form.santri() }} </div>
+        </div>
+
+        <div id="info-santri" class="info-box" style="display: none; margin-left: 165px;"></div>
+
+        <div class="form-group form-grid">
+            {{ form.kategori.label }}
+            {{ form.kategori(placeholder=form.kategori.description) }}
+        </div>
+
+        <div class="form-group" style="padding-left: 165px; margin-top: 2em;">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const hiddenSantriInput = document.getElementById('santri');
+    const infoSantriDiv = document.getElementById('info-santri');
+
+    new TomSelect('#select-santri-partisipan', {
+        valueField: 'id',
+        searchField: 'nama',
+        render: {
+            option: function(data, escape) {
+                return `<div><strong>${escape(data.nama)}</strong><br><small>${escape(data.asrama || '')} - ${escape(data.kabupaten || '')}</small></div>`;
+            },
+            item: function(data, escape) {
+                return `<div>${escape(data.nama)}</div>`;
+            }
+        },
+        load: (query, callback) => {
+            const url = `/admin/api/search-santri-for-partisipan?q=${encodeURIComponent(query)}`;
+            fetch(url)
+                .then(response => response.json())
+                .then(json => {
+                    callback(json.results);
+                }).catch(() => {
+                    callback();
+                });
+        },
+        onChange: (value) => {
+            hiddenSantriInput.value = value;
+            const selectedData = this.options[value];
+            if (selectedData) {
+                infoSantriDiv.innerHTML = `
+                    <strong>Detail Santri:</strong><br>
+                    Asrama: ${selectedData.asrama || '-'}<br>
+                    Kelas Formal: ${selectedData.kelas_formal || '-'}<br>
+                    Kelas Ngaji: ${selectedData.kelas_ngaji || '-'}
+                `;
+                infoSantriDiv.style.display = 'block';
+            } else {
+                infoSantriDiv.style.display = 'none';
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

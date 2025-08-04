@@ -80,6 +80,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const totalBiayaP = document.getElementById('total-biaya');    
     let tarifData = [];
 
+        // --- KLIK SANTRI OTOMATIS DAFTAR ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const santriIdFromUrl = urlParams.get('santri_id');
+    const rombonganIdFromUrl = urlParams.get('rombongan_id');
+    if (santriIdFromUrl) {
+        // Jika ada santri_id di URL, ambil datanya dan set di TomSelect
+        fetch(`/admin/api/search-santri?q_id=${santriIdFromUrl}`) // Kita akan buat API ini
+            .then(res => res.json())
+            .then(data => {
+                if (data.results.length > 0) {
+                    const santri = data.results[0];
+                    tomSelectSantri.addOption(santri);
+                    tomSelectSantri.setValue(santri.id);
+                }
+            });
+    }
+
+    if (rombonganIdFromUrl) {
+        rombonganSelect.value = rombonganIdFromUrl;
+        rombonganSelect.dispatchEvent(new Event('change'));
+    }
+
     // --- Inisialisasi Tom Select untuk Santri ---
     const tomSelectSantri = new TomSelect('#select-santri',{
         valueField: 'id',
