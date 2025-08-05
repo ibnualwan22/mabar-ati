@@ -1,7 +1,7 @@
 from . import admin_bp
 from flask import render_template, redirect, url_for, flash, request, jsonify, abort
-from app.models import Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, User
-from app.admin.forms import RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, UserForm, UserEditForm
+from app.models import Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, User, Edisi
+from app.admin.forms import RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, UserForm, UserEditForm, EdisiForm
 from app import db, login_manager
 import json, requests
 from collections import defaultdict
@@ -53,12 +53,14 @@ def logout():
     logout_user()
     return redirect(url_for('admin.login'))
 
-def role_required(role_name):
+def role_required(*roles): # Terima beberapa nama peran
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            if not current_user.is_authenticated or current_user.role.name != role_name:
-                abort(403) # Forbidden
+            if not current_user.is_authenticated:
+                return redirect(url_for('admin.login', next=request.url))
+            if current_user.role.name not in roles:
+                abort(403) # Forbidden - Akses Ditolak
             return f(*args, **kwargs)
         return decorated_function
     return decorator
@@ -161,65 +163,79 @@ def hapus_user(user_id):
     flash('User berhasil dihapus.', 'info')
     return redirect(url_for('admin.manajemen_user'))
 
-def role_required(*roles): # Terima beberapa nama peran
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            if not current_user.is_authenticated:
-                return redirect(url_for('admin.login', next=request.url))
-            if current_user.role.name not in roles:
-                abort(403) # Forbidden - Akses Ditolak
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
 
 @admin_bp.route('/')
 @login_required
 def dashboard():
-    # Ambil daftar ID rombongan yang dikelola user
+    active_edisi = get_active_edisi()
+    # Inisialisasi stats dengan nilai default yang aman
+    stats = { 
+        'total_peserta': 0, 'total_izin': 0, 'santri_belum_terdaftar': 0, 
+        'total_pemasukan': 0, 'total_lunas': 0, 'total_belum_lunas': 0, 
+        'jumlah_cash': 0, 'jumlah_transfer': 0, 'pendaftar_terlambat': [] 
+    }
+    semua_rombongan = []
+
     managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
 
-    # Query dasar
-    base_pendaftaran_query = Pendaftaran.query
-    
-    # Jika user bukan Korpus, filter query-nya
-    if current_user.role.name in ['Korwil', 'Korda']:
-        if not managed_rombongan_ids:
-             base_pendaftaran_query = base_pendaftaran_query.filter(db.false()) # Return empty query
-        else:
-            base_pendaftaran_query = base_pendaftaran_query.filter(Pendaftaran.rombongan_id.in_(managed_rombongan_ids))
+    if active_edisi:
+        # --- LOGIKA FILTER BERDASARKAN PERAN ---
+        base_pendaftaran_query = Pendaftaran.query.join(Rombongan).filter(Rombongan.edisi_id == active_edisi.id)
+        
+        if current_user.role.name in ['Korwil', 'Korda']:
+            if not managed_rombongan_ids:
+                base_pendaftaran_query = base_pendaftaran_query.filter(db.false())
+            else:
+                base_pendaftaran_query = base_pendaftaran_query.filter(Pendaftaran.rombongan_id.in_(managed_rombongan_ids))
+        
+        # --- Kalkulasi Statistik Peserta ---
+        stats['total_peserta'] = base_pendaftaran_query.count()
+        stats['total_izin'] = Izin.query.filter_by(edisi=active_edisi).count() # Izin tetap global
+        
+        ids_terdaftar_di_edisi_ini = [p.santri_id for p in base_pendaftaran_query.all()]
 
-    # --- Kalkulasi Statistik Utama ---
-    total_peserta = base_pendaftaran_query.count()
-    total_izin = Santri.query.filter_by(status_santri='Izin').count()
-    santri_belum_terdaftar = Santri.query.filter(Santri.status_santri == 'Aktif', Santri.pendaftaran == None).count()
-    
-    # --- Kalkulasi Keuangan Global berdasarkan data yang boleh dilihat ---
-    total_pemasukan = base_pendaftaran_query.with_entities(db.func.sum(Pendaftaran.total_biaya)).scalar() or 0
-    total_lunas = base_pendaftaran_query.filter(Pendaftaran.status_pembayaran == 'Lunas').with_entities(db.func.sum(Pendaftaran.total_biaya)).scalar() or 0
-    total_belum_lunas = total_pemasukan - total_lunas
-    jumlah_cash = base_pendaftaran_query.filter_by(metode_pembayaran='Cash').count()
-    jumlah_transfer = base_pendaftaran_query.filter_by(metode_pembayaran='Transfer').count()
-    
-    # --- Pendaftar Terlambat Bayar ---
-    pendaftar_terlambat_query = base_pendaftaran_query.join(Rombongan).filter(
-        Pendaftaran.status_pembayaran == 'Belum Lunas',
-        Rombongan.batas_pembayaran != None,
-        Rombongan.batas_pembayaran < date.today()
-    )
-    pendaftar_terlambat = pendaftar_terlambat_query.all()
+        # --- LOGIKA BARU UNTUK SANTRI BELUM TERDAFTAR ---
+        query_belum_terdaftar = Santri.query.filter(
+            Santri.status_santri == 'Aktif',
+            ~Santri.id.in_(ids_terdaftar_di_edisi_ini)
+        )
 
-    # --- Tabel Ringkasan per Rombongan ---
-    rombongan_query = Rombongan.query
-    if current_user.role.name in ['Korwil', 'Korda']:
-        if not managed_rombongan_ids:
-            rombongan_query = rombongan_query.filter(db.false())
-        else:
-            rombongan_query = rombongan_query.filter(Rombongan.id.in_(managed_rombongan_ids))
+        if current_user.role.name in ['Korwil', 'Korda']:
+            # Kumpulkan semua cakupan wilayah dari rombongan yang dikelola
+            managed_regions = set()
+            for rombongan in current_user.managed_rombongan:
+                if rombongan.cakupan_wilayah:
+                    for wilayah in rombongan.cakupan_wilayah:
+                        managed_regions.add(wilayah.get('label'))
+            
+            if managed_regions:
+                # Filter santri berdasarkan kabupaten yang ada di cakupan wilayah
+                query_belum_terdaftar = query_belum_terdaftar.filter(Santri.kabupaten.in_(list(managed_regions)))
+            else:
+                # Jika tidak ada cakupan wilayah, tampilkan 0
+                query_belum_terdaftar = query_belum_terdaftar.filter(db.false())
+        # Hitung santri aktif yang ID-nya tidak ada di daftar itu
+        stats['santri_belum_terdaftar'] = query_belum_terdaftar.count()
+        # ------------------------------------
+
+        stats['total_pemasukan'] = base_pendaftaran_query.with_entities(db.func.sum(Pendaftaran.total_biaya)).scalar() or 0
+        stats['total_lunas'] = base_pendaftaran_query.filter(Pendaftaran.status_pembayaran == 'Lunas').with_entities(db.func.sum(Pendaftaran.total_biaya)).scalar() or 0
+        stats['total_belum_lunas'] = stats['total_pemasukan'] - stats['total_lunas']
+        
+        stats['pendaftar_terlambat'] = Pendaftaran.query.join(Rombongan).filter(
+            Rombongan.edisi_id == active_edisi.id,
+            Pendaftaran.status_pembayaran == 'Belum Lunas',
+            Rombongan.batas_pembayaran != None,
+            Rombongan.batas_pembayaran < date.today()
+        ).all()
+
+        semua_rombongan = Rombongan.query.filter_by(edisi=active_edisi).order_by(Rombongan.nama_rombongan).all()
     
-    semua_rombongan = rombongan_query.order_by(Rombongan.nama_rombongan).all()
-    
-    stats = { 'total_peserta': total_peserta, 'total_izin': total_izin, 'santri_belum_terdaftar': santri_belum_terdaftar, 'total_pemasukan': total_pemasukan, 'total_lunas': total_lunas, 'total_belum_lunas': total_belum_lunas, 'jumlah_cash': jumlah_cash, 'jumlah_transfer': jumlah_transfer, 'pendaftar_terlambat': pendaftar_terlambat }
+    else:
+        flash("Tidak ada edisi yang aktif. Silakan aktifkan satu edisi di Manajemen Edisi.", "warning")
+        # Jika tidak ada edisi aktif, hitung semua santri aktif yang belum punya pendaftaran sama sekali
+        stats['santri_belum_terdaftar'] = Santri.query.filter(Santri.status_santri == 'Aktif', Santri.pendaftaran == None).count()
+
     return render_template('dashboard.html', stats=stats, semua_rombongan=semua_rombongan)
 
 # --- BUAT FUNGSI BARU INI ---
@@ -227,7 +243,9 @@ def dashboard():
 @login_required
 @role_required('Korpus', 'Korwil', 'Korda')
 def manajemen_rombongan():
-    query = Rombongan.query
+    active_edisi = get_active_edisi()
+    query = Rombongan.query.filter_by(edisi=active_edisi) # Filter utama
+    
     if current_user.role.name in ['Korwil', 'Korda']:
         managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
         if not managed_rombongan_ids:
@@ -238,16 +256,24 @@ def manajemen_rombongan():
     semua_rombongan = query.order_by(Rombongan.jadwal_keberangkatan.desc()).all()
     return render_template('manajemen_rombongan.html', semua_rombongan=semua_rombongan)
 
+
+
 # --- KODE BARU DIMULAI DI SINI ---
 
 @admin_bp.route('/rombongan/tambah', methods=['GET', 'POST'])
 @login_required
-@role_required('Korpus') # Hanya Korpus yang bisa buat rombongan baru
+@role_required('Korpus')
 def tambah_rombongan():
+    active_edisi = get_active_edisi()
+    if not active_edisi:
+        flash("Tidak bisa menambah rombongan karena tidak ada edisi yang aktif.", "danger")
+        return redirect(url_for('admin.manajemen_rombongan'))
+    
     form = RombonganForm()
     if form.validate_on_submit():
         # Buat objek Rombongan baru
         new_rombongan = Rombongan(
+            edisi=active_edisi,
             nama_rombongan=form.nama_rombongan.data,
             penanggung_jawab=form.penanggung_jawab.data,
             kontak_person=form.kontak_person.data,
@@ -393,45 +419,58 @@ def search_wilayah_proxy():
 #     return render_template('kelola_santri.html', rombongan=rombongan, peserta=peserta)
 
 @admin_bp.route('/santri')
+@login_required
 def manajemen_santri():
     page = request.args.get('page', 1, type=int)
-    
-    # Query dasar, kita akan join dengan Pendaftaran jika diperlukan
     query = Santri.query
 
     # Ambil parameter filter
     search_nama = request.args.get('nama')
+    f_alamat = request.args.get('alamat')
     search_asrama = request.args.get('asrama')
     search_status = request.args.get('status')
-    f_rombongan_id = request.args.get('rombongan_id') # Ambil sebagai string dulu
+    f_rombongan_id = request.args.get('rombongan_id')
 
     # Terapkan filter
     if search_nama:
         query = query.filter(Santri.nama.ilike(f'%{search_nama}%'))
+    if f_alamat:
+        query = query.filter(Santri.kabupaten.ilike(f'%{f_alamat}%'))
     if search_asrama:
         query = query.filter(Santri.asrama.ilike(f'%{search_asrama}%'))
     if search_status:
         query = query.filter(Santri.status_santri == search_status)
 
-    # --- LOGIKA FILTER ROMBONGAN BARU ---
     if f_rombongan_id:
         if f_rombongan_id == 'belum_terdaftar':
-            # Gunakan outerjoin untuk mencari santri yang tidak punya record pendaftaran
             query = query.outerjoin(Pendaftaran).filter(Pendaftaran.id == None)
+            
+            # --- LOGIKA FILTER CERDAS UNTUK KORDA/KORWIL ---
+            if current_user.role.name in ['Korwil', 'Korda']:
+                managed_regions = set()
+                for rombongan in current_user.managed_rombongan:
+                    if rombongan.cakupan_wilayah:
+                        for wilayah in rombongan.cakupan_wilayah:
+                            managed_regions.add(wilayah.get('label'))
+                
+                if managed_regions:
+                    query = query.filter(Santri.kabupaten.in_(list(managed_regions)))
+                else:
+                    query = query.filter(db.false()) # Jika tak ada wilayah, jangan tampilkan apa-apa
+            # --- AKHIR LOGIKA FILTER CERDAS ---
+
         else:
-            # Gunakan join biasa untuk mencari santri di rombongan spesifik
             query = query.join(Pendaftaran).filter(Pendaftaran.rombongan_id == f_rombongan_id)
 
-    pagination = query.order_by(Santri.nama).paginate(
-        page=page, per_page=20, error_out=False
-    )
+    pagination = query.order_by(Santri.nama).paginate(page=page, per_page=50, error_out=False)
     
-    # Ambil semua rombongan untuk mengisi dropdown filter
     all_rombongan = Rombongan.query.order_by(Rombongan.nama_rombongan).all()
+    all_kabupaten = [k[0] for k in db.session.query(Santri.kabupaten).distinct().order_by(Santri.kabupaten).all() if k[0] is not None]
     
     return render_template('manajemen_santri.html', 
                            pagination=pagination, 
-                           all_rombongan=all_rombongan)
+                           all_rombongan=all_rombongan,
+                           all_kabupaten=all_kabupaten)
 
 @admin_bp.route('/api/search-student')
 def search_student_proxy():
@@ -581,13 +620,15 @@ def hapus_santri(id):
 @role_required('Korpus', 'Korda')
 def pendaftaran_rombongan():
     form = PendaftaranForm()
+    active_edisi = get_active_edisi()
     
-    # Mengisi pilihan dropdown rombongan berdasarkan peran user
+    # Ambil rombongan hanya dari edisi yang aktif
+    rombongan_choices_query = Rombongan.query.filter_by(edisi=active_edisi)
     if current_user.role.name == 'Korda':
-        form.rombongan.choices = [(r.id, r.nama_rombongan) for r in current_user.managed_rombongan]
-    else: # Untuk Korpus, tampilkan semua
-        form.rombongan.choices = [(0, '-- Pilih Rombongan --')] + [(r.id, r.nama_rombongan) for r in Rombongan.query.order_by(Rombongan.nama_rombongan).all()]
-
+        managed_ids = [r.id for r in current_user.managed_rombongan]
+        rombongan_choices_query = rombongan_choices_query.filter(Rombongan.id.in_(managed_ids))
+    
+    form.rombongan.choices = [(r.id, r.nama_rombongan) for r in rombongan_choices_query.all()]
     # Jika ini adalah request POST, kita perlu mengisi pilihan 'titik_turun' sebelum validasi
     if request.method == 'POST':
         rombongan_id_from_form = request.form.get('rombongan')
@@ -751,6 +792,7 @@ def search_santri_api():
 
 @admin_bp.route('/rombongan/<int:rombongan_id>/peserta')
 def daftar_peserta(rombongan_id):
+   
     rombongan = Rombongan.query.get_or_404(rombongan_id)
     # --- VERIFIKASI KEPEMILIKAN ---
     if current_user.role.name in ['Korwil', 'Korda']:
@@ -763,7 +805,9 @@ def daftar_peserta(rombongan_id):
 @admin_bp.route('/peserta')
 def daftar_peserta_global():
     # Query dasar yang menghubungkan Pendaftaran dengan Santri
-    query = db.session.query(Pendaftaran).join(Santri)
+    active_edisi = get_active_edisi()
+    query = db.session.query(Pendaftaran).join(Rombongan).join(Santri).filter(Rombongan.edisi_id == (active_edisi.id if active_edisi else -1))
+
 
     # Ambil semua parameter filter dari URL
     f_nama = request.args.get('nama')
@@ -791,7 +835,7 @@ def daftar_peserta_global():
     semua_pendaftar = query.order_by(Santri.nama).all()
 
     # Ambil semua rombongan untuk mengisi dropdown filter
-    all_rombongan = Rombongan.query.order_by(Rombongan.nama_rombongan).all()
+    all_rombongan = Rombongan.query.filter_by(edisi=active_edisi).order_by(Rombongan.nama_rombongan).all() if active_edisi else []
 
     return render_template('daftar_peserta_global.html', 
                            semua_pendaftar=semua_pendaftar, 
@@ -801,32 +845,28 @@ def daftar_peserta_global():
 @login_required
 def perizinan():
     form = IzinForm()
+    active_edisi = get_active_edisi()
+
     if form.validate_on_submit():
-        # 1. Ambil ID santri dari form
-        santri_id = form.santri.data
-        # 2. Ambil objek santri lengkap dari database
-        santri = Santri.query.get(santri_id)
-
-        if not santri:
-            flash(f"ERROR: Santri dengan ID {santri_id} tidak ditemukan.", "danger")
+        if not active_edisi:
+            flash("Tidak bisa menambah izin karena tidak ada edisi aktif.", "danger")
             return redirect(url_for('admin.perizinan'))
-
-        # 3. Buat record izin baru menggunakan objek santri yang sudah diambil
+        
+        santri = Santri.query.get(form.santri.data)
         new_izin = Izin(
+            edisi=active_edisi, # <-- Kaitkan dengan edisi aktif
             santri=santri,
             tanggal_berakhir=form.tanggal_berakhir.data,
             keterangan=form.keterangan.data
         )
-        # Update status santri menjadi 'Izin'
         santri.status_santri = 'Izin'
-        
         db.session.add(new_izin)
         db.session.commit()
         flash(f"Izin untuk {santri.nama} telah berhasil dicatat.", "success")
         return redirect(url_for('admin.perizinan'))
 
     # Logika untuk filter
-    query = Izin.query
+    query = Izin.query.filter_by(edisi=active_edisi)
     search_nama = request.args.get('nama')
     if search_nama:
         query = query.join(Santri).filter(Santri.nama.ilike(f'%{search_nama}%'))
@@ -875,8 +915,13 @@ def cabut_izin(izin_id):
 
 @admin_bp.route('/partisipan')
 def data_partisipan():
-    # 1. Ambil semua data partisipan
-    semua_partisipan = Partisipan.query.all()
+    active_edisi = get_active_edisi()
+    
+    # Ambil semua data partisipan HANYA dari edisi yang aktif
+    if active_edisi:
+        semua_partisipan = Partisipan.query.filter_by(edisi=active_edisi).all()
+    else:
+        semua_partisipan = []
     
     # 2. Kelompokkan data berdasarkan kategori
     grouped_partisipan = defaultdict(list)
@@ -891,13 +936,20 @@ def data_partisipan():
 @role_required('Korpus', 'PJ Acara')
 def tambah_partisipan():
     form = PartisipanForm()
+    active_edisi = get_active_edisi()
+
     if form.validate_on_submit():
+        if not active_edisi:
+            flash("Tidak bisa menambah status partisipan karena tidak ada edisi yang aktif.", "danger")
+            return redirect(url_for('admin.data_partisipan'))
+
         santri_id = form.santri.data
         santri = Santri.query.get(santri_id)
 
         if santri and santri.status_santri == 'Aktif':
-            # Buat record partisipan baru
+            # Buat record partisipan baru dan kaitkan dengan edisi aktif
             new_partisipan = Partisipan(
+                edisi=active_edisi,
                 santri=santri,
                 kategori=form.kategori.data
             )
@@ -972,3 +1024,137 @@ def hapus_partisipan(partisipan_id):
     db.session.commit()
     flash(f"Status partisipan untuk '{nama_santri}' telah berhasil dihapus.", "info")
     return redirect(url_for('admin.data_partisipan'))
+
+# --- MANAJEMEN EDISI ---
+@admin_bp.route('/edisi')
+@login_required
+@role_required('Korpus')
+def manajemen_edisi():
+    semua_edisi = Edisi.query.order_by(Edisi.tahun.desc()).all()
+    return render_template('manajemen_edisi.html', semua_edisi=semua_edisi)
+
+@admin_bp.route('/edisi/tambah', methods=['GET', 'POST'])
+@login_required
+@role_required('Korpus')
+def tambah_edisi():
+    form = EdisiForm()
+    if form.validate_on_submit():
+        # Jika edisi baru ini di-set sebagai aktif, nonaktifkan semua yang lain
+        if form.is_active.data:
+            Edisi.query.update({Edisi.is_active: False})
+        
+        new_edisi = Edisi(
+            nama=form.nama.data,
+            tahun=form.tahun.data,
+            is_active=form.is_active.data
+        )
+        db.session.add(new_edisi)
+        db.session.commit()
+        flash('Edisi baru berhasil ditambahkan.', 'success')
+        return redirect(url_for('admin.manajemen_edisi'))
+    return render_template('form_edisi.html', form=form, title="Tambah Edisi Baru")
+
+@admin_bp.route('/edisi/edit/<int:edisi_id>', methods=['GET', 'POST'])
+@login_required
+@role_required('Korpus')
+def edit_edisi(edisi_id):
+    edisi = Edisi.query.get_or_404(edisi_id)
+    form = EdisiForm(obj=edisi)
+    if form.validate_on_submit():
+        # Jika edisi ini di-set sebagai aktif, nonaktifkan semua yang lain
+        if form.is_active.data:
+            Edisi.query.filter(Edisi.id != edisi_id).update({Edisi.is_active: False})
+
+        edisi.nama = form.nama.data
+        edisi.tahun = form.tahun.data
+        edisi.is_active = form.is_active.data
+        db.session.commit()
+        flash('Data edisi berhasil diperbarui.', 'success')
+        return redirect(url_for('admin.manajemen_edisi'))
+    return render_template('form_edisi.html', form=form, title="Edit Edisi")
+
+@admin_bp.route('/edisi/hapus/<int:edisi_id>', methods=['POST'])
+@login_required
+@role_required('Korpus')
+def hapus_edisi(edisi_id):
+    edisi = Edisi.query.get_or_404(edisi_id)
+    # Cek apakah edisi ini masih memiliki rombongan, jika iya jangan dihapus
+    if edisi.rombongans:
+        flash('Edisi ini tidak bisa dihapus karena masih memiliki data rombongan.', 'danger')
+        return redirect(url_for('admin.manajemen_edisi'))
+    
+    db.session.delete(edisi)
+    db.session.commit()
+    flash('Edisi berhasil dihapus.', 'info')
+    return redirect(url_for('admin.manajemen_edisi'))
+
+def get_active_edisi():
+    """Mencari dan mengembalikan edisi yang sedang aktif."""
+    return Edisi.query.filter_by(is_active=True).first()
+
+# --- CONTEXT PROCESSOR ---
+# Ini membuat variabel 'active_edisi' tersedia di semua template secara otomatis
+@admin_bp.context_processor
+def inject_active_edisi():
+    return dict(active_edisi=get_active_edisi())
+
+@admin_bp.route('/riwayat')
+@login_required
+@role_required('Korpus') # Hanya Korpus yang bisa lihat riwayat
+def riwayat_edisi():
+    # Ambil semua edisi yang statusnya tidak aktif
+    arsip_edisi = Edisi.query.filter_by(is_active=False).order_by(Edisi.tahun.desc()).all()
+    
+    # Siapkan data ringkasan untuk setiap edisi arsip
+    summary_arsip = []
+    for edisi in arsip_edisi:
+        total_peserta = Pendaftaran.query.join(Rombongan).filter(Rombongan.edisi_id == edisi.id).count()
+        total_pemasukan = db.session.query(db.func.sum(Pendaftaran.total_biaya)).join(Rombongan).filter(Rombongan.edisi_id == edisi.id).scalar() or 0
+        summary_arsip.append({
+            'edisi': edisi,
+            'total_peserta': total_peserta,
+            'total_pemasukan': total_pemasukan
+        })
+
+    return render_template('riwayat_edisi.html', summary_arsip=summary_arsip)
+
+
+@admin_bp.route('/riwayat/<int:edisi_id>')
+@login_required
+@role_required('Korpus')
+def detail_arsip(edisi_id):
+    arsip_edisi = Edisi.query.get_or_404(edisi_id)
+    
+    # --- MULAI KALKULASI LENGKAP (SAMA SEPERTI DASHBOARD) ---
+    stats = {}
+    base_pendaftaran_query = Pendaftaran.query.join(Rombongan).filter(Rombongan.edisi_id == arsip_edisi.id)
+    
+    stats['total_peserta'] = base_pendaftaran_query.count()
+    stats['total_izin'] = Izin.query.filter_by(edisi=arsip_edisi).count()
+    
+    ids_terdaftar = [p.santri_id for p in base_pendaftaran_query.all()]
+    stats['santri_belum_terdaftar'] = Santri.query.filter(
+        Santri.status_santri == 'Aktif',
+        ~Santri.id.in_(ids_terdaftar)
+    ).count()
+
+    stats['total_pemasukan'] = base_pendaftaran_query.with_entities(db.func.sum(Pendaftaran.total_biaya)).scalar() or 0
+    stats['total_lunas'] = base_pendaftaran_query.filter(Pendaftaran.status_pembayaran == 'Lunas').with_entities(db.func.sum(Pendaftaran.total_biaya)).scalar() or 0
+    stats['total_belum_lunas'] = stats['total_pemasukan'] - stats['total_lunas']
+    stats['jumlah_cash'] = base_pendaftaran_query.filter(Pendaftaran.metode_pembayaran == 'Cash').count()
+    stats['jumlah_transfer'] = base_pendaftaran_query.filter(Pendaftaran.metode_pembayaran == 'Transfer').count()
+    
+    stats['pendaftar_terlambat'] = base_pendaftaran_query.filter(
+        Pendaftaran.status_pembayaran == 'Belum Lunas',
+        Rombongan.batas_pembayaran != None,
+        Rombongan.batas_pembayaran < date.today()
+    ).all()
+
+    semua_rombongan = Rombongan.query.filter_by(edisi=arsip_edisi).order_by(Rombongan.nama_rombongan).all()
+    # --- AKHIR KALKULASI ---
+
+    return render_template('dashboard.html', 
+                           stats=stats, 
+                           semua_rombongan=semua_rombongan,
+                           is_arsip=True,
+                           arsip_edisi_nama=arsip_edisi.nama)

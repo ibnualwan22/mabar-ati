@@ -198,7 +198,12 @@ class UserForm(FlaskForm):
     confirm_password = PasswordField('Konfirmasi Password', validators=[DataRequired(), EqualTo('password')])
     submit = SubmitField('Simpan User')
 
-# --- GANTI USEREDITFORM LAMA ANDA DENGAN INI ---
 class UserEditForm(UserForm):
     password = PasswordField('Password Baru (kosongi jika tidak ingin diubah)', validators=[Optional(), Length(min=6)])
     confirm_password = PasswordField('Konfirmasi Password Baru', validators=[EqualTo('password')])
+
+class EdisiForm(FlaskForm):
+    nama = StringField('Nama Edisi', validators=[DataRequired()], description="Contoh: Ramadhan 1448 H")
+    tahun = IntegerField('Tahun Hijriah', validators=[DataRequired()], description="Contoh: 1448")
+    is_active = BooleanField('Jadikan Edisi Aktif?')
+    submit = SubmitField('Simpan Edisi')

@@ -1,0 +1,45 @@
+{% extends "_admin_layout.html" %}
+
+{% block title %}Riwayat Edisi{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Riwayat Edisi Perpulangan</h1>
+    </div>
+    <p>Halaman ini berisi arsip dari semua event perpulangan yang telah selesai.</p>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Nama Edisi</th>
+                            <th>Tahun</th>
+                            <th>Total Peserta</th>
+                            <th>Total Pemasukan</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in summary_arsip %}
+                        <tr>
+                            <td><strong>{{ item.edisi.nama }}</strong></td>
+                            <td>{{ item.edisi.tahun }} H</td>
+                            <td>{{ item.total_peserta }} orang</td>
+                            <td>Rp {{ "{:,.0f}".format(item.total_pemasukan).replace(',', '.') }}</td>
+                            <td>
+                                <a href="{{ url_for('admin.detail_arsip', edisi_id=item.edisi.id) }}" class="btn btn-primary btn-sm">Lihat Detail Arsip</a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center">Belum ada edisi yang diarsipkan.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

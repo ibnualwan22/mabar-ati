@@ -1,0 +1,28 @@
+{% extends "_admin_layout.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+    <h1>{{ title }}</h1>
+    <a href="{{ url_for('admin.manajemen_edisi') }}">&larr; Kembali ke Manajemen Edisi</a>
+    
+    <form method="POST" style="margin-top: 2rem;">
+        {{ form.hidden_tag() }}
+        <div class="form-group form-grid">
+            {{ form.nama.label }}
+            {{ form.nama(placeholder=form.nama.description) }}
+        </div>
+        <div class="form-group form-grid">
+            {{ form.tahun.label }}
+            {{ form.tahun(placeholder=form.tahun.description) }}
+        </div>
+
+        <div class="form-group form-grid">
+            <div></div> <div>
+                {{ form.is_active() }}
+                {{ form.is_active.label }}
+            </div>
+        </div>
+        <div class="form-group" style="padding-left: 165px;">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+{% endblock %}

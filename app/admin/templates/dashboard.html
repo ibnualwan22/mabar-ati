@@ -10,18 +10,16 @@
     .stat-card .stat-number { font-size: 2.5em; font-weight: bold; color: #007bff; }
     .info-box { background-color: #fefefe; border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin-top: 30px; }
     .warning-box { background-color: #fff3cd; border-color: #ffeeba; padding: 20px; border-radius: 8px; margin-top: 20px; }
-    .stat-card-link {
-    text-decoration: none;
-    color: inherit; /* Mewarisi warna teks dari parent */
-}
-.stat-card:hover {
-    background-color: #e2e6ea; /* Efek hover agar terlihat bisa diklik */
-    cursor: pointer;
-}
 </style>
 
-<h1>Dashboard Utama</h1>
-<p>Ringkasan status dan keuangan dari semua kegiatan perpulangan.</p>
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    {% if is_arsip %}
+        <h1 class="h2">Arsip Dashboard: {{ arsip_edisi_nama }}</h1>
+        <a href="{{ url_for('admin.riwayat_edisi') }}" class="btn btn-secondary">&larr; Kembali ke Riwayat</a>
+    {% else %}
+        <h1 class="h2">Dashboard Utama</h1>
+    {% endif %}
+</div>
 
 {% if stats.pendaftar_terlambat %}
 <div class="warning-box">
@@ -37,26 +35,42 @@
 </div>
 {% endif %}
 
-<div class="stat-grid" style="margin-top: 20px;">
-    <div class="stat-card">
-        <h3>Peserta Rombongan</h3>
-        <p class="stat-number">{{ stats.total_peserta }}</p>
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <a href="{{ url_for('admin.daftar_peserta_global') }}" class="stat-card-link">
+            <div class="card text-center h-100">
+                <div class="card-header">Peserta Rombongan</div>
+                <div class="card-body">
+                    <h5 class="card-title stat-number text-primary">{{ stats.total_peserta }}</h5>
+                </div>
+            </div>
+        </a>
     </div>
-    <div class="stat-card">
-        <h3>Santri Belum Terdaftar</h3>
-        <p class="stat-number">{{ stats.santri_belum_terdaftar }}</p>
+    <div class="col-md-4">
+        <a href="{{ url_for('admin.manajemen_santri', rombongan_id='belum_terdaftar') }}" class="stat-card-link">
+            <div class="card text-center h-100">
+                <div class="card-header">Santri Belum Terdaftar</div>
+                <div class="card-body">
+                    <h5 class="card-title stat-number">{{ stats.santri_belum_terdaftar }}</h5>
+                </div>
+            </div>
+        </a>
     </div>
-    <a href="{{ url_for('admin.perizinan') }}" class="stat-card-link">
-    <div class="stat-card">
-        <h3>Total Santri Izin</h3>
-        <p class="stat-number">{{ stats.total_izin }}</p>
+    <div class="col-md-4">
+        <a href="{{ url_for('admin.perizinan') }}" class="stat-card-link">
+            <div class="card text-center h-100">
+                <div class="card-header">Total Santri Izin</div>
+                <div class="card-body">
+                    <h5 class="card-title stat-number text-secondary">{{ stats.total_izin }}</h5>
+                </div>
+            </div>
+        </a>
     </div>
-</a>
 </div>
 
 {% if current_user.role.name in ['Korpus', 'Korwil', 'Korda'] %}
 <div class="info-box">
-    <h2>Ringkasan Keuangan Global</h2>
+    <h2>Ringkasan Keuangan</h2>
     <div class="stat-grid">
     <div class="stat-card">
         <h3>Total Pemasukan</h3>
@@ -76,7 +90,7 @@
 {% endif %}
 
 <div class="info-box">
-    <h2>Ringkasan per Rombongan</h2>
+    <h2>Perincian Rombongan</h2>
     <table>
         <thead>
             <tr>

@@ -1,0 +1,41 @@
+{% extends "_admin_layout.html" %}
+{% block title %}Manajemen Edisi{% endblock %}
+{% block content %}
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h1>Manajemen Edisi</h1>
+        <a href="{{ url_for('admin.tambah_edisi') }}" class="btn btn-primary">+ Tambah Edisi Baru</a>
+    </div>
+    <p>Gunakan halaman ini untuk mengelola periode perpulangan (Ramadhan/Maulid).</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Nama Edisi</th>
+                <th>Tahun</th>
+                <th>Status</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for edisi in semua_edisi %}
+            <tr>
+                <td>{{ edisi.nama }}</td>
+                <td>{{ edisi.tahun }} H</td>
+                <td>
+                    {% if edisi.is_active %}
+                        <span class="status-lunas">Aktif</span>
+                    {% else %}
+                        <span style="color: #888;">Selesai</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{{ url_for('admin.edit_edisi', edisi_id=edisi.id) }}" class="btn btn-secondary action-btn">Edit</a>
+                    <form method="POST" action="{{ url_for('admin.hapus_edisi', edisi_id=edisi.id) }}" style="display:inline;" onsubmit="return confirm('Anda yakin?');">
+                        <button type="submit" class="btn btn-danger action-btn">Hapus</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

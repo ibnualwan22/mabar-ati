@@ -1,0 +1,40 @@
+# import mysql.connector
+
+# # Ganti dengan kredensial Anda jika berbeda
+# config = {
+#     'user': 'alan',
+#     'password': 'alan',
+#     'host': '165.22.106.176', # atau '127.0.0.1'
+#     'database': 'mabar_ati_dev', # Pastikan nama database sudah benar
+#     'port': 3306
+# }
+
+# try:
+#     print("Menghubungkan ke database...")
+#     cnx = mysql.connector.connect(**config)
+#     cursor = cnx.cursor()
+#     print("Berhasil terhubung.")
+
+#     santri_id_to_update = 223
+#     new_kelas_formal = "TES BERHASIL"
+    
+#     query = ("UPDATE santri SET kelas_formal = %s WHERE id = %s")
+    
+#     print(f"Menjalankan UPDATE untuk ID: {santri_id_to_update}...")
+#     cursor.execute(query, (new_kelas_formal, santri_id_to_update))
+    
+#     # Commit perubahan agar permanen
+#     cnx.commit()
+    
+#     print(f"Update selesai. {cursor.rowcount} baris terpengaruh.")
+#     print("Silakan periksa database Anda sekarang.")
+
+# except mysql.connector.Error as err:
+#     print(f"Terjadi error: {err}")
+
+# finally:
+#     if 'cursor' in locals() and cursor:
+#         cursor.close()
+#     if 'cnx' in locals() and cnx.is_connected():
+#         cnx.close()
+#         print("Koneksi ditutup.")

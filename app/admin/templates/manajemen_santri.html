@@ -33,6 +33,7 @@
 <form method="GET" action="{{ url_for('admin.manajemen_santri') }}" class="filter-form">
     <div class="filter-grid">
         <input type="text" name="nama" placeholder="Cari Nama..." value="{{ request.args.get('nama', '') }}">
+        <input type="text" name="alamat" placeholder="Cari Alamat..." value="{{ request.args.get('alamat', '') }}">
         <input type="text" name="asrama" placeholder="Cari Asrama..." value="{{ request.args.get('asrama', '') }}">
         <select name="status">
             <option value="">-- Semua Status Santri --</option>
@@ -178,6 +179,9 @@ document.addEventListener('DOMContentLoaded', function () {
     openModalBtn.onclick = () => { modal.style.display = 'block'; searchInput.focus(); };
     closeModalBtn.onclick = () => { modal.style.display = 'none'; };
     window.onclick = (event) => { if (event.target == modal) { modal.style.display = 'none'; } };
+    new TomSelect('#filter-alamat',{
+    plugins: ['remove_button'],
+});
 
     searchInput.addEventListener('keyup', (e) => {
         clearTimeout(debounceTimer);
