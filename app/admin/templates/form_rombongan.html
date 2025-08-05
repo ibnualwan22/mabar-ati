@@ -52,6 +52,14 @@
             {{ form.jadwal_keberangkatan.label }}
             {{ form.jadwal_keberangkatan() }}
         </div>
+        <div class="form-group form-grid">
+            {{ form.batas_pembayaran.label }}
+            {{ form.batas_pembayaran() }}
+        </div>
+        <div class="form-group form-grid">
+            {{ form.kuota.label }}
+            {{ form.kuota(placeholder="Contoh: 50") }}
+        </div>
         <div class="form-group">
             {{ form.titik_kumpul.label }}
             {{ form.titik_kumpul(size=32) }}

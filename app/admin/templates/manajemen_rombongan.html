@@ -1,0 +1,49 @@
+{% extends "_admin_layout.html" %}
+
+{% block title %}Manajemen Rombongan{% endblock %}
+
+{% block content %}
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h1>Manajemen Rombongan</h1>
+        {% if current_user.role.name == 'Korpus' %}
+        <a href="{{ url_for('admin.tambah_rombongan') }}" class="btn btn-primary">+ Tambah Rombongan Baru</a>
+        {% endif %}
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nama Rombongan</th>
+                <th>Penanggung Jawab</th>
+                <th>Jadwal Berangkat</th>
+                <th>Kuota</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rombongan in semua_rombongan %}
+            <tr>
+                <td>{{ rombongan.id }}</td>
+                <td>{{ rombongan.nama_rombongan }}</td>
+                <td>{{ rombongan.penanggung_jawab }}</td>
+                <td>{{ rombongan.jadwal_keberangkatan.strftime('%d %b %Y %H:%M') }}</td>
+                <td>{{ rombongan.pendaftar|length }} / {{ rombongan.kuota or '∞' }}</td>
+                <td>
+                    <a href="{{ url_for('admin.daftar_peserta', rombongan_id=rombongan.id) }}" class="btn btn-primary action-btn">Lihat Peserta ({{ rombongan.pendaftar|length }})</a>
+                    {% if current_user.role.name == 'Korpus' %}
+                    <a href="{{ url_for('admin.edit_rombongan', id=rombongan.id) }}" class="btn btn-secondary action-btn">Edit Rombongan</a>
+                    <form method="POST" action="{{ url_for('admin.hapus_rombongan', id=rombongan.id) }}" style="display:inline;" onsubmit="return confirm('Anda yakin?');">
+                        <button type="submit" class="btn btn-danger action-btn">Hapus</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="text-align: center;">Belum ada data rombongan.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

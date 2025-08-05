@@ -1,24 +1,248 @@
 from . import admin_bp
-from flask import render_template, redirect, url_for, flash, request, jsonify
-from app.models import Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan
-from app.admin.forms import RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm
-from app import db
+from flask import render_template, redirect, url_for, flash, request, jsonify, abort
+from app.models import Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, User
+from app.admin.forms import RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, UserForm, UserEditForm
+from app import db, login_manager
 import json, requests
 from collections import defaultdict
 from sqlalchemy import update, text
+from datetime import date
+from flask_login import login_user, logout_user, current_user, login_required
+from functools import wraps
 
 
 
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+# Di app/admin/routes.py
+@admin_bp.before_request
+def require_login():
+    # Cek jika endpoint yang diminta BUKAN halaman login dan user BELUM login
+    if request.endpoint and 'admin.' in request.endpoint and request.endpoint != 'admin.login':
+        if not current_user.is_authenticated:
+            return redirect(url_for('admin.login', next=request.url))
+
+@admin_bp.route('/login', methods=['GET', 'POST'])
+def login():
+    # Jika user sudah login, arahkan ke dashboard
+    if current_user.is_authenticated:
+        return redirect(url_for('admin.dashboard'))
+    
+    form = LoginForm()
+    if form.validate_on_submit():
+        # Cari user di database berdasarkan username
+        user = User.query.filter_by(username=form.username.data).first()
+        
+        # Cek apakah user ada dan passwordnya cocok
+        if user and user.check_password(form.password.data):
+            login_user(user, remember=form.remember_me.data)
+            # Arahkan ke halaman yang tadinya ingin diakses, atau ke dashboard
+            next_page = request.args.get('next')
+            return redirect(next_page) if next_page else redirect(url_for('admin.dashboard'))
+        else:
+            flash('Username atau password salah.', 'danger')
+            
+    return render_template('login.html', form=form)
+
+# Di app/admin/routes.py
+@admin_bp.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('admin.login'))
+
+def role_required(role_name):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not current_user.is_authenticated or current_user.role.name != role_name:
+                abort(403) # Forbidden
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+@admin_bp.route('/users')
+@login_required
+@role_required('Korpus')
+def manajemen_user():
+    users = User.query.all()
+    return render_template('manajemen_user.html', users=users)
+@admin_bp.route('/users/tambah', methods=['GET', 'POST'])
+@login_required
+@role_required('Korpus')
+def tambah_user():
+    form = UserForm()
+    if form.validate_on_submit():
+        # Buat objek user terlebih dahulu
+        new_user = User(
+            username=form.username.data,
+            role=form.role.data
+        )
+        # Set password-nya
+        new_user.set_password(form.password.data)
+        
+        # Tentukan rombongan yang dikelola berdasarkan peran
+        if form.role.data.name == 'Korwil':
+            new_user.managed_rombongan = form.managed_rombongan_multi.data
+        elif form.role.data.name == 'Korda':
+            # Pastikan ada data sebelum dimasukkan ke list
+            if form.managed_rombongan_single.data:
+                new_user.managed_rombongan = [form.managed_rombongan_single.data]
+            else:
+                new_user.managed_rombongan = []
+        else: # Untuk peran lain, kosongkan
+            new_user.managed_rombongan = []
+            
+        # Simpan user baru ke database
+        db.session.add(new_user)
+        db.session.commit()
+        
+        flash('User baru berhasil ditambahkan.', 'success')
+        return redirect(url_for('admin.manajemen_user'))
+        
+    return render_template('form_user.html', form=form, title="Tambah User Baru")
+
+
+@admin_bp.route('/users/edit/<int:user_id>', methods=['GET', 'POST'])
+@login_required
+@role_required('Korpus')
+def edit_user(user_id):
+    user = User.query.get_or_404(user_id)
+    # Saat GET, form diisi dengan data awal dari 'user'
+    form = UserEditForm(obj=user)
+    
+    # Saat POST, kita proses datanya
+    if form.validate_on_submit():
+        user.username = form.username.data
+        user.role = form.role.data
+        
+        # Tentukan rombongan yang dikelola berdasarkan peran
+        if form.role.data.name == 'Korwil':
+            user.managed_rombongan = form.managed_rombongan_multi.data
+        elif form.role.data.name == 'Korda':
+            if form.managed_rombongan_single.data:
+                user.managed_rombongan = [form.managed_rombongan_single.data]
+            else:
+                user.managed_rombongan = []
+        else:
+            user.managed_rombongan = []
+
+        # Jika ada password baru yang diisi, update passwordnya
+        if form.password.data:
+            user.set_password(form.password.data)
+            
+        # Simpan semua perubahan
+        db.session.commit()
+        
+        flash('Data user berhasil diperbarui.', 'success')
+        return redirect(url_for('admin.manajemen_user'))
+
+    # Saat GET, isi field rombongan secara manual karena 'obj' tidak menanganinya dengan baik untuk field ini
+    if user.role.name == 'Korwil':
+        form.managed_rombongan_multi.data = user.managed_rombongan
+    elif user.role.name == 'Korda' and user.managed_rombongan:
+        form.managed_rombongan_single.data = user.managed_rombongan[0]
+
+    return render_template('form_user.html', form=form, title="Edit User")
+
+@admin_bp.route('/users/hapus/<int:user_id>', methods=['POST'])
+@login_required
+@role_required('Korpus')
+def hapus_user(user_id):
+    user = User.query.get_or_404(user_id)
+    # Jangan biarkan korpus menghapus dirinya sendiri
+    if user == current_user:
+        flash('Anda tidak bisa menghapus akun Anda sendiri.', 'danger')
+        return redirect(url_for('admin.manajemen_user'))
+    db.session.delete(user)
+    db.session.commit()
+    flash('User berhasil dihapus.', 'info')
+    return redirect(url_for('admin.manajemen_user'))
+
+def role_required(*roles): # Terima beberapa nama peran
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not current_user.is_authenticated:
+                return redirect(url_for('admin.login', next=request.url))
+            if current_user.role.name not in roles:
+                abort(403) # Forbidden - Akses Ditolak
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 @admin_bp.route('/')
+@login_required
 def dashboard():
-    semua_rombongan = Rombongan.query.order_by(Rombongan.jadwal_keberangkatan.desc()).all()
-    return render_template('dashboard.html', semua_rombongan=semua_rombongan)
+    # Ambil daftar ID rombongan yang dikelola user
+    managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
 
+    # Query dasar
+    base_pendaftaran_query = Pendaftaran.query
+    
+    # Jika user bukan Korpus, filter query-nya
+    if current_user.role.name in ['Korwil', 'Korda']:
+        if not managed_rombongan_ids:
+             base_pendaftaran_query = base_pendaftaran_query.filter(db.false()) # Return empty query
+        else:
+            base_pendaftaran_query = base_pendaftaran_query.filter(Pendaftaran.rombongan_id.in_(managed_rombongan_ids))
+
+    # --- Kalkulasi Statistik Utama ---
+    total_peserta = base_pendaftaran_query.count()
+    total_izin = Santri.query.filter_by(status_santri='Izin').count()
+    santri_belum_terdaftar = Santri.query.filter(Santri.status_santri == 'Aktif', Santri.pendaftaran == None).count()
+    
+    # --- Kalkulasi Keuangan Global berdasarkan data yang boleh dilihat ---
+    total_pemasukan = base_pendaftaran_query.with_entities(db.func.sum(Pendaftaran.total_biaya)).scalar() or 0
+    total_lunas = base_pendaftaran_query.filter(Pendaftaran.status_pembayaran == 'Lunas').with_entities(db.func.sum(Pendaftaran.total_biaya)).scalar() or 0
+    total_belum_lunas = total_pemasukan - total_lunas
+    jumlah_cash = base_pendaftaran_query.filter_by(metode_pembayaran='Cash').count()
+    jumlah_transfer = base_pendaftaran_query.filter_by(metode_pembayaran='Transfer').count()
+    
+    # --- Pendaftar Terlambat Bayar ---
+    pendaftar_terlambat_query = base_pendaftaran_query.join(Rombongan).filter(
+        Pendaftaran.status_pembayaran == 'Belum Lunas',
+        Rombongan.batas_pembayaran != None,
+        Rombongan.batas_pembayaran < date.today()
+    )
+    pendaftar_terlambat = pendaftar_terlambat_query.all()
+
+    # --- Tabel Ringkasan per Rombongan ---
+    rombongan_query = Rombongan.query
+    if current_user.role.name in ['Korwil', 'Korda']:
+        if not managed_rombongan_ids:
+            rombongan_query = rombongan_query.filter(db.false())
+        else:
+            rombongan_query = rombongan_query.filter(Rombongan.id.in_(managed_rombongan_ids))
+    
+    semua_rombongan = rombongan_query.order_by(Rombongan.nama_rombongan).all()
+    
+    stats = { 'total_peserta': total_peserta, 'total_izin': total_izin, 'santri_belum_terdaftar': santri_belum_terdaftar, 'total_pemasukan': total_pemasukan, 'total_lunas': total_lunas, 'total_belum_lunas': total_belum_lunas, 'jumlah_cash': jumlah_cash, 'jumlah_transfer': jumlah_transfer, 'pendaftar_terlambat': pendaftar_terlambat }
+    return render_template('dashboard.html', stats=stats, semua_rombongan=semua_rombongan)
+
+# --- BUAT FUNGSI BARU INI ---
+@admin_bp.route('/rombongan')
+@login_required
+@role_required('Korpus', 'Korwil', 'Korda')
+def manajemen_rombongan():
+    query = Rombongan.query
+    if current_user.role.name in ['Korwil', 'Korda']:
+        managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+        if not managed_rombongan_ids:
+            query = query.filter(db.false())
+        else:
+            query = query.filter(Rombongan.id.in_(managed_rombongan_ids))
+    
+    semua_rombongan = query.order_by(Rombongan.jadwal_keberangkatan.desc()).all()
+    return render_template('manajemen_rombongan.html', semua_rombongan=semua_rombongan)
 
 # --- KODE BARU DIMULAI DI SINI ---
 
 @admin_bp.route('/rombongan/tambah', methods=['GET', 'POST'])
+@login_required
+@role_required('Korpus') # Hanya Korpus yang bisa buat rombongan baru
 def tambah_rombongan():
     form = RombonganForm()
     if form.validate_on_submit():
@@ -29,6 +253,8 @@ def tambah_rombongan():
             kontak_person=form.kontak_person.data,
             nomor_rekening=form.nomor_rekening.data,
             jadwal_keberangkatan=form.jadwal_keberangkatan.data,
+            batas_pembayaran=form.batas_pembayaran.data,
+            kuota=form.kuota.data,
             titik_kumpul=form.titik_kumpul.data,
             nama_armada=form.nama_armada.data,
             keterangan_armada=form.keterangan_armada.data,
@@ -55,6 +281,8 @@ def tambah_rombongan():
     return render_template('form_rombongan.html', form=form, title='Tambah Rombongan Baru')
 
 @admin_bp.route('/rombongan/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+@role_required('Korpus') # Hanya Korpus yang bisa buat rombongan baru
 def edit_rombongan(id):
     # Ambil data rombongan dari database berdasarkan ID
     rombongan = Rombongan.query.get_or_404(id)
@@ -68,6 +296,8 @@ def edit_rombongan(id):
         rombongan.kontak_person = form.kontak_person.data
         rombongan.nomor_rekening = form.nomor_rekening.data
         rombongan.jadwal_keberangkatan = form.jadwal_keberangkatan.data
+        rombongan.batas_pembayaran = form.batas_pembayaran.data
+        rombongan.kuota = form.kuota.data
         rombongan.titik_kumpul = form.titik_kumpul.data
         rombongan.nama_armada = form.nama_armada.data
         rombongan.keterangan_armada = form.keterangan_armada.data
@@ -95,6 +325,8 @@ def edit_rombongan(id):
     form.kontak_person.data = rombongan.kontak_person
     form.nomor_rekening.data = rombongan.nomor_rekening
     form.jadwal_keberangkatan.data = rombongan.jadwal_keberangkatan
+    form.batas_pembayaran.data = rombongan.batas_pembayaran
+    form.kuota.data = rombongan.kuota
     form.titik_kumpul.data = rombongan.titik_kumpul
     form.nama_armada.data = rombongan.nama_armada
     form.keterangan_armada.data = rombongan.keterangan_armada
@@ -116,6 +348,8 @@ def edit_rombongan(id):
 
 
 @admin_bp.route('/rombongan/hapus/<int:id>', methods=['POST'])
+@login_required
+@role_required('Korpus') # Hanya Korpus yang bisa buat rombongan baru
 def hapus_rombongan(id):
     rombongan = Rombongan.query.get_or_404(id)
     db.session.delete(rombongan)
@@ -144,19 +378,19 @@ def search_wilayah_proxy():
         print(f"Error fetching API: {e}")
         return jsonify({"error": "Gagal mengambil data dari API"}), 500
     
-@admin_bp.route('/rombongan/<int:rombongan_id>/kelola-santri')
-def kelola_santri(rombongan_id):
-    # Ambil data rombongan saat ini
-    rombongan = Rombongan.query.get_or_404(rombongan_id)
+# @admin_bp.route('/rombongan/<int:rombongan_id>/kelola-santri')
+# def kelola_santri(rombongan_id):
+#     # Ambil data rombongan saat ini
+#     rombongan = Rombongan.query.get_or_404(rombongan_id)
     
-    # Untuk saat ini, kita hanya akan menampilkan halaman kosong
-    # Logika untuk filter dan search akan ditambahkan nanti
+#     # Untuk saat ini, kita hanya akan menampilkan halaman kosong
+#     # Logika untuk filter dan search akan ditambahkan nanti
     
-    # Ambil semua santri yang terhubung dengan rombongan ini
-    # (Relasi `rombongan.santris` sudah kita buat di model)
-    peserta = rombongan.santris
+#     # Ambil semua santri yang terhubung dengan rombongan ini
+#     # (Relasi `rombongan.santris` sudah kita buat di model)
+#     peserta = rombongan.santris
 
-    return render_template('kelola_santri.html', rombongan=rombongan, peserta=peserta)
+#     return render_template('kelola_santri.html', rombongan=rombongan, peserta=peserta)
 
 @admin_bp.route('/santri')
 def manajemen_santri():
@@ -219,6 +453,8 @@ def search_student_proxy():
 
 # Route ini untuk memproses aksi "Impor"
 @admin_bp.route('/santri/impor', methods=['POST'])
+@login_required
+@role_required('Korpus') # Hanya Korpus yang bisa buat rombongan baru
 def impor_santri():
     data = request.get_json()
     if not data:
@@ -247,6 +483,8 @@ def impor_santri():
     return jsonify({"success": True, "message": f"{new_santri.nama} berhasil diimpor."})
 
 @admin_bp.route('/santri/impor-semua', methods=['POST'])
+@login_required
+@role_required('Korpus') # Hanya Korpus yang bisa buat rombongan baru
 def impor_semua_santri():
     try:
         api_url = "https://dev.amtsilatipusat.com/api/student?limit=2000"
@@ -327,6 +565,8 @@ def edit_santri(id):
     return redirect(url_for('admin.manajemen_santri'))
 
 @admin_bp.route('/santri/hapus/<int:id>', methods=['POST'])
+@login_required
+@role_required('Korpus') # Hanya Korpus yang bisa buat rombongan baru
 def hapus_santri(id):
     santri = Santri.query.get_or_404(id)
     nama_santri = santri.nama
@@ -337,55 +577,68 @@ def hapus_santri(id):
 
 # Ganti route pendaftaran_rombongan yang lama dengan ini
 @admin_bp.route('/pendaftaran', methods=['GET', 'POST'])
+@login_required
+@role_required('Korpus', 'Korda')
 def pendaftaran_rombongan():
     form = PendaftaranForm()
     
-    # --- BLOK KODE BARU UNTUK MENGATASI VALIDASI ---
-    # Ambil rombongan_id dari form yang disubmit
+    # Mengisi pilihan dropdown rombongan berdasarkan peran user
+    if current_user.role.name == 'Korda':
+        form.rombongan.choices = [(r.id, r.nama_rombongan) for r in current_user.managed_rombongan]
+    else: # Untuk Korpus, tampilkan semua
+        form.rombongan.choices = [(0, '-- Pilih Rombongan --')] + [(r.id, r.nama_rombongan) for r in Rombongan.query.order_by(Rombongan.nama_rombongan).all()]
+
+    # Jika ini adalah request POST, kita perlu mengisi pilihan 'titik_turun' sebelum validasi
     if request.method == 'POST':
         rombongan_id_from_form = request.form.get('rombongan')
         if rombongan_id_from_form:
             selected_rombongan = Rombongan.query.get(rombongan_id_from_form)
             if selected_rombongan:
-                # Isi choices untuk titik_turun SEBELUM validasi
                 form.titik_turun.choices = [(t.titik_turun, t.titik_turun) for t in selected_rombongan.tarifs]
-    # --- AKHIR BLOK KODE BARU ---
 
     if form.validate_on_submit():
-        # 1. Ambil ID santri dari form
+        # Ambil ID dari form
+        rombongan_id = form.rombongan.data
         santri_id = form.santri.data
-        # 2. Ambil objek santri lengkap dari database menggunakan ID
+        
+        # Ambil objek lengkap dari database
+        rombongan = Rombongan.query.get(rombongan_id)
         santri = Santri.query.get(santri_id)
 
-        if not santri:
-            flash(f"ERROR: Santri dengan ID {santri_id} tidak ditemukan.", "danger")
+        if not santri or not rombongan:
+            flash("ERROR: Santri atau Rombongan tidak ditemukan.", "danger")
             return redirect(url_for('admin.pendaftaran_rombongan'))
 
-        # 3. Sekarang kita bisa cek statusnya dengan aman
+        # Lakukan validasi status santri
         if santri.status_santri == 'Izin':
             flash(f"ERROR: {santri.nama} sedang Izin dan tidak bisa didaftarkan.", "danger")
             return redirect(url_for('admin.pendaftaran_rombongan'))
 
-        selected_tarif = Tarif.query.filter_by(rombongan_id=form.rombongan.data.id, titik_turun=form.titik_turun.data).first()
+        # Gunakan rombongan_id langsung untuk query tarif
+        selected_tarif = Tarif.query.filter_by(rombongan_id=rombongan_id, titik_turun=form.titik_turun.data).first()
         if not selected_tarif:
             flash("Terjadi error: Titik turun tidak valid.", "danger")
             return redirect(url_for('admin.pendaftaran_rombongan'))
         
+        # Kalkulasi biaya
         total_biaya = selected_tarif.harga_bus + selected_tarif.fee_korda + 10000
         if form.jenis_perjalanan.data == 'Pulang Pergi':
             total_biaya *= 2
 
+        # Buat objek Pendaftaran dengan objek lengkap
         pendaftaran = Pendaftaran(
-            santri=santri, rombongan=form.rombongan.data, titik_turun=form.titik_turun.data,
+            santri=santri, rombongan=rombongan, titik_turun=form.titik_turun.data,
             jenis_perjalanan=form.jenis_perjalanan.data, status_pembayaran=form.status_pembayaran.data,
-            metode_pembayaran=form.metode_pembayaran.data, # <-- TAMBAHKAN INI
+            metode_pembayaran=form.metode_pembayaran.data,
             nomor_bus=form.nomor_bus.data, total_biaya=total_biaya
         )
         db.session.add(pendaftaran)
         db.session.commit()
-        flash(f"{santri.nama} berhasil didaftarkan!", "success")
+        
+        flash(f"{santri.nama} berhasil didaftarkan ke {rombongan.nama_rombongan}!", "success")
         return redirect(url_for('admin.daftar_peserta', rombongan_id=pendaftaran.rombongan.id))
     
+    # Logika untuk menampilkan daftar peserta di bawah (jika ada rombongan_id di URL)
     peserta_terdaftar = []
     rombongan_id_get = request.args.get('rombongan_id', type=int)
     if rombongan_id_get:
@@ -396,8 +649,14 @@ def pendaftaran_rombongan():
     return render_template('pendaftaran_rombongan.html', form=form, peserta=peserta_terdaftar)
 
 @admin_bp.route('/pendaftaran/edit/<int:pendaftaran_id>', methods=['GET', 'POST'])
+@login_required
+@role_required('Korpus', 'Korda')
 def edit_pendaftaran(pendaftaran_id):
     pendaftaran = Pendaftaran.query.get_or_404(pendaftaran_id)
+    if current_user.role.name == 'Korda' and pendaftaran.rombongan not in current_user.managed_rombongan:
+        abort(403)
+        if pendaftaran.rombongan not in current_user.managed_rombongan:
+            abort(403) # Akses ditolak jika mencoba mengedit pendaftaran di luar rombongannya
     form = PendaftaranEditForm(obj=pendaftaran)
     
     # Isi pilihan titik turun secara dinamis berdasarkan rombongan pendaftaran
@@ -426,8 +685,12 @@ def edit_pendaftaran(pendaftaran_id):
 
 
 @admin_bp.route('/pendaftaran/hapus/<int:pendaftaran_id>', methods=['POST'])
+@login_required
+@role_required('Korpus', 'Korda')
 def hapus_pendaftaran(pendaftaran_id):
     pendaftaran = Pendaftaran.query.get_or_404(pendaftaran_id)
+    if current_user.role.name == 'Korda' and pendaftaran.rombongan not in current_user.managed_rombongan:
+        abort(403)
     rombongan_id = pendaftaran.rombongan_id # Simpan ID rombongan untuk redirect
     nama_santri = pendaftaran.santri.nama
     
@@ -489,6 +752,10 @@ def search_santri_api():
 @admin_bp.route('/rombongan/<int:rombongan_id>/peserta')
 def daftar_peserta(rombongan_id):
     rombongan = Rombongan.query.get_or_404(rombongan_id)
+    # --- VERIFIKASI KEPEMILIKAN ---
+    if current_user.role.name in ['Korwil', 'Korda']:
+        if rombongan not in current_user.managed_rombongan:
+            abort(403)
     # `rombongan.pendaftar` adalah backref yang kita buat di model Pendaftaran
     # Ini akan berisi semua data pendaftaran untuk rombongan ini
     return render_template('daftar_peserta.html', rombongan=rombongan)
@@ -531,6 +798,7 @@ def daftar_peserta_global():
                            all_rombongan=all_rombongan)
 
 @admin_bp.route('/perizinan', methods=['GET', 'POST'])
+@login_required
 def perizinan():
     form = IzinForm()
     if form.validate_on_submit():
@@ -583,6 +851,8 @@ def search_active_santri_api():
     return jsonify({'results': results})
 
 @admin_bp.route('/izin/cabut/<int:izin_id>', methods=['POST'])
+@login_required
+@role_required('Korpus', 'Keamanan') # Keamanan dan Korpus
 def cabut_izin(izin_id):
     # 1. Cari data izin berdasarkan ID-nya
     izin = Izin.query.get_or_404(izin_id)
@@ -617,6 +887,8 @@ def data_partisipan():
 
 # Buat route placeholder untuk form tambah agar link-nya tidak error
 @admin_bp.route('/partisipan/tambah', methods=['GET', 'POST'])
+@login_required
+@role_required('Korpus', 'PJ Acara')
 def tambah_partisipan():
     form = PartisipanForm()
     if form.validate_on_submit():
@@ -666,3 +938,37 @@ def search_santri_for_partisipan_api():
         } for s in santri_results
     ]
     return jsonify({'results': results})
+
+@admin_bp.route('/partisipan/edit/<int:partisipan_id>', methods=['GET', 'POST'])
+@login_required
+@role_required('Korpus', 'PJ Acara')
+def edit_partisipan(partisipan_id):
+    partisipan = Partisipan.query.get_or_404(partisipan_id)
+    form = PartisipanEditForm(obj=partisipan)
+
+    if form.validate_on_submit():
+        partisipan.kategori = form.kategori.data
+        db.session.commit()
+        flash(f"Kategori untuk {partisipan.santri.nama} berhasil diubah.", "success")
+        return redirect(url_for('admin.data_partisipan'))
+
+    return render_template('edit_partisipan.html', form=form, partisipan=partisipan)
+
+
+@admin_bp.route('/partisipan/hapus/<int:partisipan_id>', methods=['POST'])
+@login_required
+@role_required('Korpus', 'PJ Acara')
+def hapus_partisipan(partisipan_id):
+    partisipan = Partisipan.query.get_or_404(partisipan_id)
+    santri = partisipan.santri
+    nama_santri = santri.nama
+    
+    # Kembalikan status santri menjadi 'Aktif'
+    santri.status_santri = 'Aktif'
+    
+    # Hapus record partisipan
+    db.session.delete(partisipan)
+    
+    db.session.commit()
+    flash(f"Status partisipan untuk '{nama_santri}' telah berhasil dihapus.", "info")
+    return redirect(url_for('admin.data_partisipan'))

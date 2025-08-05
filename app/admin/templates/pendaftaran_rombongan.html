@@ -80,6 +80,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const totalBiayaP = document.getElementById('total-biaya');    
     let tarifData = [];
 
+
+     // --- FUNGSI BARU UNTUK MEMUAT DETAIL ---
+    function loadRombonganDetails(rombonganId) {
+        if (!rombonganId) {
+            resetForm();
+            return;
+        }
+        fetch(`/admin/api/rombongan-detail/${rombonganId}`)
+            .then(response => response.json())
+            .then(data => {
+                updateInfoRombongan(data.cakupan_wilayah, data.tarifs);
+                updateTitikTurun(data.tarifs);
+                // Kita hapus updateDaftarPeserta dari sini karena sudah ditangani backend
+                tarifData = data.tarifs;
+                calculateBiaya();
+            });
+    }
         // --- KLIK SANTRI OTOMATIS DAFTAR ---
     const urlParams = new URLSearchParams(window.location.search);
     const santriIdFromUrl = urlParams.get('santri_id');
@@ -159,6 +176,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     titikTurunSelect.addEventListener('change', calculateBiaya);
     jenisPerjalananSelect.addEventListener('change', calculateBiaya);
+
+    // Cek apakah sudah ada rombongan yang terpilih (baik dari URL atau dari filter Korda)
+    if (rombonganSelect.value) {
+        loadRombonganDetails(rombonganSelect.value);
+    }
     
     // --- FUNGSI-FUNGSI HELPER ---
     function updateInfoRombongan(wilayah, tarifs) {

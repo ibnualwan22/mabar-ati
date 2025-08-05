@@ -45,6 +45,7 @@
                 <tr>
                     <th>No.</th>
                     <th>Nama Santri</th>
+                    <th>Alamat</th>
                     <th>Rombongan</th>
                     <th>Titik Turun</th>
                     <th>Status Bayar</th>
@@ -62,6 +63,7 @@
                         <small>NIS: {{ pendaftaran.santri.nis }}</small>
                     </td>
                     <td>{{ pendaftaran.rombongan.nama_rombongan }}</td>
+                    <td>{{ pendaftaran.santri.kabupaten or '-' }}</td>
                     <td>{{ pendaftaran.titik_turun }}</td>
                     <td>
                         {% if pendaftaran.status_pembayaran == 'Lunas' %}

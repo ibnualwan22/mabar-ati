@@ -1,5 +1,43 @@
 from . import db
 from datetime import datetime
+from flask_login import UserMixin # <-- Import UserMixin
+from app import bcrypt # <-- Import bcrypt dari app
+
+
+
+# Tabel perantara untuk relasi many-to-many antara User dan Rombongan
+user_rombongan = db.Table('user_rombongan',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('rombongan_id', db.Integer, db.ForeignKey('rombongan.id'), primary_key=True)
+)
+
+class Role(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), unique=True, nullable=False)
+    users = db.relationship('User', backref='role', lazy=True)
+
+    def __repr__(self):
+        return f'<Role {self.name}>'
+
+class User(db.Model, UserMixin): # UserMixin adalah tambahan dari Flask-Login
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128))
+    
+    role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
+    
+    # Relasi many-to-many ke Rombongan yang dikelola
+    managed_rombongan = db.relationship('Rombongan', secondary=user_rombongan, lazy='subquery',
+        backref=db.backref('managers', lazy=True))
+
+    def set_password(self, password):
+        self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+
+    def check_password(self, password):
+        return bcrypt.check_password_hash(self.password_hash, password)
+
+    def __repr__(self):
+        return f'<User {self.username}>'
 
 class Pendaftaran(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -27,6 +65,8 @@ class Rombongan(db.Model):
     kontak_person = db.Column(db.String(20), nullable=False)
     nomor_rekening = db.Column(db.String(50), nullable=False)
     jadwal_keberangkatan = db.Column(db.DateTime, nullable=False)
+    batas_pembayaran = db.Column(db.Date) # Kolom untuk tanggal
+    kuota = db.Column(db.Integer, default=0)
     titik_kumpul = db.Column(db.String(200), nullable=False)
     nama_armada = db.Column(db.String(100))
     keterangan_armada = db.Column(db.Text)

@@ -1,44 +1,104 @@
 {% extends "_admin_layout.html" %}
 
-{% block title %}Manajemen Rombongan{% endblock %}
+{% block title %}Dashboard Utama{% endblock %}
 
 {% block content %}
-    <h1>Manajemen Rombongan</h1>
-    <p>
-        <a href="{{ url_for('admin.tambah_rombongan') }}" class="btn btn-primary">+ Tambah Rombongan Baru</a>
-    </p>
+<style>
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+    .stat-card { background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 20px; border-radius: 8px; }
+    .stat-card h3 { margin-top: 0; color: #495057; }
+    .stat-card .stat-number { font-size: 2.5em; font-weight: bold; color: #007bff; }
+    .info-box { background-color: #fefefe; border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin-top: 30px; }
+    .warning-box { background-color: #fff3cd; border-color: #ffeeba; padding: 20px; border-radius: 8px; margin-top: 20px; }
+    .stat-card-link {
+    text-decoration: none;
+    color: inherit; /* Mewarisi warna teks dari parent */
+}
+.stat-card:hover {
+    background-color: #e2e6ea; /* Efek hover agar terlihat bisa diklik */
+    cursor: pointer;
+}
+</style>
+
+<h1>Dashboard Utama</h1>
+<p>Ringkasan status dan keuangan dari semua kegiatan perpulangan.</p>
+
+{% if stats.pendaftar_terlambat %}
+<div class="warning-box">
+    <h4><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg> 
+        Perhatian: Ada {{ stats.pendaftar_terlambat|length }} santri terlambat membayar!
+    </h4>
+    <p>Berikut adalah daftar santri yang belum lunas dan sudah melewati batas pembayaran:</p>
+    <ul>
+        {% for p in stats.pendaftar_terlambat %}
+        <li><strong>{{ p.santri.nama }}</strong> (Rombongan: {{ p.rombongan.nama_rombongan }})</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div class="stat-grid" style="margin-top: 20px;">
+    <div class="stat-card">
+        <h3>Peserta Rombongan</h3>
+        <p class="stat-number">{{ stats.total_peserta }}</p>
+    </div>
+    <div class="stat-card">
+        <h3>Santri Belum Terdaftar</h3>
+        <p class="stat-number">{{ stats.santri_belum_terdaftar }}</p>
+    </div>
+    <a href="{{ url_for('admin.perizinan') }}" class="stat-card-link">
+    <div class="stat-card">
+        <h3>Total Santri Izin</h3>
+        <p class="stat-number">{{ stats.total_izin }}</p>
+    </div>
+</a>
+</div>
+
+{% if current_user.role.name in ['Korpus', 'Korwil', 'Korda'] %}
+<div class="info-box">
+    <h2>Ringkasan Keuangan Global</h2>
+    <div class="stat-grid">
+    <div class="stat-card">
+        <h3>Total Pemasukan</h3>
+        <p class="stat-number">Rp {{ "{:,.0f}".format(stats.total_pemasukan).replace(',', '.') }}</p>
+    </div>
+    <div class="stat-card" style="border-left: 5px solid #28a745;">
+        <h3>Diterima (Lunas)</h3>
+        <p class="stat-number" style="color: #28a745;">Rp {{ "{:,.0f}".format(stats.total_lunas).replace(',', '.') }}</p>
+    </div>
+    <div class="stat-card" style="border-left: 5px solid #dc3545;">
+        <h3>Sisa Tagihan</h3>
+        <p class="stat-number" style="color: #dc3545;">Rp {{ "{:,.0f}".format(stats.total_belum_lunas).replace(',', '.') }}</p>
+    </div>
+</div>
+    <p style="margin-top: 20px;"><strong>Metode Pembayaran:</strong> {{ stats.jumlah_cash }} Cash / {{ stats.jumlah_transfer }} Transfer</p>
+</div>
+{% endif %}
+
+<div class="info-box">
+    <h2>Ringkasan per Rombongan</h2>
     <table>
         <thead>
             <tr>
-                <th>ID</th>
                 <th>Nama Rombongan</th>
-                <th>Penanggung Jawab</th>
-                <th>Jadwal Berangkat</th>
-                <th>Armada</th>
-                <th>Aksi</th>
+                <th>Kuota</th>
+                <th>Total Peserta</th>
+                <th>Lunas</th>
+                <th>Belum Lunas</th>
+                <th>Total Pemasukan</th>
             </tr>
         </thead>
         <tbody>
             {% for rombongan in semua_rombongan %}
             <tr>
-                <td>{{ rombongan.id }}</td>
-                <td>{{ rombongan.nama_rombongan }}</td>
-                <td>{{ rombongan.penanggung_jawab }}</td>
-                <td>{{ rombongan.jadwal_keberangkatan.strftime('%d %b %Y %H:%M') }}</td>
-                <td>{{ rombongan.nama_armada }}</td>
-                <td>
-                    <a href="{{ url_for('admin.daftar_peserta', rombongan_id=rombongan.id) }}" class="btn btn-primary action-btn">Lihat Peserta ({{ rombongan.pendaftar|length }})</a>
-                    <a href="{{ url_for('admin.edit_rombongan', id=rombongan.id) }}" class="btn btn-secondary action-btn">Edit Rombongan</a>
-                    <form method="POST" action="{{ url_for('admin.hapus_rombongan', id=rombongan.id) }}" style="display:inline;" onsubmit="return confirm('Anda yakin ingin menghapus rombongan \'{{ rombongan.nama_rombongan }}\'?');">
-                        <button type="submit" class="btn btn-danger action-btn">Hapus</button>
-                    </form>
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="6" style="text-align: center;">Belum ada data rombongan.</td>
-            </tr>
+                <td><strong>{{ rombongan.nama_rombongan }}</strong></td>
+                <td>{{ rombongan.pendaftar|length }} / {{ rombongan.kuota or '∞' }}</td>
+                <td>{{ rombongan.pendaftar|length }}</td>
+                <td>{{ rombongan.pendaftar|selectattr('status_pembayaran', 'equalto', 'Lunas')|list|length }}</td>
+                <td>{{ rombongan.pendaftar|selectattr('status_pembayaran', 'equalto', 'Belum Lunas')|list|length }}</td>
+                <td>Rp {{ "{:,.0f}".format(rombongan.pendaftar|sum(attribute='total_biaya')).replace(',', '.') }}</td>            </tr>
             {% endfor %}
         </tbody>
     </table>
+</div>
 {% endblock %}

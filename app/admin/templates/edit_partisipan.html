@@ -1,0 +1,25 @@
+{% extends "_admin_layout.html" %}
+
+{% block title %}Edit Partisipan{% endblock %}
+
+{% block content %}
+    <h1>Edit Status Partisipan</h1>
+    <p>
+        <strong>Santri:</strong> {{ partisipan.santri.nama }}<br>
+        <strong>Status Saat Ini:</strong> Partisipan
+    </p>
+    <a href="{{ url_for('admin.data_partisipan') }}">&larr; Kembali ke Data Partisipan</a>
+
+    <form method="POST" action="" style="margin-top: 2rem;">
+        {{ form.hidden_tag() }}
+
+        <div class="form-group form-grid">
+            {{ form.kategori.label }}
+            {{ form.kategori() }}
+        </div>
+
+        <div class="form-group" style="padding-left: 165px; margin-top: 2em;">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+{% endblock %}

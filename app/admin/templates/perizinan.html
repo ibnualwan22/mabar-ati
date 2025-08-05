@@ -6,6 +6,7 @@
     <h1>Manajemen Perizinan Santri</h1>
     <p>Gunakan form di bawah untuk mencatat santri yang izin tidak mengikuti kegiatan perpulangan.</p>
     
+    {% if current_user.role.name in ['Korpus', 'Keamanan'] %}
     <hr>
     <h3>Form Izin Baru</h3>
     <form method="POST">
@@ -28,6 +29,7 @@
             {{ form.submit(class="btn btn-primary") }}
         </div>
     </form>
+{% endif %}
     <hr>
 
     <h3>Daftar Santri yang Sedang Izin</h3>
@@ -46,8 +48,13 @@
                 <th>Asrama</th>
                 <th>Alamat</th>
                 <th>Izin Sampai</th>
+                {% if current_user.role.name in ['Korpus', 'Keamanan'] %}
                 <th>Keterangan</th>
+                {% endif %}
+                
+                {% if current_user.role.name in ['Korpus', 'Keamanan'] %}
                 <th>Aksi</th>
+                {% endif %}
             </tr>
         </thead>
         <tbody>
@@ -58,12 +65,17 @@
                 <td>{{ izin.santri.asrama }}</td>
                 <td>{{ izin.santri.kabupaten }}</td>
                 <td>{{ izin.tanggal_berakhir.strftime('%d %b %Y') }}</td>
+                {% if current_user.role.name in ['Korpus', 'Keamanan'] %}
                 <td>{{ izin.keterangan }}</td>
+                {% endif %}
+
+                {% if current_user.role.name in ['Korpus', 'Keamanan'] %}
                 <td>
-    <form method="POST" action="{{ url_for('admin.cabut_izin', izin_id=izin.id) }}" onsubmit="return confirm('Anda yakin ingin mencabut izin untuk santri \'{{ izin.santri.nama }}\'?');">
-        <button type="submit" class="btn btn-danger action-btn">Cabut Izin</button>
-    </form>
-</td>
+                    <form method="POST" action="{{ url_for('admin.cabut_izin', izin_id=izin.id) }}" onsubmit="return confirm('Anda yakin?');">
+                        <button type="submit" class="btn btn-danger action-btn">Cabut Izin</button>
+                    </form>
+                </td>
+                {% endif %}
             </tr>
             {% else %}
             <tr>

@@ -1,10 +1,11 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, IntegerField, DateTimeLocalField, FieldList, FormField, SubmitField, Form, HiddenField
-from wtforms.validators import DataRequired, Optional
-from wtforms_sqlalchemy.fields import QuerySelectField
-from wtforms import SelectField
-from app.models import Rombongan, Santri
+from wtforms import StringField, TextAreaField, IntegerField, DateTimeLocalField, FieldList, FormField, SubmitField, Form, HiddenField, SelectField, PasswordField, BooleanField
+from wtforms.validators import DataRequired, Optional, EqualTo, Length
+from wtforms_sqlalchemy.fields import QuerySelectField, QuerySelectMultipleField
+from app.models import Rombongan, Santri, Role
 from wtforms.fields import DateField
+from wtforms.widgets import ListWidget, CheckboxInput
+
 
 
 
@@ -28,6 +29,8 @@ class RombonganForm(FlaskForm):
         format='%Y-%m-%dT%H:%M', 
         validators=[DataRequired()]
     )
+    batas_pembayaran = DateField('Batas Akhir Pembayaran', format='%Y-%m-%d', validators=[Optional()])
+    kuota = IntegerField('Kuota Kursi', default=0, validators=[Optional()])
     titik_kumpul = StringField('Titik Kumpul', validators=[DataRequired()])
     nama_armada = StringField('Nama Armada', validators=[Optional()])
     keterangan_armada = TextAreaField('Keterangan Armada', validators=[Optional()])
@@ -88,15 +91,9 @@ def santri_query():
     return Santri.query.filter(Santri.status_santri == 'Aktif', Santri.pendaftaran == None).order_by(Santri.nama).all()
 
 class PendaftaranForm(FlaskForm):
-    rombongan = QuerySelectField(
-        'Pilih Rombongan',
-        query_factory=rombongan_query,
-        get_label='nama_rombongan',
-        allow_blank=True,
-        blank_text='-- Pilih Rombongan --',
-        validators=[DataRequired()]
-    )
-    # Cukup gunakan HiddenField untuk menampung ID santri yang dipilih
+    # Ubah rombongan menjadi SelectField biasa, pilihannya akan diisi di route
+    rombongan = SelectField('Pilih Rombongan', coerce=int, validators=[DataRequired()])
+    
     santri = HiddenField('Pilih Santri', validators=[DataRequired()])
     titik_turun = SelectField('Pilih Titik Turun', choices=[], validators=[DataRequired()])
     jenis_perjalanan = SelectField(
@@ -114,7 +111,6 @@ class PendaftaranForm(FlaskForm):
         choices=[('', '-- Pilih Metode --'), ('Cash', 'Cash'), ('Transfer', 'Transfer')],
         validators=[Optional()]
     )
-
     nomor_bus = StringField('Nomor Bus', validators=[Optional()])
     submit = SubmitField('Daftarkan Santri')
 
@@ -158,3 +154,51 @@ class PartisipanForm(FlaskForm):
     santri = HiddenField('Pilih Santri', validators=[DataRequired()])
     kategori = StringField('Kategori Partisipan', validators=[DataRequired()], description="Contoh: Panitia, Peserta Lomba, Khotmil Qur'an")
     submit = SubmitField('Simpan Status Partisipan')
+
+class PartisipanEditForm(FlaskForm):
+    kategori = StringField('Ubah Kategori Partisipan', validators=[DataRequired()])
+    submit = SubmitField('Simpan Perubahan')
+
+class LoginForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    remember_me = BooleanField('Ingat Saya')
+    submit = SubmitField('Login')
+
+def role_query():
+    return Role.query.order_by(Role.name).all()
+
+def rombongan_query():
+    return Rombongan.query.order_by(Rombongan.nama_rombongan).all()
+
+class UserForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired(), Length(min=4, max=25)])
+    role = QuerySelectField('Peran (Role)', query_factory=role_query, get_label='name', allow_blank=False)
+    
+    # --- UBAH FIELD INI ---
+    managed_rombongan_multi = QuerySelectMultipleField(
+        'Rombongan yang Dikelola (Korwil)',
+        query_factory=rombongan_query,
+        get_label='nama_rombongan',
+        widget=ListWidget(prefix_label=False),      # Gunakan list widget
+        option_widget=CheckboxInput(),              # Render setiap opsi sebagai checkbox
+        validators=[Optional()]
+    )
+    # Field BARU untuk Korda (hanya bisa pilih satu)
+    managed_rombongan_single = QuerySelectField(
+        'Rombongan yang Dikelola (Korda)',
+        query_factory=rombongan_query,
+        get_label='nama_rombongan',
+        allow_blank=True,
+        blank_text='-- Pilih Satu Rombongan --',
+        validators=[Optional()]
+    )
+
+    password = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
+    confirm_password = PasswordField('Konfirmasi Password', validators=[DataRequired(), EqualTo('password')])
+    submit = SubmitField('Simpan User')
+
+# --- GANTI USEREDITFORM LAMA ANDA DENGAN INI ---
+class UserEditForm(UserForm):
+    password = PasswordField('Password Baru (kosongi jika tidak ingin diubah)', validators=[Optional(), Length(min=6)])
+    confirm_password = PasswordField('Konfirmasi Password Baru', validators=[EqualTo('password')])

@@ -1,6 +1,6 @@
 {% extends "_admin_layout.html" %}
 
-{% block title %}Manajemen Santri{% endblock %}
+{% block title %}Data Global{% endblock %}
 
 {% block content %}
 <style>
@@ -24,7 +24,7 @@
 </style>
 
 <div style="display: flex; justify-content: space-between; align-items: center;">
-    <h1>Manajemen Santri</h1>
+    <h1>Data Global Santri</h1>
 </div>
 <p>Halaman ini berisi semua data santri yang sudah diimpor ke dalam sistem.</p>
 
@@ -57,10 +57,12 @@
     </div>
 </form>
 <div class="action-buttons">
+    {% if current_user.role.name == 'Korpus' %}
     <button id="open-impor-modal" class="btn btn-primary">[+ Impor Santri Individual]</button>
-    <form method="POST" action="{{ url_for('admin.impor_semua_santri') }}" style="display: inline-block;" onsubmit="return confirm('Proses ini akan mengambil semua data dari server induk dan mungkin membutuhkan waktu. Lanjutkan?');">
+    <form method="POST" action="{{ url_for('admin.impor_semua_santri') }}" style="display: inline-block;" onsubmit="return confirm('Proses ini akan memakan waktu. Lanjutkan?');">
         <button type="submit" class="btn btn-secondary">[Impor & Sinkronkan Semua Santri]</button>
     </form>
+    {% endif %}
 </div>
 <hr>
 
@@ -71,7 +73,6 @@
             <tr>
                 <th>No.</th>
                 <th>Nama Santri</th>
-                <th>NIS</th>
                 <th>Asrama</th>
                 <th>Alamat</th>
                 <th>Kelas Formal</th>
@@ -86,7 +87,6 @@
             <tr>
                 <td>{{ loop.index + (pagination.page - 1) * pagination.per_page }}</td>
                 <td>{{ santri.nama }}</td>
-                <td>{{ santri.nis }}</td>
                 <td>{{ santri.asrama or '-' }}</td>
                 <td>{{ santri.kabupaten or '-' }}</td>
                 <td>{{ santri.kelas_formal or '-' }}</td>
@@ -100,15 +100,20 @@
                     {% endif %}
                 </td>
                 <td>
-    {% if santri.pendaftaran %}
-        <a href="{{ url_for('admin.edit_pendaftaran', pendaftaran_id=santri.pendaftaran.id) }}" class="btn btn-secondary action-btn">Edit Pendaftaran</a>
-    {% else %}
-        <a href="{{ url_for('admin.pendaftaran_rombongan', santri_id=santri.id) }}" class="btn btn-primary action-btn">+ Daftarkan</a>
+    {% if current_user.role.name in ['Korpus', 'Korda'] %}
+        {% if santri.pendaftaran %}
+            <a href="{{ url_for('admin.edit_pendaftaran', pendaftaran_id=santri.pendaftaran.id) }}" class="btn btn-secondary action-btn">Edit Pendaftaran</a>
+        {% else %}
+            <a href="{{ url_for('admin.pendaftaran_rombongan', santri_id=santri.id) }}" class="btn btn-primary action-btn">+ Daftarkan</a>
+        {% endif %}
     {% endif %}
-    
+
+    {% if current_user.role.name == 'Korpus' %}
     <form method="POST" action="{{ url_for('admin.hapus_santri', id=santri.id) }}" style="display:inline;" onsubmit="return confirm('Anda yakin ingin menghapus \'{{ santri.nama }}\' dari sistem lokal?');">
         <button type="submit" class="btn btn-danger action-btn">Hapus</button>
     </form>
+    {% endif %}
+</td>
 </td>
             </tr>
             {% else %}

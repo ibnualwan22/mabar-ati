@@ -1,0 +1,68 @@
+{% extends "_admin_layout.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+    <h1>{{ title }}</h1>
+    <a href="{{ url_for('admin.manajemen_user') }}">&larr; Kembali ke Manajemen User</a>
+    <form method="POST" style="margin-top: 2rem;">
+        {{ form.hidden_tag() }}
+
+        <div class="form-group form-grid">
+            {{ form.username.label }}
+            {{ form.username() }}
+        </div>
+        <div class="form-group form-grid">
+            {{ form.password.label }}
+            {{ form.password() }}
+        </div>
+        <div class="form-group form-grid">
+            {{ form.confirm_password.label }}
+            {{ form.confirm_password() }}
+        </div>
+        <div class="form-group form-grid">
+            {{ form.role.label }}
+            {{ form.role() }}
+        </div>
+        
+        <div class="form-group form-grid" id="field-korwil" style="display: none;">
+            {{ form.managed_rombongan_multi.label }}
+            {{ form.managed_rombongan_multi() }}
+        </div>
+        
+        <div class="form-group form-grid" id="field-korda" style="display: none;">
+            {{ form.managed_rombongan_single.label }}
+            {{ form.managed_rombongan_single() }}
+        </div>
+
+        <div class="form-group" style="padding-left: 165px;">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const roleSelect = document.getElementById('role');
+    const fieldKorwil = document.getElementById('field-korwil');
+    const fieldKorda = document.getElementById('field-korda');
+
+    function toggleRombonganFields() {
+        const selectedRoleText = roleSelect.options[roleSelect.selectedIndex].text;
+        
+        if (selectedRoleText === 'Korwil') {
+            fieldKorwil.style.display = 'grid';
+            fieldKorda.style.display = 'none';
+        } else if (selectedRoleText === 'Korda') {
+            fieldKorwil.style.display = 'none';
+            fieldKorda.style.display = 'grid';
+        } else {
+            fieldKorwil.style.display = 'none';
+            fieldKorda.style.display = 'none';
+        }
+    }
+
+    // Panggil saat halaman dimuat
+    toggleRombonganFields();
+    // Panggil saat role diganti
+    roleSelect.addEventListener('change', toggleRombonganFields);
+});
+</script>
+{% endblock %}

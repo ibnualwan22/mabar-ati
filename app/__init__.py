@@ -2,28 +2,33 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from config import config_by_name # Import dictionary config
 from flask_migrate import Migrate # PASTIKAN BARIS INI ADA
+from flask_login import LoginManager
+from flask_bcrypt import Bcrypt
 
 
 # Inisialisasi SQLAlchemy
 db = SQLAlchemy()
 migrate = Migrate() # <- Tambahkan ini
+bcrypt = Bcrypt() # <-- Inisialisasi Bcrypt
+login_manager = LoginManager()
+
+# Arahkan user ke halaman login jika mencoba akses halaman terproteksi
+login_manager.login_view = 'admin.login' 
+# Pesan yang muncul saat redirect
+login_manager.login_message = 'Silakan login untuk mengakses halaman ini.'
+login_manager.login_message_category = 'info'
 
 
 def create_app(config_name):
-    """
-    Function factory untuk membuat aplikasi Flask.
-    """
     app = Flask(__name__)
-
     app.jinja_env.add_extension('jinja2.ext.do')
-    
-
-    # Memuat konfigurasi dari objek config
     app.config.from_object(config_by_name[config_name])
-
-    # Menginisialisasi database dengan aplikasi
+    
+    
     db.init_app(app)
     migrate.init_app(app, db) # <- Tambahkan ini, hubungkan app dan db
+    bcrypt.init_app(app) # <-- Hubungkan bcrypt dengan app
+    login_manager.init_app(app)
 
 
     # --- PENAMBAHAN BARU ---
