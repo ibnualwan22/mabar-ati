@@ -53,8 +53,8 @@
 <body>
     <nav class="navbar">
         <a href="{{ url_for('admin.dashboard') }}" class="{{ 'active' if request.endpoint == 'admin.dashboard' else '' }}">Dashboard</a>
-        {% if current_user.role.name in ['Korpus', 'Korwil', 'Korda'] %}
-      
+        
+        {% if current_user.role.name == 'Korpus' %}
         <a href="{{ url_for('admin.manajemen_rombongan') }}" class="{{ 'active' if request.endpoint == 'admin.manajemen_rombongan' else '' }}">Daftar Rombongan</a>
         {% endif %}
       

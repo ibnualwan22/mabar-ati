@@ -5,7 +5,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h2">Detail Bus & Manifest</h1>
-    <a href="{{ url_for('admin.manajemen_rombongan', id=bus.rombongan_id) }}" class="btn btn-secondary">&larr; Kembali ke Daftar Rombongan</a>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">&larr; Kembali ke Dashboard</a>
 </div>
 
 <div class="card mb-4">
@@ -17,7 +17,7 @@
         <p><strong>Plat Nomor:</strong> {{ bus.plat_nomor or '-' }}</p>
         <p><strong>Keterangan:</strong> {{ bus.keterangan or '-' }}</p>
         <hr>
-        <p class="h4">Kapasitas: <span class="fw-bold">{{ total_peserta }} / {{ bus.kuota }}</span> Terisi</p>
+<p class="h5">Kapasitas Pulang: <span class="fw-bold">{{ jumlah_peserta_pulang }} / {{ bus.kuota }}</span> Terisi</p>
     </div>
 </div>
 
@@ -26,24 +26,30 @@
         <h5>Manifest Perjalanan Pulang (Meninggalkan Pondok)</h5>
     </div>
     <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-sm table-striped">
-                <thead><tr><th>No.</th><th>Nama Santri</th><th>NIS</th><th>Asrama</th><th>Titik Turun</th></tr></thead>
-                <tbody>
-                    {% for p in peserta_pulang|sort(attribute='santri.nama') %}
-                    <tr>
-                        <td>{{ loop.index }}</td>
-                        <td>{{ p.santri.nama }}</td>
-                        <td>{{ p.santri.nis }}</td>
-                        <td>{{ p.santri.asrama }}</td>
-                        <td>{{ p.titik_turun }}</td>
-                    </tr>
-                    {% else %}
-                    <tr><td colspan="5" class="text-center">Tidak ada peserta untuk perjalanan pulang.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        {% if grouped_peserta_pulang %}
+            {% for titik_turun, pendaftar_list in grouped_peserta_pulang.items()|sort %}
+            <div class="mb-4">
+                <h6><strong>Titik Turun: {{ titik_turun }}</strong> (Jumlah: {{ pendaftar_list|length }})</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead><tr><th>No.</th><th>Nama Santri</th><th>NIS</th><th>Asrama</th></tr></thead>
+                        <tbody>
+                            {% for p in pendaftar_list|sort(attribute='santri.nama') %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ p.santri.nama }}</td>
+                                <td>{{ p.santri.nis }}</td>
+                                <td>{{ p.santri.asrama }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-center">Tidak ada peserta untuk perjalanan pulang di bus ini.</p>
+        {% endif %}
     </div>
 </div>
 
@@ -52,23 +58,45 @@
         <h5>Manifest Perjalanan Kembali (Menuju Pondok)</h5>
     </div>
     <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-sm table-striped">
-                <thead><tr><th>No.</th><th>Nama Santri</th><th>NIS</th><th>Asrama</th></tr></thead>
-                <tbody>
-                    {% for p in peserta_kembali|sort(attribute='santri.nama') %}
-                    <tr>
-                        <td>{{ loop.index }}</td>
-                        <td>{{ p.santri.nama }}</td>
-                        <td>{{ p.santri.nis }}</td>
-                        <td>{{ p.santri.asrama }}</td>
-                    </tr>
-                    {% else %}
-                    <tr><td colspan="4" class="text-center">Tidak ada peserta untuk perjalanan kembali.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        <p>
+            <strong>Jadwal Kembali:</strong> {{ bus.rombongan.jadwal_kembali.strftime('%d %b %Y %H:%M') if bus.rombongan.jadwal_kembali else 'Belum diatur' }}<br>
+            <strong>Titik Kumpul Kembali:</strong> {{ bus.rombongan.titik_kumpul_kembali or 'Belum diatur' }}
+        <p class="h5">Kapasitas Kembali: <span class="fw-bold">{{ jumlah_peserta_kembali }} / {{ bus.kuota }}</span> Terisi</p>
+        </p>
+        
+        <hr>
+
+        {% if grouped_peserta_kembali %}
+            {% for kabupaten, pendaftar_list in grouped_peserta_kembali.items()|sort %}
+            <div class="mb-4">
+                <h6><strong>Titik Jemput : {{ kabupaten or 'Tidak Diketahui' }}</strong> (Jumlah: {{ pendaftar_list|length }})</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>No.</th>
+                                <th>Nama Santri</th>
+                                <th>NIS</th>
+                                <th>Asrama</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in pendaftar_list|sort(attribute='santri.nama') %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ p.santri.nama }}</td>
+                                <td>{{ p.santri.nis }}</td>
+                                <td>{{ p.santri.asrama }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-center">Tidak ada peserta untuk perjalanan kembali di bus ini.</p>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

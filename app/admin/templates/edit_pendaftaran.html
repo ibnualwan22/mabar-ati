@@ -10,37 +10,32 @@
 
     <form method="POST" action="" class="mt-4">
         {{ form.hidden_tag() }}
-
-        <div class="card">
-            <div class="card-body">
-                <div class="form-group form-grid">
-                    {{ form.jenis_perjalanan.label(class="form-label") }}
-                    {{ form.jenis_perjalanan(class="form-select") }}
-                </div>
-                <div class="form-group form-grid">
-                    {{ form.titik_turun.label(class="form-label") }}
-                    {{ form.titik_turun(class="form-select") }}
-                </div>
-                <div class="form-group form-grid" id="field-bus-pulang">
-                    {{ form.bus_pulang.label(class="form-label") }}
-                    {{ form.bus_pulang(class="form-select") }}
-                </div>
-                <div class="form-group form-grid" id="field-bus-kembali">
-                    {{ form.bus_kembali.label(class="form-label") }}
-                    {{ form.bus_kembali(class="form-select") }}
-                </div>
-                <div class="form-group form-grid">
-                    {{ form.status_pembayaran.label(class="form-label") }}
-                    {{ form.status_pembayaran(class="form-select") }}
-                </div>
-                <div class="form-group form-grid">
-                    {{ form.metode_pembayaran.label(class="form-label") }}
-                    {{ form.metode_pembayaran(class="form-select") }}
-                </div>
-                <div class="form-group mt-4" style="padding-left: 165px;">
-                    {{ form.submit(class="btn btn-primary") }}
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header fw-bold">Detail Perjalanan Pulang (Meninggalkan Pondok)</div>
+                    <div class="card-body">
+                        <div class="mb-3">{{ form.status_pulang.label(class="form-label") }} {{ form.status_pulang(class="form-select") }}</div>
+                        <div class="mb-3">{{ form.metode_pembayaran_pulang.label(class="form-label") }} {{ form.metode_pembayaran_pulang(class="form-select") }}</div>
+                        <div class="mb-3">{{ form.titik_turun.label(class="form-label") }} {{ form.titik_turun(class="form-select") }}</div>
+                        <div class="mb-3">{{ form.bus_pulang.label(class="form-label") }} {{ form.bus_pulang(class="form-select") }}</div>
+                    </div>
                 </div>
             </div>
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header fw-bold">Detail Perjalanan Kembali (Menuju Pondok)</div>
+                    <div class="card-body">
+                        <div class="mb-3">{{ form.status_kembali.label(class="form-label") }} {{ form.status_kembali(class="form-select") }}</div>
+                        <div class="mb-3">{{ form.metode_pembayaran_kembali.label(class="form-label") }} {{ form.metode_pembayaran_kembali(class="form-select") }}</div>
+                        <div class="mb-3">{{ form.bus_kembali.label(class="form-label") }} {{ form.bus_kembali(class="form-select") }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group mt-4">
+            {{ form.submit(class="btn btn-primary") }}
         </div>
     </form>
 

@@ -76,46 +76,52 @@ def santri_query():
     return Santri.query.filter(Santri.status_santri == 'Aktif', Santri.pendaftaran == None).order_by(Santri.nama).all()
 
 class PendaftaranForm(FlaskForm):
-    rombongan = SelectField('Pilih Rombongan', validators=[DataRequired()]) 
+    rombongan = SelectField('Pilih Rombongan', validators=[DataRequired()])
     santri = HiddenField('Pilih Santri', validators=[DataRequired()])
-    titik_turun = SelectField('Pilih Titik Turun', choices=[], validators=[DataRequired()])
     
-    jenis_perjalanan = SelectField(
-        'Jenis Perjalanan',
-        choices=[
-            ('', '-- Pilih Jenis Perjalanan --'),
-            ('Pulang Saja', 'Pulang Saja'),
-            ('Kembali Saja', 'Kembali Saja'),
-            ('Pulang Pergi', 'Pulang Pergi')
-        ],
+    # Detail Perjalanan Pulang
+    status_pulang = SelectField(
+        'Status Pembayaran Pulang',
+        choices=[('Belum Bayar', 'Belum Bayar'), ('Lunas', 'Lunas'), ('Tidak Ikut', 'Tidak Ikut')],
+        default='Belum Bayar',
         validators=[DataRequired()]
     )
-    
-    # --- PERUBAHAN DI SINI ---
-    # Field baru untuk memilih bus, coerce=int akan mengubah value menjadi integer
-    bus_pulang = SelectField('Pilih Bus Pulang', validators=[Optional()])
-    bus_kembali = SelectField('Pilih Bus Kembali', validators=[Optional()])
-    
-    status_pembayaran = SelectField('Status Pembayaran', choices=[('Belum Lunas', 'Belum Lunas'), ('Lunas', 'Lunas')], validators=[DataRequired()])
-    metode_pembayaran = SelectField('Metode Pembayaran', choices=[('', '-- Pilih Metode --'), ('Cash', 'Cash'), ('Transfer', 'Transfer')], validators=[Optional()])
+    metode_pembayaran_pulang = SelectField('Metode Pembayaran (Pulang)', choices=[('', '-'), ('Cash', 'Cash'), ('Transfer', 'Transfer')], validators=[Optional()])
+    bus_pulang = SelectField('Bus Pulang', validators=[Optional()])
+    titik_turun = SelectField('Pilih Titik Turun', choices=[], validators=[DataRequired()])
+
+    # Detail Perjalanan Kembali
+    status_kembali = SelectField(
+        'Status Pembayaran Kembali',
+        choices=[('Belum Bayar', 'Belum Bayar'), ('Lunas', 'Lunas'), ('Tidak Ikut', 'Tidak Ikut')],
+        default='Belum Bayar',
+        validators=[DataRequired()]
+    )
+    metode_pembayaran_kembali = SelectField('Metode Pembayaran (Kembali)', choices=[('', '-'), ('Cash', 'Cash'), ('Transfer', 'Transfer')], validators=[Optional()])
+    bus_kembali = SelectField('Bus Kembali', validators=[Optional()])
     
     submit = SubmitField('Daftarkan Santri')
 
 class PendaftaranEditForm(FlaskForm):
-    titik_turun = SelectField('Titik Turun', validators=[DataRequired()])
-    jenis_perjalanan = SelectField(
-        'Jenis Perjalanan',
-        choices=[
-            ('Pulang Saja', 'Pulang Saja'),
-            ('Kembali Saja', 'Kembali Saja'),
-            ('Pulang Pergi', 'Pulang Pergi')
-        ],
+    # Field untuk Perjalanan Pulang
+    status_pulang = SelectField(
+        'Status Perjalanan Pulang',
+        choices=[('Belum Bayar', 'Belum Bayar'), ('Lunas', 'Lunas'), ('Tidak Ikut', 'Tidak Ikut')],
         validators=[DataRequired()]
     )
+    metode_pembayaran_pulang = SelectField('Metode Pembayaran (Pulang)', choices=[('', '-'), ('Cash', 'Cash'), ('Transfer', 'Transfer')], validators=[Optional()])
     bus_pulang = SelectField('Bus Pulang', validators=[Optional()])
+    titik_turun = SelectField('Titik Turun', validators=[DataRequired()])
+
+    # Field untuk Perjalanan Kembali
+    status_kembali = SelectField(
+        'Status Perjalanan Kembali',
+        choices=[('Belum Bayar', 'Belum Bayar'), ('Lunas', 'Lunas'), ('Tidak Ikut', 'Tidak Ikut')],
+        validators=[DataRequired()]
+    )
+    metode_pembayaran_kembali = SelectField('Metode Pembayaran (Kembali)', choices=[('', '-'), ('Cash', 'Cash'), ('Transfer', 'Transfer')], validators=[Optional()])
     bus_kembali = SelectField('Bus Kembali', validators=[Optional()])
-    status_pembayaran = SelectField('Status Pembayaran', choices=[('Belum Lunas', 'Belum Lunas'), ('Lunas', 'Lunas')], validators=[DataRequired()])
-    metode_pembayaran = SelectField('Metode Pembayaran', choices=[('', '-- Pilih Metode --'), ('Cash', 'Cash'), ('Transfer', 'Transfer')], validators=[Optional()])
+    
     submit = SubmitField('Simpan Perubahan')
 
 def santri_aktif_query():
