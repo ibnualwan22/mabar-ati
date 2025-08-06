@@ -33,6 +33,7 @@
 <form method="GET" action="{{ url_for('admin.manajemen_santri') }}" class="filter-form">
     <div class="filter-grid">
         <input type="text" name="nama" placeholder="Cari Nama..." value="{{ request.args.get('nama', '') }}">
+        <!-- jangan diubah untuk filter alamat yaa -->
         <input type="text" name="alamat" placeholder="Cari Alamat..." value="{{ request.args.get('alamat', '') }}">
         <input type="text" name="asrama" placeholder="Cari Asrama..." value="{{ request.args.get('asrama', '') }}">
         <select name="status">

@@ -19,31 +19,16 @@ class TarifForm(Form):
     fee_korda = IntegerField('Fee Korda', default=0, validators=[Optional()])
 
 class RombonganForm(FlaskForm):
-    """Form utama untuk menambah/edit rombongan."""
     nama_rombongan = StringField('Nama Rombongan', validators=[DataRequired()])
     penanggung_jawab = StringField('Penanggung Jawab', validators=[DataRequired()])
     kontak_person = StringField('Kontak Person (WA)', validators=[DataRequired()])
     nomor_rekening = StringField('Nomor Rekening', validators=[DataRequired()])
-    jadwal_keberangkatan = DateTimeLocalField(
-        'Jadwal Keberangkatan', 
-        format='%Y-%m-%dT%H:%M', 
-        validators=[DataRequired()]
-    )
+    jadwal_keberangkatan = DateTimeLocalField('Jadwal Keberangkatan', format='%Y-%m-%dT%H:%M', validators=[DataRequired()])
     batas_pembayaran = DateField('Batas Akhir Pembayaran', format='%Y-%m-%d', validators=[Optional()])
-    kuota = IntegerField('Kuota Kursi', default=0, validators=[Optional()])
     titik_kumpul = StringField('Titik Kumpul', validators=[DataRequired()])
-    nama_armada = StringField('Nama Armada', validators=[Optional()])
-    keterangan_armada = TextAreaField('Keterangan Armada', validators=[Optional()])
     cakupan_wilayah = HiddenField('Cakupan Wilayah')
-
-
-    # Bagian dinamis untuk tarif
-    tarifs = FieldList(
-        FormField(TarifForm),
-        min_entries=1,
-        label='Tarif Berdasarkan Titik Turun'
-    )
-
+    tarifs = FieldList(FormField(TarifForm), min_entries=1, label='Tarif Berdasarkan Titik Turun')
+    # Field kuota dan nama_armada sudah dihapus
     submit = SubmitField('Simpan Rombongan')
 
 def rombongan_query():
@@ -91,47 +76,46 @@ def santri_query():
     return Santri.query.filter(Santri.status_santri == 'Aktif', Santri.pendaftaran == None).order_by(Santri.nama).all()
 
 class PendaftaranForm(FlaskForm):
-    # Ubah rombongan menjadi SelectField biasa, pilihannya akan diisi di route
-    rombongan = SelectField('Pilih Rombongan', coerce=int, validators=[DataRequired()])
-    
+    rombongan = SelectField('Pilih Rombongan', validators=[DataRequired()]) 
     santri = HiddenField('Pilih Santri', validators=[DataRequired()])
     titik_turun = SelectField('Pilih Titik Turun', choices=[], validators=[DataRequired()])
+    
     jenis_perjalanan = SelectField(
         'Jenis Perjalanan',
-        choices=[('Pulang Saja', 'Pulang Saja'), ('Pulang Pergi', 'Pulang Pergi')],
+        choices=[
+            ('', '-- Pilih Jenis Perjalanan --'),
+            ('Pulang Saja', 'Pulang Saja'),
+            ('Kembali Saja', 'Kembali Saja'),
+            ('Pulang Pergi', 'Pulang Pergi')
+        ],
         validators=[DataRequired()]
     )
-    status_pembayaran = SelectField(
-        'Status Pembayaran',
-        choices=[('Belum Lunas', 'Belum Lunas'), ('Lunas', 'Lunas')],
-        validators=[DataRequired()]
-    )
-    metode_pembayaran = SelectField(
-        'Metode Pembayaran',
-        choices=[('', '-- Pilih Metode --'), ('Cash', 'Cash'), ('Transfer', 'Transfer')],
-        validators=[Optional()]
-    )
-    nomor_bus = StringField('Nomor Bus', validators=[Optional()])
+    
+    # --- PERUBAHAN DI SINI ---
+    # Field baru untuk memilih bus, coerce=int akan mengubah value menjadi integer
+    bus_pulang = SelectField('Pilih Bus Pulang', validators=[Optional()])
+    bus_kembali = SelectField('Pilih Bus Kembali', validators=[Optional()])
+    
+    status_pembayaran = SelectField('Status Pembayaran', choices=[('Belum Lunas', 'Belum Lunas'), ('Lunas', 'Lunas')], validators=[DataRequired()])
+    metode_pembayaran = SelectField('Metode Pembayaran', choices=[('', '-- Pilih Metode --'), ('Cash', 'Cash'), ('Transfer', 'Transfer')], validators=[Optional()])
+    
     submit = SubmitField('Daftarkan Santri')
 
 class PendaftaranEditForm(FlaskForm):
     titik_turun = SelectField('Titik Turun', validators=[DataRequired()])
     jenis_perjalanan = SelectField(
         'Jenis Perjalanan',
-        choices=[('Pulang Saja', 'Pulang Saja'), ('Pulang Pergi', 'Pulang Pergi')],
+        choices=[
+            ('Pulang Saja', 'Pulang Saja'),
+            ('Kembali Saja', 'Kembali Saja'),
+            ('Pulang Pergi', 'Pulang Pergi')
+        ],
         validators=[DataRequired()]
     )
-    status_pembayaran = SelectField(
-        'Status Pembayaran',
-        choices=[('Belum Lunas', 'Belum Lunas'), ('Lunas', 'Lunas')],
-        validators=[DataRequired()]
-    )
-    metode_pembayaran = SelectField(
-        'Metode Pembayaran',
-        choices=[('', '-- Pilih Metode --'), ('Cash', 'Cash'), ('Transfer', 'Transfer')],
-        validators=[Optional()]
-    )
-    nomor_bus = StringField('Nomor Bus', validators=[Optional()])
+    bus_pulang = SelectField('Bus Pulang', validators=[Optional()])
+    bus_kembali = SelectField('Bus Kembali', validators=[Optional()])
+    status_pembayaran = SelectField('Status Pembayaran', choices=[('Belum Lunas', 'Belum Lunas'), ('Lunas', 'Lunas')], validators=[DataRequired()])
+    metode_pembayaran = SelectField('Metode Pembayaran', choices=[('', '-- Pilih Metode --'), ('Cash', 'Cash'), ('Transfer', 'Transfer')], validators=[Optional()])
     submit = SubmitField('Simpan Perubahan')
 
 def santri_aktif_query():
@@ -207,3 +191,13 @@ class EdisiForm(FlaskForm):
     tahun = IntegerField('Tahun Hijriah', validators=[DataRequired()], description="Contoh: 1448")
     is_active = BooleanField('Jadikan Edisi Aktif?')
     submit = SubmitField('Simpan Edisi')
+
+class BusForm(FlaskForm):
+    nama_armada = StringField('Nama Armada (PO)', validators=[DataRequired()])
+    nomor_lambung = StringField('Nomor Lambung/Bus', validators=[Optional()])
+    plat_nomor = StringField('Plat Nomor', validators=[Optional()])
+    kuota = IntegerField('Kuota Kursi', default=50, validators=[DataRequired()])
+    keterangan = TextAreaField('Keterangan', validators=[Optional()])
+    submit = SubmitField('Simpan Bus')
+
+

@@ -72,10 +72,6 @@
         {% endif %}
         
         <a href="{{ url_for('admin.daftar_peserta_global') }}" class="{{ 'active' if request.endpoint == 'admin.daftar_peserta_global' else '' }}">Data Peserta Rombongan</a>
-        
-        {% if current_user.role.name == 'Korpus' %}
-        <a href="{{ url_for('admin.manajemen_user') }}" class="{{ 'active' if 'manajemen_user' in request.endpoint else '' }}">Manajemen User</a>
-        {% endif %}
 
         {% if current_user.role.name == 'Korpus' %}
         <a href="{{ url_for('admin.manajemen_edisi') }}" class="{{ 'active' if 'manajemen_edisi' in request.endpoint else '' }}">Manajemen Edisi</a>
