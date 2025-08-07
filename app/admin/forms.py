@@ -20,8 +20,10 @@ class TarifForm(Form):
 
 class RombonganForm(FlaskForm):
     nama_rombongan = StringField('Nama Rombongan', validators=[DataRequired()])
-    penanggung_jawab = StringField('Penanggung Jawab', validators=[DataRequired()])
-    kontak_person = StringField('Kontak Person (WA)', validators=[DataRequired()])
+    penanggung_jawab_putra = StringField('PJ Putra', validators=[DataRequired()])
+    kontak_person_putra = StringField('Kontak PJ Putra (WA)', validators=[DataRequired()])
+    penanggung_jawab_putri = StringField('PJ Putri', validators=[Optional()])
+    kontak_person_putri = StringField('Kontak PJ Putri (WA)', validators=[Optional()])
     nomor_rekening = StringField('Nomor Rekening', validators=[DataRequired()])
     jadwal_keberangkatan = DateTimeLocalField('Jadwal Keberangkatan', format='%Y-%m-%dT%H:%M', validators=[DataRequired()])
     batas_pembayaran = DateField('Batas Akhir Pembayaran', format='%Y-%m-%d', validators=[Optional()])

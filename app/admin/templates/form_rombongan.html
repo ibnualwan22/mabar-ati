@@ -19,17 +19,26 @@
                     {{ form.nama_rombongan(class="form-control") }}
                 </div>
                 <div class="form-group form-grid">
-                    {{ form.penanggung_jawab.label }}
-                    {{ form.penanggung_jawab(class="form-control") }}
+                    {{ form.penanggung_jawab_putra.label(class="form-label") }}
+                    {{ form.penanggung_jawab_putra(class="form-control") }}
                 </div>
                 <div class="form-group form-grid">
-                    {{ form.kontak_person.label }}
-                    {{ form.kontak_person(class="form-control") }}
+                    {{ form.kontak_person_putra.label(class="form-label") }}
+                    {{ form.kontak_person_putra(class="form-control") }}
                 </div>
+
+    <div class="form-group form-grid">
+        {{ form.penanggung_jawab_putri.label(class="form-label") }}
+        {{ form.penanggung_jawab_putri(class="form-control") }}
+    </div>
+    <div class="form-group form-grid">
+        {{ form.kontak_person_putri.label(class="form-label") }}
+        {{ form.kontak_person_putri(class="form-control") }}
+    </div>
                 <div class="form-group form-grid">
-                    {{ form.nomor_rekening.label }}
-                    {{ form.nomor_rekening(class="form-control") }}
-                </div>
+        {{ form.nomor_rekening.label(class="form-label") }}
+        {{ form.nomor_rekening(class="form-control") }}
+    </div>
                 <div class="form-group form-grid">
                     {{ form.jadwal_keberangkatan.label }}
                     {{ form.jadwal_keberangkatan(class="form-control") }}

@@ -84,8 +84,10 @@ class Rombongan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     edisi_id = db.Column(db.Integer, db.ForeignKey('edisi.id'), nullable=False)
     nama_rombongan = db.Column(db.String(100), nullable=False)
-    penanggung_jawab = db.Column(db.String(100), nullable=False)
-    kontak_person = db.Column(db.String(20), nullable=False)
+    penanggung_jawab_putra = db.Column(db.String(100), nullable=False)
+    kontak_person_putra = db.Column(db.String(20), nullable=False)
+    penanggung_jawab_putri = db.Column(db.String(100))
+    kontak_person_putri = db.Column(db.String(20))
     nomor_rekening = db.Column(db.String(50), nullable=False)
     cakupan_wilayah = db.Column(db.JSON)
     jadwal_keberangkatan = db.Column(db.DateTime) # Pulang

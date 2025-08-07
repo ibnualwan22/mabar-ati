@@ -278,8 +278,10 @@ def tambah_rombongan():
         new_rombongan = Rombongan(
         edisi=active_edisi,
         nama_rombongan=form.nama_rombongan.data,
-        penanggung_jawab=form.penanggung_jawab.data,
-        kontak_person=form.kontak_person.data,
+        penanggung_jawab_putra=form.penanggung_jawab_putra.data,
+        kontak_person_putra=form.kontak_person_putra.data,
+        penanggung_jawab_putri=form.penanggung_jawab_putri.data,
+        kontak_person_putri=form.kontak_person_putri.data,
         nomor_rekening=form.nomor_rekening.data,
         jadwal_keberangkatan=form.jadwal_keberangkatan.data,
         batas_pembayaran=form.batas_pembayaran.data,
@@ -324,8 +326,10 @@ def edit_rombongan(id):
     if form.validate_on_submit():
         # Update data rombongan dengan data dari form
         rombongan.nama_rombongan = form.nama_rombongan.data
-        rombongan.penanggung_jawab = form.penanggung_jawab.data
-        rombongan.kontak_person = form.kontak_person.data
+        rombongan.penanggung_jawab_putra = form.penanggung_jawab_putra.data
+        rombongan.kontak_person_putra = form.kontak_person_putra.data
+        rombongan.penanggung_jawab_putri = form.penanggung_jawab_putri.data
+        rombongan.kontak_person_putri = form.kontak_person_putri.data
         rombongan.nomor_rekening = form.nomor_rekening.data
         rombongan.jadwal_keberangkatan = form.jadwal_keberangkatan.data
         rombongan.batas_pembayaran = form.batas_pembayaran.data
@@ -350,8 +354,10 @@ def edit_rombongan(id):
     # Jika request adalah GET (pertama kali halaman dibuka)
     # Isi form dengan data yang ada di database
     form.nama_rombongan.data = rombongan.nama_rombongan
-    form.penanggung_jawab.data = rombongan.penanggung_jawab
-    form.kontak_person.data = rombongan.kontak_person
+    form.penanggung_jawab_putra.data = rombongan.penanggung_jawab_putra
+    form.kontak_person_putra.data = rombongan.kontak_person_putra
+    form.penanggung_jawab_putri.data = rombongan.penanggung_jawab_putri
+    form.kontak_person_putri.data = rombongan.kontak_person_putri
     form.nomor_rekening.data = rombongan.nomor_rekening
     form.jadwal_keberangkatan.data = rombongan.jadwal_keberangkatan
     form.batas_pembayaran.data = rombongan.batas_pembayaran
