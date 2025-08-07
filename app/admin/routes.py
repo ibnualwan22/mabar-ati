@@ -308,7 +308,7 @@ def tambah_rombongan():
 
 @admin_bp.route('/rombongan/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
-@role_required('Korpus') # Hanya Korpus yang bisa buat rombongan baru
+@role_required('Korpus', 'Korda')
 def edit_rombongan(id):
     active_edisi = get_active_edisi()
     rombongan = Rombongan.query.get_or_404(id)
@@ -858,42 +858,46 @@ def daftar_peserta(rombongan_id):
     return render_template('daftar_peserta.html', rombongan=rombongan, pendaftar=pendaftar)
 
 @admin_bp.route('/peserta')
+@login_required
 def daftar_peserta_global():
-    # Query dasar yang menghubungkan Pendaftaran dengan Santri
+    page = request.args.get('page', 1, type=int)
     active_edisi = get_active_edisi()
-    query = db.session.query(Pendaftaran).join(Rombongan).join(Santri).filter(Rombongan.edisi_id == (active_edisi.id if active_edisi else -1))
-
+    
+    # Query dasar yang menghubungkan Pendaftaran, Rombongan, dan Santri
+    query = db.session.query(Pendaftaran).join(Rombongan).join(Santri)
+    if active_edisi:
+        query = query.filter(Rombongan.edisi_id == active_edisi.id)
+    else:
+        query = query.filter(db.false()) # Jika tidak ada edisi aktif, jangan tampilkan apa-apa
 
     # Ambil semua parameter filter dari URL
     f_nama = request.args.get('nama')
-    f_alamat = request.args.get('alamat')
-    f_titik_turun = request.args.get('titik_turun')
+    f_rombongan_id = request.args.get('rombongan_id', type=int)
     f_status_bayar = request.args.get('status_bayar')
-    f_metode_bayar = request.args.get('metode_bayar')
-    f_rombongan_id = request.args.get('rombongan_id', type=int) # <-- FILTER BARU
-
+    
     # Terapkan filter ke query jika ada
     if f_nama:
         query = query.filter(Santri.nama.ilike(f'%{f_nama}%'))
-    if f_alamat:
-        query = query.filter(Santri.kabupaten.ilike(f'%{f_alamat}%'))
-    if f_titik_turun:
-        query = query.filter(Pendaftaran.titik_turun.ilike(f'%{f_titik_turun}%'))
-    if f_status_bayar:
-        query = query.filter(Pendaftaran.status_pembayaran == f_status_bayar)
-    if f_metode_bayar:
-        query = query.filter(Pendaftaran.metode_pembayaran == f_metode_bayar)
-    if f_rombongan_id: # <-- LOGIKA FILTER BARU
+    if f_rombongan_id:
         query = query.filter(Pendaftaran.rombongan_id == f_rombongan_id)
+    
+    # Perbaiki filter status bayar untuk model baru
+    if f_status_bayar:
+        if f_status_bayar == 'Lunas':
+            query = query.filter(Pendaftaran.status_pulang == 'Lunas', Pendaftaran.status_kembali.in_(['Lunas', 'Tidak Ikut']))
+        elif f_status_bayar == 'Belum Lunas':
+            query = query.filter((Pendaftaran.status_pulang == 'Belum Bayar') | (Pendaftaran.status_kembali == 'Belum Bayar'))
 
-    # Eksekusi query final dan urutkan berdasarkan nama santri
-    semua_pendaftar = query.order_by(Santri.nama).all()
+    # Gunakan .paginate() bukan .all()
+    pagination = query.order_by(Santri.nama).paginate(
+        page=page, per_page=50, error_out=False
+    )
 
     # Ambil semua rombongan untuk mengisi dropdown filter
     all_rombongan = Rombongan.query.filter_by(edisi=active_edisi).order_by(Rombongan.nama_rombongan).all() if active_edisi else []
 
     return render_template('daftar_peserta_global.html', 
-                           semua_pendaftar=semua_pendaftar, 
+                           pagination=pagination, # Kirim objek pagination
                            all_rombongan=all_rombongan)
 
 @admin_bp.route('/perizinan', methods=['GET', 'POST'])
@@ -1287,3 +1291,60 @@ def detail_bus(bus_id):
                            grouped_peserta_kembali=grouped_peserta_kembali,
                            jumlah_peserta_pulang=len(peserta_pulang),
                            jumlah_peserta_kembali=len(peserta_kembali))
+
+@admin_bp.route('/keuangan')
+@login_required
+@role_required('Korpus', 'Korwil', 'Korda')
+def manajemen_keuangan():
+    active_edisi = get_active_edisi()
+    
+    # Inisialisasi semua variabel
+    financial_data = {
+        'global_total': 0, 'global_lunas': 0, 'global_belum_lunas': 0,
+        'pulang_total': 0, 'pulang_lunas': 0, 'pulang_belum_lunas': 0,
+        'kembali_total': 0, 'kembali_lunas': 0, 'kembali_belum_lunas': 0,
+        'alokasi_bus_pulang': 0, 'alokasi_korda_pulang': 0, 'alokasi_pondok_pulang': 0,
+        'alokasi_bus_kembali': 0, 'alokasi_korda_kembali': 0, 'alokasi_pondok_kembali': 0
+    }
+
+    if active_edisi:
+        pendaftaran_query = Pendaftaran.query.join(Rombongan).filter(Rombongan.edisi_id == active_edisi.id)
+
+        if current_user.role.name in ['Korwil', 'Korda']:
+            managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+            if not managed_rombongan_ids:
+                pendaftaran_query = pendaftaran_query.filter(db.false())
+            else:
+                pendaftaran_query = pendaftaran_query.filter(Pendaftaran.rombongan_id.in_(managed_rombongan_ids))
+        
+        all_pendaftaran = pendaftaran_query.all()
+
+        for p in all_pendaftaran:
+            tarif = Tarif.query.filter_by(rombongan_id=p.rombongan_id, titik_turun=p.titik_turun).first()
+            if not tarif: continue
+
+            biaya_per_perjalanan = tarif.harga_bus + tarif.fee_korda + 10000
+            
+            if p.status_pulang != 'Tidak Ikut':
+                financial_data['pulang_total'] += biaya_per_perjalanan
+                financial_data['alokasi_bus_pulang'] += tarif.harga_bus
+                financial_data['alokasi_korda_pulang'] += tarif.fee_korda
+                financial_data['alokasi_pondok_pulang'] += 10000
+                if p.status_pulang == 'Lunas':
+                    financial_data['pulang_lunas'] += biaya_per_perjalanan
+            
+            if p.status_kembali != 'Tidak Ikut':
+                financial_data['kembali_total'] += biaya_per_perjalanan
+                financial_data['alokasi_bus_kembali'] += tarif.harga_bus
+                financial_data['alokasi_korda_kembali'] += tarif.fee_korda
+                financial_data['alokasi_pondok_kembali'] += 10000
+                if p.status_kembali == 'Lunas':
+                    financial_data['kembali_lunas'] += biaya_per_perjalanan
+
+        financial_data['pulang_belum_lunas'] = financial_data['pulang_total'] - financial_data['pulang_lunas']
+        financial_data['kembali_belum_lunas'] = financial_data['kembali_total'] - financial_data['kembali_lunas']
+        financial_data['global_total'] = financial_data['pulang_total'] + financial_data['kembali_total']
+        financial_data['global_lunas'] = financial_data['pulang_lunas'] + financial_data['kembali_lunas']
+        financial_data['global_belum_lunas'] = financial_data['pulang_belum_lunas'] + financial_data['kembali_belum_lunas']
+
+    return render_template('manajemen_keuangan.html', data=financial_data)

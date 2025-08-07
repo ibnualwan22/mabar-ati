@@ -3,85 +3,112 @@
 {% block title %}Data Peserta Global{% endblock %}
 
 {% block content %}
-    <h1>Data Peserta Global</h1>
-    <p>Halaman ini menampilkan semua santri yang telah terdaftar di semua rombongan.</p>
-    <p>Total Peserta Terdaftar: <strong>{{ semua_pendaftar|length }}</strong></p>
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Data Peserta Global</h1>
+</div>
+<p>Halaman ini menampilkan semua santri yang telah terdaftar di semua rombongan untuk edisi yang sedang aktif.</p>
 
-    <hr>
-    <h3>Filter Data Peserta</h3>
-    <form method="GET" action="{{ url_for('admin.daftar_peserta_global') }}" class="filter-form">
-        <div class="filter-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
-            <select name="rombongan_id">
-                <option value="">-- Semua Rombongan --</option>
-                {% for rombongan in all_rombongan %}
-                    <option value="{{ rombongan.id }}" {% if request.args.get('rombongan_id')|int == rombongan.id %}selected{% endif %}>
-                        {{ rombongan.nama_rombongan }}
-                    </option>
-                {% endfor %}
-            </select>
-            
-            <input type="text" name="nama" placeholder="Cari Nama Santri..." value="{{ request.args.get('nama', '') }}">
-            <input type="text" name="alamat" placeholder="Cari Alamat..." value="{{ request.args.get('alamat', '') }}">
-            <input type="text" name="titik_turun" placeholder="Cari Titik Turun..." value="{{ request.args.get('titik_turun', '') }}">
-            <select name="status_bayar">
-                <option value="">-- Semua Status Bayar --</option>
-                <option value="Lunas" {% if request.args.get('status_bayar') == 'Lunas' %}selected{% endif %}>Lunas</option>
-                <option value="Belum Lunas" {% if request.args.get('status_bayar') == 'Belum Lunas' %}selected{% endif %}>Belum Lunas</option>
-            </select>
-            <select name="metode_bayar">
-                <option value="">-- Semua Metode Bayar --</option>
-                <option value="Cash" {% if request.args.get('metode_bayar') == 'Cash' %}selected{% endif %}>Cash</option>
-                <option value="Transfer" {% if request.args.get('metode_bayar') == 'Transfer' %}selected{% endif %}>Transfer</option>
-            </select>
-            <button type="submit" class="btn btn-primary">Filter</button>
-            <a href="{{ url_for('admin.daftar_peserta_global') }}" class="btn btn-secondary">Reset</a>
-        </div>
-    </form>
-    <hr>
-
-    <div style="overflow-x: auto;">
-        <table style="width: 100%; min-width: 1200px;">
-            <thead>
-                <tr>
-                    <th>No.</th>
-                    <th>Nama Santri</th>
-                    <th>Alamat</th>
-                    <th>Rombongan</th>
-                    <th>Titik Turun</th>
-                    <th>Status Bayar</th>
-                    <th>Metode Bayar</th>
-                    <th>Total Biaya</th>
-                    <th>No. Bus</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for pendaftaran in semua_pendaftar %}
-                <tr>
-                    <td>{{ loop.index }}</td>
-                    <td>
-                        <strong>{{ pendaftaran.santri.nama }}</strong><br>
-                        <small>NIS: {{ pendaftaran.santri.nis }}</small>
-                    </td>
-                    <td>{{ pendaftaran.rombongan.nama_rombongan }}</td>
-                    <td>{{ pendaftaran.santri.kabupaten or '-' }}</td>
-                    <td>{{ pendaftaran.titik_turun }}</td>
-                    <td>
-                        {% if pendaftaran.status_pembayaran == 'Lunas' %}
-                            <span class="status-lunas">Lunas</span>
-                        {% else %}
-                            <span class="status-belum">Belum Lunas</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ pendaftaran.metode_pembayaran or '-' }}</td>
-                    <td>Rp {{ pendaftaran.total_biaya|abs|round|int|format(grouping=true) }}</td>
-                    <td>{{ pendaftaran.nomor_bus or '-' }}</td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="8" style="text-align: center;">Tidak ada data yang cocok dengan filter Anda.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<div class="card">
+    <div class="card-header">
+        <h5>Filter Data Peserta</h5>
     </div>
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('admin.daftar_peserta_global') }}">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" name="nama" class="form-control" placeholder="Cari Nama Santri..." value="{{ request.args.get('nama', '') }}">
+                </div>
+                <div class="col-md-4">
+                    <select name="rombongan_id" class="form-select">
+                        <option value="">-- Semua Rombongan --</option>
+                        {% for rombongan in all_rombongan %}
+                            <option value="{{ rombongan.id }}" {% if request.args.get('rombongan_id')|int == rombongan.id %}selected{% endif %}>
+                                {{ rombongan.nama_rombongan }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select name="status_bayar" class="form-select">
+                        <option value="">-- Semua Status Bayar --</option>
+                        <option value="Lunas" {% if request.args.get('status_bayar') == 'Lunas' %}selected{% endif %}>Lunas</option>
+                        <option value="Belum Lunas" {% if request.args.get('status_bayar') == 'Belum Lunas' %}selected{% endif %}>Belum Lunas</option>
+                    </select>
+                </div>
+                <div class="col-12 text-end">
+                    <button type="submit" class="btn btn-primary">Filter</button>
+                    <a href="{{ url_for('admin.daftar_peserta_global') }}" class="btn btn-secondary">Reset</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header">
+        <h5>Daftar Peserta (Total: {{ pagination.total }})</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>No.</th>
+                        <th>Nama Santri</th>
+                        <th>Rombongan</th>
+                        <th>Titik Turun</th>
+                        <th>Perjalanan Pulang</th>
+                        <th>Perjalanan Kembali</th>
+                        <th>Status Bayar</th>
+                        <th>Total Biaya</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pendaftaran in pagination.items %}
+                    <tr>
+                        <td>{{ loop.index + (pagination.page - 1) * pagination.per_page }}</td>
+                        <td>
+                            <strong>{{ pendaftaran.santri.nama }}</strong><br>
+                            <small class="text-muted">NIS: {{ pendaftaran.santri.nis }}</small>
+                        </td>
+                        <td>{{ pendaftaran.rombongan.nama_rombongan }}</td>
+                        <td>{{ pendaftaran.titik_turun or '-' }}</td>
+                        <td>
+                            {% if pendaftaran.bus_pulang %}
+                                <span class="badge bg-info text-dark">{{ pendaftaran.bus_pulang.nama_armada }} ({{ pendaftaran.bus_pulang.nomor_lambung or pendaftaran.bus_pulang.plat_nomor }})</span>
+                            {% else %}
+                                <span class="badge bg-secondary">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if pendaftaran.bus_kembali %}
+                                <span class="badge bg-info text-dark">{{ pendaftaran.bus_kembali.nama_armada }} ({{ pendaftaran.bus_kembali.nomor_lambung or pendaftaran.bus_kembali.plat_nomor }})</span>
+                            {% else %}
+                                 <span class="badge bg-secondary">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if pendaftaran.status_pembayaran == 'Lunas' %}
+                                <span class="badge bg-success">Lunas</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">Belum Lunas</span>
+                            {% endif %}
+                        </td>
+                        <td>Rp {{ "{:,.0f}".format(pendaftaran.total_biaya).replace(',', '.') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center">Tidak ada data peserta yang cocok dengan filter Anda.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination justify-content-center mt-4">
+             </div>
+
+    </div>
+</div>
+
 {% endblock %}

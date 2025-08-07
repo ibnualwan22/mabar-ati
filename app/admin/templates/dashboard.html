@@ -121,9 +121,7 @@
     {% endif %}
     </td>
     <td>
-                    <a href="{{ url_for('admin.daftar_peserta', rombongan_id=rombongan.id) }}" class="btn btn-primary btn-sm">
-                        Lihat ({{ rombongan.pendaftar|length }})
-                    </a>
+                <a href="{{ url_for('admin.daftar_peserta', rombongan_id=rombongan.id) }}" class="btn btn-primary btn-sm">Lihat Peserta ({{ rombongan.pendaftar|length }})</a>
                 </td>
                 <td>
                     {% if rombongan.buses %}

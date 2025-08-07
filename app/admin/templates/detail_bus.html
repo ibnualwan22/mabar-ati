@@ -61,22 +61,21 @@
         <p>
             <strong>Jadwal Kembali:</strong> {{ bus.rombongan.jadwal_kembali.strftime('%d %b %Y %H:%M') if bus.rombongan.jadwal_kembali else 'Belum diatur' }}<br>
             <strong>Titik Kumpul Kembali:</strong> {{ bus.rombongan.titik_kumpul_kembali or 'Belum diatur' }}
-        <p class="h5">Kapasitas Kembali: <span class="fw-bold">{{ jumlah_peserta_kembali }} / {{ bus.kuota }}</span> Terisi</p>
         </p>
-        
+        <p class="h5">Kapasitas Kembali: <span class="fw-bold">{{ jumlah_peserta_kembali }} / {{ bus.kuota }}</span> Terisi</p>
         <hr>
 
         {% if grouped_peserta_kembali %}
-            {% for kabupaten, pendaftar_list in grouped_peserta_kembali.items()|sort %}
+            {% for titik_jemput, pendaftar_list in grouped_peserta_kembali.items()|sort %}
             <div class="mb-4">
-                <h6><strong>Titik Jemput : {{ kabupaten or 'Tidak Diketahui' }}</strong> (Jumlah: {{ pendaftar_list|length }})</h6>
+                <h6><strong>Titik Jemput (Referensi): {{ titik_jemput or 'Tidak Diketahui' }}</strong> (Jumlah: {{ pendaftar_list|length }})</h6>
                 <div class="table-responsive">
                     <table class="table table-sm table-striped">
                         <thead>
                             <tr>
                                 <th>No.</th>
                                 <th>Nama Santri</th>
-                                <th>NIS</th>
+                                <th>Alamat</th>
                                 <th>Asrama</th>
                             </tr>
                         </thead>
@@ -85,7 +84,7 @@
                             <tr>
                                 <td>{{ loop.index }}</td>
                                 <td>{{ p.santri.nama }}</td>
-                                <td>{{ p.santri.nis }}</td>
+                                <td>{{ p.santri.kabupaten }}</td>
                                 <td>{{ p.santri.asrama }}</td>
                             </tr>
                             {% endfor %}

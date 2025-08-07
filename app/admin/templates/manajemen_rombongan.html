@@ -32,9 +32,7 @@
                 <td>{{ rombongan.jadwal_keberangkatan.strftime('%d %b %Y %H:%M') if rombongan.jadwal_keberangkatan else '-' }}</td>
                 <td>{{ rombongan.pendaftar|length }} / {{ rombongan.buses|sum(attribute='kuota') or '0' }}</td>
                 <td>
-                    <a href="{{ url_for('admin.daftar_peserta', rombongan_id=rombongan.id) }}" class="btn btn-primary btn-sm">
-                        Lihat ({{ rombongan.pendaftar|length }})
-                    </a>
+                <a href="{{ url_for('admin.daftar_peserta', rombongan_id=rombongan.id) }}" class="btn btn-primary btn-sm">Lihat Peserta ({{ rombongan.pendaftar|length }})</a>
                 </td>
                 <td>
                     {% if rombongan.buses %}
@@ -57,13 +55,16 @@
                     {% endif %}
                 </td>
                 <td>
-                    {% if current_user.role.name == 'Korpus' or (current_user.role.name == 'Korda' and rombongan in current_user.managed_rombongan) %}
-                        <a href="{{ url_for('admin.edit_rombongan', id=rombongan.id) }}" class="btn btn-secondary btn-sm">Edit</a>
-                        <form method="POST" action="{{ url_for('admin.hapus_rombongan', id=rombongan.id) }}" style="display:inline;" onsubmit="return confirm('Anda yakin?');">
-                            <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
-                        </form>
-                    {% endif %}
-                </td>
+    {% if current_user.role.name == 'Korpus' or (current_user.role.name == 'Korda' and rombongan in current_user.managed_rombongan) %}
+        <a href="{{ url_for('admin.edit_rombongan', id=rombongan.id) }}" class="btn btn-secondary btn-sm">Edit</a>
+    {% endif %}
+
+    {% if current_user.role.name == 'Korpus' %}
+        <form method="POST" action="{{ url_for('admin.hapus_rombongan', id=rombongan.id) }}" style="display:inline;" onsubmit="return confirm('Anda yakin?');">
+            <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
+        </form>
+    {% endif %}
+</td>
             </tr>
             {% else %}
             <tr>

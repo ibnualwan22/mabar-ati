@@ -3,109 +3,746 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Admin Panel{% endblock %} - Mabar-Ati</title>
-    
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    
-    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    <title>Admin Panel - Mabar-Ati</title>
 
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        body { background-color: #f8f9fa; }
-        body { font-family: sans-serif; margin: 0; background-color: #f8f9fa; }
-        .navbar { background-color: #343a40; padding: 1rem; }
-        .navbar a { color: white; text-decoration: none; margin-right: 1.5rem; font-size: 1.1em; }
-        .navbar a.active { font-weight: bold; border-bottom: 2px solid #007bff; }
-        .container { max-width: 1200px; margin: 2rem auto; padding: 2rem; background-color: white; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px;}
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        h1, h2 { border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .btn { padding: 8px 12px; border: none; color: white !important; cursor: pointer; text-decoration: none; display: inline-block; border-radius: 4px; font-size: 0.9em;}
-        .btn-primary { background-color: #007bff; }
-        .btn-secondary { background-color: #6c757d; }
-        .btn-danger { background-color: #dc3545; }
-        .action-btn { margin: 2px; }
-        .alert { padding: 15px; margin-bottom: 20px; border: 1px solid transparent; border-radius: 4px; }
-        .alert-success { color: #155724; background-color: #d4edda; border-color: #c3e6cb; }
-        .alert-info { color: #0c5460; background-color: #d1ecf1; border-color: #bee5eb; }
-        .form-grid {
-    display: grid;
-    grid-template-columns: 150px 1fr;
-    gap: 15px;
-    align-items: center;
-}
-.form-group label {
-    font-weight: bold;
-    text-align: right;
-}
-.form-group input, .form-group select, .form-group textarea {
-    width: 100%;
-    padding: 8px;
-    box-sizing: border-box;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
+        /* --- General & Layout --- */
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background-color: #f0f2f5; 
+            margin: 0;
+            padding: 0;
+        }
         
-        .stat-number { font-size: 2.5em; font-weight: bold; }
+        #main-content { 
+            margin-top: 56px; 
+            transition: margin-left 0.3s ease-in-out;
+            min-height: calc(100vh - 56px);
+        }
+        
+        .content-wrapper { 
+            padding: 2rem; 
+            width: 100%;
+            max-width: 100%;
+        }
+
+        /* --- Top Header --- */
+        .header-top {
+            background: linear-gradient(135deg, #1877F2 0%, #3b5998 100%);
+            color: white;
+            padding: 0 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1030;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: 56px;
+        }
+        
+        .header-left, .header-right { 
+            display: flex; 
+            align-items: center; 
+            gap: 1rem; 
+        }
+        
+        .brand-name { 
+            font-size: 1.25rem; 
+            font-weight: bold; 
+            color: white; 
+            text-decoration: none;
+            margin: 0;
+        }
+        
+        .brand-name:hover {
+            color: #e3f2fd;
+        }
+        
+        .hamburger-btn { 
+            background: none; 
+            border: none; 
+            color: white; 
+            font-size: 1.25rem;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            display: block; /* Always show by default */
+        }
+        
+        .hamburger-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .user-info { 
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .user-info .badge { 
+            font-size: 0.7rem; 
+        }
+        
+        .logout-link { 
+            color: white; 
+            text-decoration: none; 
+            font-weight: 500;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .logout-link:hover { 
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            width: 280px;
+            background: white;
+            position: fixed;
+            top: 0;
+            left: -280px;
+            height: 100vh;
+            transition: left 0.3s ease-in-out;
+            z-index: 1040;
+            box-shadow: 2px 0 15px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .sidebar.active { 
+            left: 0; 
+        }
+        
+        .sidebar-header { 
+            padding: 1rem; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-bottom: 1px solid #e9ecef;
+            background-color: #f8f9fa;
+            min-height: 56px;
+        }
+        
+        .sidebar-header h5 { 
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            color: #6c757d;
+            padding: 0.25rem;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        .close-btn:hover {
+            background-color: #e9ecef;
+            color: #495057;
+        }
+        
+        .sidebar-nav { 
+            padding: 1rem;
+            flex: 1;
+        }
+        
+        .sidebar-nav .nav-link {
+            display: flex; 
+            align-items: center; 
+            gap: 1rem;
+            color: #495057; 
+            padding: 0.75rem 1rem; 
+            border-radius: 8px;
+            margin-bottom: 0.25rem; 
+            transition: all 0.2s ease-in-out;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .sidebar-nav .nav-link:hover { 
+            background-color: #f8f9fa; 
+            color: #1877F2;
+            transform: translateX(4px);
+        }
+        
+        .sidebar-nav .nav-link.active { 
+            background-color: #e7f3ff; 
+            color: #1877F2; 
+            font-weight: 600;
+            border-left: 4px solid #1877F2;
+        }
+        
+        .sidebar-nav .nav-link i.fas { 
+            width: 20px; 
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        
+        .nav-heading { 
+            font-size: 0.75rem; 
+            color: #6c757d; 
+            text-transform: uppercase; 
+            padding: 1.5rem 1rem 0.5rem;
+            margin: 0;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        .nav-heading:first-child {
+            padding-top: 0.5rem;
+        }
+
+        /* --- Overlay --- */
+        .overlay { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,0.5); 
+            z-index: 1035; 
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease-in-out;
+        }
+        
+        .overlay.active { 
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* --- Alert Styles --- */
+        .alert {
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        
+        /* --- Content Improvements --- */
+        .content-wrapper h1, .content-wrapper h2, .content-wrapper h3 {
+            color: #495057;
+            margin-bottom: 1.5rem;
+        }
+        
+        .card {
+            border: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            border-radius: 12px;
+        }
+        
+        /* --- Bottom Navigation --- */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #e9ecef;
+            z-index: 1025;
+            height: 70px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            display: block; /* Always show by default */
+        }
+        
+        .bottom-nav-content {
+            display: flex;
+            height: 100%;
+            align-items: center;
+            justify-content: space-around;
+            padding: 0 1rem;
+        }
+        
+        .bottom-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: #6c757d;
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: all 0.2s;
+            flex: 1;
+            max-width: 80px;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .bottom-nav-item:hover {
+            color: #1877F2;
+            background-color: #f8f9fa;
+        }
+        
+        .bottom-nav-item.active {
+            color: #1877F2;
+            background-color: #e7f3ff;
+        }
+        
+        .bottom-nav-item i {
+            font-size: 1.2rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .bottom-nav-item span {
+            font-size: 0.7rem;
+            text-align: center;
+            line-height: 1;
+        }
+
+        /* --- Mobile Responsive --- */
+        @media (max-width: 576px) {
+            .header-top {
+                padding: 0 0.75rem;
+            }
+            
+            .brand-name {
+                font-size: 1.1rem;
+            }
+            
+            .user-info {
+                display: none;
+            }
+            
+            .content-wrapper {
+                padding: 1rem 1rem 80px 1rem;
+            }
+            
+            .sidebar {
+                width: 100%;
+                left: -100%;
+            }
+            
+            .sidebar.active {
+                left: 0;
+            }
+            
+            #main-content {
+                margin-left: 0;
+                padding-bottom: 70px;
+            }
+        }
+        
+        /* --- Tablet Responsive --- */
+        @media (min-width: 577px) and (max-width: 991px) {
+            .content-wrapper {
+                padding: 1.5rem 1.5rem 80px 1.5rem;
+            }
+            
+            #main-content {
+                margin-left: 0;
+                padding-bottom: 70px;
+            }
+        }
+
+        /* --- Desktop Responsive --- */
+        @media (min-width: 992px) {
+            .bottom-nav {
+                display: none; /* Hide bottom nav on desktop */
+            }
+            
+            .sidebar { 
+                left: 0; 
+                box-shadow: none; 
+                border-right: 1px solid #e9ecef;
+                position: fixed;
+            }
+            
+            .sidebar.collapsed {
+                left: -280px;
+            }
+            
+            #main-content { 
+                margin-left: 280px;
+                transition: margin-left 0.3s ease-in-out;
+                padding-bottom: 0;
+            }
+            
+            #main-content.expanded {
+                margin-left: 0;
+            }
+            
+            .overlay { 
+                display: none !important; 
+            }
+            
+            .content-wrapper {
+                max-width: calc(100vw - 280px);
+                transition: max-width 0.3s ease-in-out;
+                padding: 2rem;
+            }
+            
+            .content-wrapper.expanded {
+                max-width: 100vw;
+            }
+        }
+        
+        /* --- Large Desktop --- */
+        @media (min-width: 1400px) {
+            .content-wrapper {
+                padding: 2.5rem;
+            }
+        }
+        
+        /* --- Accessibility Improvements --- */
+        .hamburger-btn:focus,
+        .close-btn:focus,
+        .logout-link:focus {
+            outline: 2px solid #ffffff;
+            outline-offset: 2px;
+        }
+        
+        .nav-link:focus {
+            outline: 2px solid #1877F2;
+            outline-offset: 2px;
+        }
+        
+        /* --- Print Styles --- */
+        @media print {
+            .header-top,
+            .sidebar,
+            .overlay,
+            .bottom-nav {
+                display: none !important;
+            }
+            
+            #main-content {
+                margin-left: 0 !important;
+                margin-top: 0 !important;
+            }
+        }
     </style>
 </head>
 <body>
-    <nav class="navbar">
-        <a href="{{ url_for('admin.dashboard') }}" class="{{ 'active' if request.endpoint == 'admin.dashboard' else '' }}">Dashboard</a>
-        
-        {% if current_user.role.name == 'Korpus' %}
-        <a href="{{ url_for('admin.manajemen_rombongan') }}" class="{{ 'active' if request.endpoint == 'admin.manajemen_rombongan' else '' }}">Daftar Rombongan</a>
-        {% endif %}
-      
-        <a href="{{ url_for('admin.manajemen_santri') }}" class="{{ 'active' if request.endpoint == 'admin.manajemen_santri' else '' }}">Data Global Santri</a>
-        {% if current_user.role.name in ['Korpus', 'Korda'] %}
-        <a href="{{ url_for('admin.pendaftaran_rombongan') }}" class="{{ 'active' if request.endpoint == 'admin.pendaftaran_rombongan' else '' }}">Form Pendaftaran Rombongan</a>
-        {% endif %}
 
-        {% if current_user.role.name in ['Korpus', 'Keamanan'] %}
-        <a href="{{ url_for('admin.perizinan') }}" class="{{ 'active' if request.endpoint == 'admin.perizinan' else '' }}">Manajemen Perizinan</a>
-        {% endif %}
-       
-        {% if current_user.role.name in ['Korpus', 'PJ Acara'] %}
-        <a href="{{ url_for('admin.data_partisipan') }}" class="{{ 'active' if request.endpoint == 'admin.data_partisipan' else '' }}">Data Partisipan</a>
-        {% endif %}
-        
-        <a href="{{ url_for('admin.daftar_peserta_global') }}" class="{{ 'active' if request.endpoint == 'admin.daftar_peserta_global' else '' }}">Data Peserta Rombongan</a>
-
-        {% if current_user.role.name == 'Korpus' %}
-        <a href="{{ url_for('admin.manajemen_edisi') }}" class="{{ 'active' if 'manajemen_edisi' in request.endpoint else '' }}">Manajemen Edisi</a>
-        <a href="{{ url_for('admin.riwayat_edisi') }}">Riwayat</a></li>
-        <a href="{{ url_for('admin.manajemen_user') }}" class="{{ 'active' if 'manajemen_user' in request.endpoint else '' }}">Manajemen User</a>
-        {% endif %}
-    
-        <div style="margin-left: auto;">
-        <span style="color: #adb5bd; margin-right: 1rem;">Halo, {{ current_user.username }} ({{ current_user.role.name }})</span>
-        <a href="{{ url_for('admin.logout') }}">Logout</a>
+<header class="header-top">
+    <div class="header-left">
+        <button id="sidebar-toggle" class="hamburger-btn" title="Toggle Menu" aria-label="Toggle Navigation Menu">
+            <i class="fas fa-bars"></i>
+        </button>
+        <a class="brand-name" href="{{ url_for('admin.dashboard') }}">Mabar-Ati</a>
     </div>
-    </nav>
-
-    {% if active_edisi %}
-        <div class="alert alert-primary text-center rounded-0 mb-0" role="alert">
-            Perpulangan Edisi: <strong>{{ active_edisi.nama }}</strong>
+    <div class="header-right">
+        <div class="user-info d-none d-md-flex">
+            <span>Halo, {{ current_user.username }}</span>
+            <span class="badge bg-light text-dark">{{ current_user.role.name }}</span>
         </div>
-    {% endif %}
+        <a href="{{ url_for('admin.logout') }}" class="logout-link" title="Logout" aria-label="Logout">
+            <i class="fas fa-sign-out-alt"></i>
+            <span class="d-none d-md-inline">Logout</span>
+        </a>
+    </div>
+</header>
 
-    <main class="container-fluid p-4">
+<nav id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+        <h5><i class="fas fa-compass"></i> Mabar Ati</h5>
+        <button id="sidebar-close" class="close-btn" title="Close Menu" aria-label="Close Navigation Menu">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <ul class="nav flex-column sidebar-nav">
+        <li class="nav-heading">Utama</li>
+        <li class="nav-item">
+            <a href="{{ url_for('admin.dashboard') }}" 
+               class="nav-link {{ 'active' if request.endpoint == 'admin.dashboard' else '' }}">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+        </li>
+        
+        <li class="nav-heading">Manajemen Event</li>
+        {% if current_user.role.name in ['Korpus', 'Korda', 'Korwil'] %}
+        <li class="nav-item">
+            <a href="{{ url_for('admin.manajemen_rombongan') }}" 
+               class="nav-link {{ 'active' if 'manajemen_rombongan' in request.endpoint else '' }}">
+                <i class="fas fa-bus"></i> Manajemen Rombongan
+            </a>
+        </li>
+        {% endif %}
+        {% if current_user.role.name in ['Korpus', 'Korda'] %}
+        <li class="nav-item">
+            <a href="{{ url_for('admin.pendaftaran_rombongan') }}" 
+               class="nav-link {{ 'active' if 'pendaftaran_rombongan' in request.endpoint else '' }}">
+                <i class="fas fa-user-plus"></i> Form Pendaftaran
+            </a>
+        </li>
+        {% endif %}
+        <li class="nav-item">
+            <a href="{{ url_for('admin.daftar_peserta_global') }}" 
+               class="nav-link {{ 'active' if 'daftar_peserta_global' in request.endpoint else '' }}">
+                <i class="fas fa-users"></i> Data Peserta Global
+            </a>
+        </li>
+        
+        <li class="nav-heading">Manajemen Santri</li>
+        <li class="nav-item">
+            <a href="{{ url_for('admin.manajemen_santri') }}" 
+               class="nav-link {{ 'active' if 'manajemen_santri' in request.endpoint else '' }}">
+                <i class="fas fa-database"></i> Data Global Santri
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ url_for('admin.perizinan') }}" 
+               class="nav-link {{ 'active' if 'perizinan' in request.endpoint else '' }}">
+                <i class="fas fa-id-card"></i> Manajemen Perizinan
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ url_for('admin.data_partisipan') }}" 
+               class="nav-link {{ 'active' if 'data_partisipan' in request.endpoint else '' }}">
+                <i class="fas fa-user-tag"></i> Data Partisipan
+            </a>
+        </li>
+        {% if current_user.role.name in ['Korpus', 'Korda', 'Korwil'] %}
+        <li class="nav-heading">Manajemen Keuangan</li>
+        <li class="nav-item">
+            <a href="{{ url_for('admin.manajemen_keuangan') }}" 
+               class="nav-link {{ 'active' if 'manajemen_keuangan' in request.endpoint else '' }}">
+                <i class="fas fa-money-bill-wave"></i> Manajemen Keuangan
+            </a>
+        </li>
+        {% endif %}
+        {% if current_user.role.name == 'Korpus' %}
+        <li class="nav-heading">Pengaturan Sistem</li>
+        <li class="nav-item">
+            <a href="{{ url_for('admin.manajemen_edisi') }}" 
+               class="nav-link {{ 'active' if 'manajemen_edisi' in request.endpoint else '' }}">
+                <i class="fas fa-calendar-alt"></i> Manajemen Edisi
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ url_for('admin.riwayat_edisi') }}" 
+               class="nav-link {{ 'active' if 'riwayat_edisi' in request.endpoint else '' }}">
+                <i class="fas fa-history"></i> Riwayat Edisi
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ url_for('admin.manajemen_user') }}" 
+               class="nav-link {{ 'active' if 'manajemen_user' in request.endpoint else '' }}">
+                <i class="fas fa-users-cog"></i> Manajemen User
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+
+<div id="overlay" class="overlay"></div>
+
+<div id="main-content">
+    {% if active_edisi %}
+    <div class="alert alert-primary text-center mb-0" role="alert">
+        <i class="fas fa-info-circle me-2"></i>
+        Anda sedang bekerja pada edisi: <strong>{{ active_edisi.nama }}</strong>
+    </div>
+    {% endif %}
+    
+    <main class="content-wrapper">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
                     <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' if category == 'warning' else 'info-circle' if category == 'info' else 'exclamation-circle' }} me-2"></i>
                         {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
 
-        {% block content %}{% endblock %}
+        {% block content %}
+        <!-- Konten halaman akan dimuat di sini -->
+        <div class="row">
+            <div class="col-12">
+                <h1>Dashboard</h1>
+                <p>Selamat datang di admin panel Mabar-Ati!</p>
+            </div>
+        </div>
+        {% endblock %}
     </main>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+<!-- Bottom Navigation (Mobile & Tablet Only) -->
+<nav class="bottom-nav">
+    <div class="bottom-nav-content">
+        <a href="{{ url_for('admin.dashboard') }}" 
+           class="bottom-nav-item {{ 'active' if request.endpoint == 'admin.dashboard' else '' }}">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="{{ url_for('admin.pendaftaran_rombongan') }}" 
+           class="bottom-nav-item {{ 'active' if 'pendaftaran_rombongan' in request.endpoint else '' }}">
+            <i class="fas fa-user-plus"></i>
+            <span>Pendaftaran</span>
+        </a>
+        <a href="{{ url_for('admin.manajemen_keuangan') }}" 
+           class="bottom-nav-item {{ 'active' if 'manajemen_keuangan' in request.endpoint else '' }}">
+            <i class="fas fa-money-bill-wave"></i>
+            <span>Keuangan</span>
+        </a>
+        <button id="bottom-menu-toggle" class="bottom-nav-item" type="button">
+            <i class="fas fa-ellipsis-h"></i>
+            <span>Menu</span>
+        </button>
+    </div>
+</nav>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const sidebarClose = document.getElementById('sidebar-close');
+    const bottomMenuToggle = document.getElementById('bottom-menu-toggle');
+    const mainContent = document.getElementById('main-content');
+    const contentWrapper = document.querySelector('.content-wrapper');
+
+    function toggleSidebar() {
+        sidebar.classList.toggle('active');
+        
+        // Desktop behavior - toggle sidebar visibility and expand content
+        if (window.innerWidth >= 992) {
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+            contentWrapper.classList.toggle('expanded');
+        } else {
+            // Mobile/tablet behavior - show overlay
+            overlay.classList.toggle('active');
+        }
+        
+        // Prevent body scroll when sidebar is open on mobile/tablet
+        if (window.innerWidth < 992) {
+            document.body.style.overflow = sidebar.classList.contains('active') ? 'hidden' : '';
+        }
+    }
+
+    function closeSidebar() {
+        sidebar.classList.remove('active');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+        
+        // Desktop behavior - collapse sidebar and expand content
+        if (window.innerWidth >= 992) {
+            sidebar.classList.add('collapsed');
+            mainContent.classList.add('expanded');
+            contentWrapper.classList.add('expanded');
+        }
+    }
+
+    function openSidebar() {
+        sidebar.classList.add('active');
+        
+        // Desktop behavior - show sidebar and restore content width
+        if (window.innerWidth >= 992) {
+            sidebar.classList.remove('collapsed');
+            mainContent.classList.remove('expanded');
+            contentWrapper.classList.remove('expanded');
+        }
+    }
+
+    // Event listeners
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', toggleSidebar);
+    }
+    
+    if (sidebarClose) {
+        sidebarClose.addEventListener('click', function() {
+            if (window.innerWidth >= 992) {
+                closeSidebar();
+            } else {
+                closeSidebar();
+            }
+        });
+    }
+    
+    if (bottomMenuToggle) {
+        bottomMenuToggle.addEventListener('click', function() {
+            openSidebar();
+            if (window.innerWidth < 992) {
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+        });
+    }
+    
+    if (overlay) {
+        overlay.addEventListener('click', closeSidebar);
+    }
+
+    // Handle keyboard navigation
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && sidebar.classList.contains('active')) {
+            closeSidebar();
+        }
+    });
+
+    // Handle window resize
+    window.addEventListener('resize', function() {
+        if (window.innerWidth >= 992) {
+            // Desktop mode - remove mobile classes
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+            
+            // If sidebar was closed on mobile, keep it closed on desktop
+            if (!sidebar.classList.contains('active')) {
+                sidebar.classList.add('collapsed');
+                mainContent.classList.add('expanded');
+                contentWrapper.classList.add('expanded');
+            }
+        } else {
+            // Mobile/tablet mode - reset desktop classes
+            sidebar.classList.remove('collapsed');
+            mainContent.classList.remove('expanded');
+            contentWrapper.classList.remove('expanded');
+            
+            if (sidebar.classList.contains('active')) {
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+    });
+
+    // Auto-close sidebar on mobile when clicking nav links
+    const navLinks = sidebar.querySelectorAll('.nav-link');
+    navLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            if (window.innerWidth < 992) {
+                setTimeout(closeSidebar, 150);
+            }
+        });
+    });
+
+    // Initialize desktop state
+    if (window.innerWidth >= 992) {
+        // Start with sidebar open on desktop
+        sidebar.classList.add('active');
+        sidebar.classList.remove('collapsed');
+        mainContent.classList.remove('expanded');
+        contentWrapper.classList.remove('expanded');
+    }
+});
+</script>
+
 </body>
 </html>

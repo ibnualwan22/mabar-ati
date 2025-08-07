@@ -3,78 +3,91 @@
 {% block title %}Peserta {{ rombongan.nama_rombongan }}{% endblock %}
 
 {% block content %}
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h1>Daftar Peserta</h1>
-        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">&larr; Kembali ke Manajemen Rombongan</a>
+<style>
+    /* Sedikit style tambahan untuk badge */
+    .badge {
+        font-size: 0.85em;
+        padding: 0.4em 0.7em;
+    }
+</style>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">Daftar Peserta</h1>
+        <h2 class="h4 text-muted">Rombongan: <strong>{{ rombongan.nama_rombongan }}</strong></h2>
     </div>
-    <h2>Rombongan: <strong>{{ rombongan.nama_rombongan }}</strong></h2>
-    <p>Total Peserta: <strong>{{ rombongan.pendaftar|length }}</strong></p>
-    <hr>
-    
-    <div class="table-responsive">
-    <table class="table table-striped table-hover">
-        <thead>
-            <tr>
-                <th>No.</th>
-                <th>Nama Santri</th>
-                <th>Asrama</th>
-                <th>Titik Turun</th>
-                <th>Jenis Perjalanan</th>
-                <th>Bus Pulang</th>
-                <th>Bus Kembali</th>
-                <th>Status Bayar</th>
-                <th>Aksi</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for pendaftaran in pendaftar|sort(attribute='santri.nama') %}
-            <tr>
-                <td>{{ loop.index }}</td>
-                <td>
-                    <strong>{{ pendaftaran.santri.nama }}</strong><br>
-                    <small class="text-muted">NIS: {{ pendaftaran.santri.nis }}</small>
-                </td>
-                <td>{{ pendaftaran.santri.asrama }}</td>
-                <td>{{ pendaftaran.titik_turun or '-' }}</td>
-                <td>{{ pendaftaran.jenis_perjalanan }}</td>
-                <td>
-                    {% if pendaftaran.bus_pulang %}
-                        {{ pendaftaran.bus_pulang.nama_armada }} 
-                        ({{ pendaftaran.bus_pulang.nomor_lambung or pendaftaran.bus_pulang.plat_nomor }})
+    <a href="{{ url_for('admin.manajemen_rombongan') }}" class="btn btn-secondary">&larr; Kembali ke Manajemen Rombongan</a>
+</div>
+<p>Total Peserta di Rombongan Ini: <strong>{{ rombongan.pendaftar|length }}</strong></p>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>No.</th>
+                        <th>Nama Santri</th>
+                        <th>Asrama</th>
+                        <th>Titik Turun</th>
+                        <th>Perjalanan Pulang</th>
+                        <th>Perjalanan Kembali</th>
+                        <th>Status Bayar</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pendaftaran in pendaftar|sort(attribute='santri.nama') %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            <strong>{{ pendaftaran.santri.nama }}</strong><br>
+                            <small class="text-muted">NIS: {{ pendaftaran.santri.nis }}</small>
+                        </td>
+                        <td>{{ pendaftaran.santri.asrama }}</td>
+                        <td>{{ pendaftaran.titik_turun or '-' }}</td>
+                        <td>
+                            {% if pendaftaran.bus_pulang %}
+                                <span class="badge bg-info text-dark">
+                                    {{ pendaftaran.bus_pulang.nama_armada }} ({{ pendaftaran.bus_pulang.nomor_lambung or pendaftaran.bus_pulang.plat_nomor }})
+                                </span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if pendaftaran.bus_kembali %}
+                                <span class="badge bg-info text-dark">
+                                    {{ pendaftaran.bus_kembali.nama_armada }} ({{ pendaftaran.bus_kembali.nomor_lambung or pendaftaran.bus_kembali.plat_nomor }})
+                                </span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if pendaftaran.status_pembayaran == 'Lunas' %}
+                                <span class="badge bg-success">Lunas</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">Belum Lunas</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if current_user.role.name == 'Korpus' or (current_user.role.name == 'Korda' and rombongan in current_user.managed_rombongan) %}
+                                <a href="{{ url_for('admin.edit_pendaftaran', pendaftaran_id=pendaftaran.id) }}" class="btn btn-secondary btn-sm">Edit</a>
+                                <form method="POST" action="{{ url_for('admin.hapus_pendaftaran', pendaftaran_id=pendaftaran.id) }}" style="display:inline;" onsubmit="return confirm('Anda yakin ingin menghapus pendaftaran untuk \'{{ pendaftaran.santri.nama }}\'?');">
+                                    <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
                     {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>
-                    {% if pendaftaran.bus_kembali %}
-                        {{ pendaftaran.bus_kembali.nama_armada }} 
-                        ({{ pendaftaran.bus_kembali.nomor_lambung or pendaftaran.bus_kembali.plat_nomor }})
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>
-                    {% if pendaftaran.status_pembayaran == 'Lunas' %}
-                        <span class="badge bg-success">Lunas</span>
-                    {% else %}
-                        <span class="badge bg-danger">Belum Lunas</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if current_user.role.name == 'Korpus' or (current_user.role.name == 'Korda' and rombongan in current_user.managed_rombongan) %}
-                    <a href="{{ url_for('admin.edit_pendaftaran', pendaftaran_id=pendaftaran.id) }}" class="btn btn-secondary btn-sm">Edit</a>
-                    <form method="POST" action="{{ url_for('admin.hapus_pendaftaran', pendaftaran_id=pendaftaran.id) }}" style="display:inline;" onsubmit="return confirm('Anda yakin?');">
-                        <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
-                    </form>
-                    {% endif %}
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="9" class="text-center">Belum ada peserta di rombongan ini.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                    <tr>
+                        <td colspan="8" class="text-center">Belum ada peserta di rombongan ini.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 {% endblock %}

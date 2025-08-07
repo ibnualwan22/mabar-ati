@@ -3,6 +3,7 @@
 {% block title %}Tambah Partisipan Baru{% endblock %}
 
 {% block content %}
+        {% if current_user.role.name in ['Korpus', 'PJ Acara'] %}
     <h1>Tambah Partisipan Baru</h1>
     <a href="{{ url_for('admin.data_partisipan') }}">&larr; Kembali ke Data Partisipan</a>
 
@@ -26,7 +27,7 @@
             {{ form.submit(class="btn btn-primary") }}
         </div>
     </form>
-
+            {% endif %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const hiddenSantriInput = document.getElementById('santri');
