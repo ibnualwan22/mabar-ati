@@ -1,77 +1,108 @@
 {% extends "_admin_layout.html" %}
-
 {% block title %}Manajemen Rombongan{% endblock %}
-
 {% block content %}
-    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-        <h1 class="h2">Manajemen Rombongan</h1>
-        {% if current_user.role.name == 'Korpus' %}
-            <a href="{{ url_for('admin.tambah_rombongan') }}" class="btn btn-primary">+ Tambah Rombongan Baru</a>
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Manajemen Rombongan</h1>
+    {% if current_user.role.name == 'Korpus' %}
+        <a href="{{ url_for('admin.tambah_rombongan') }}" class="btn btn-primary"><i class="fas fa-plus me-2"></i>Tambah Rombongan Baru</a>
+    {% endif %}
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3 align-items-center">
+            <div class="col-md-10">
+                <input type="text" name="q" class="form-control" placeholder="Cari nama rombongan..." value="{{ request.args.get('q', '') }}">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Cari</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-4">
+    {% for rombongan in semua_rombongan %}
+    <div class="col-lg-6">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ rombongan.nama_rombongan }}</h5>
+                <span class="badge bg-primary rounded-pill">{{ rombongan.pendaftar_pulang|length + rombongan.pendaftar_kembali|length }} Peserta</span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">PJ Putra</h6>
+                        <p><i class="fas fa-user me-2"></i>{{ rombongan.penanggung_jawab_putra or '-' }}<br>
+                           <i class="fab fa-whatsapp me-2"></i>{{ rombongan.kontak_person_putra or '-' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">PJ Putri</h6>
+                        <p><i class="fas fa-user me-2"></i>{{ rombongan.penanggung_jawab_putri or '-' }}<br>
+                           <i class="fab fa-whatsapp me-2"></i>{{ rombongan.kontak_person_putri or '-' }}</p>
+                    </div>
+                </div>
+                <hr>
+    <h6 class="text-muted">Informasi Pembayaran</h6>
+    <p><i class="fas fa-credit-card me-2"></i>{{ rombongan.nomor_rekening or 'Informasi rekening belum diatur.' }}</p>
+    <hr>
+                <hr>
+                <h6 class="text-muted">Jadwal</h6>
+                <p>
+                    <i class="fas fa-arrow-right-from-bracket me-2"></i> <strong>Pulang:</strong> {{ rombongan.jadwal_pulang.strftime('%d %b %Y, %H:%M') if rombongan.jadwal_pulang else 'N/A' }}<br>
+                    <i class="fas fa-arrow-right-to-bracket me-2"></i> <strong>Kembali:</strong> {{ rombongan.jadwal_berangkat.strftime('%d %b %Y, %H:%M') if rombongan.jadwal_berangkat else 'N/A' }}
+                </p>
+                <hr>
+                <h6 class="text-muted">Detail Harga Titik Turun/Jemput</h6>
+                <ul class="list-group list-group-flush">
+                    {% for tarif in rombongan.tarifs %}
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>{{ tarif.titik_turun }}</span>
+                            <strong>Rp {{ "{:,.0f}".format(tarif.harga_bus + tarif.fee_korda + 10000).replace(',', '.') }}</strong>
+                        </li>
+                    {% else %}
+                        <li class="list-group-item">Belum ada data tarif.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="card-footer text-end bg-light">
+    <div class="btn-group">
+        <a href="{{ url_for('admin.daftar_peserta', rombongan_id=rombongan.id) }}" class="btn btn-primary btn-sm">Lihat Peserta</a>
+        
+        {% if rombongan.buses.count() > 0 %}
+        <div class="btn-group">
+            <button type="button" class="btn btn-info btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                Lihat Manifest Bus
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                {% for bus in rombongan.buses %}
+                    <li>
+                        <a class="dropdown-item" href="{{ url_for('admin.detail_bus', bus_id=bus.id) }}">
+                            {{ bus.nama_armada }} - {{ bus.nomor_lambung or bus.plat_nomor }}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
         {% endif %}
     </div>
-    
-    <table class="table table-striped table-hover align-middle">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Nama Rombongan</th>
-                <th>Penanggung Jawab</th>
-                <th>Jadwal Berangkat</th>
-                <th>Kuota</th>
-                <th>Peserta</th>
-                <th>Manifest Bus</th>
-                <th>Aksi</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for rombongan in semua_rombongan %}
-            <tr>
-                <td>{{ rombongan.id }}</td>
-                <td>{{ rombongan.nama_rombongan }}</td>
-                <td>{{ rombongan.penanggung_jawab }}</td>
-                <td>{{ rombongan.jadwal_keberangkatan.strftime('%d %b %Y %H:%M') if rombongan.jadwal_keberangkatan else '-' }}</td>
-                <td>{{ rombongan.pendaftar|length }} / {{ rombongan.buses|sum(attribute='kuota') or '0' }}</td>
-                <td>
-                <a href="{{ url_for('admin.daftar_peserta', rombongan_id=rombongan.id) }}" class="btn btn-primary btn-sm">Lihat Peserta ({{ rombongan.pendaftar|length }})</a>
-                </td>
-                <td>
-                    {% if rombongan.buses %}
-                    <div class="dropdown">
-                        <button class="btn btn-info btn-sm dropdown-toggle w-100" type="button" data-bs-toggle="dropdown">
-                            Lihat Manifest
-                        </button>
-                        <ul class="dropdown-menu">
-                            {% for bus in rombongan.buses %}
-                                <li>
-                                    <a class="dropdown-item" href="{{ url_for('admin.detail_bus', bus_id=bus.id) }}">
-                                        {{ bus.nama_armada }} - {{ bus.nomor_lambung or bus.plat_nomor }}
-                                    </a>
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    {% else %}
-                    <span class="text-muted">Belum ada bus</span>
-                    {% endif %}
-                </td>
-                <td>
+
     {% if current_user.role.name == 'Korpus' or (current_user.role.name == 'Korda' and rombongan in current_user.managed_rombongan) %}
         <a href="{{ url_for('admin.edit_rombongan', id=rombongan.id) }}" class="btn btn-secondary btn-sm">Edit</a>
     {% endif %}
-
+    
     {% if current_user.role.name == 'Korpus' %}
         <form method="POST" action="{{ url_for('admin.hapus_rombongan', id=rombongan.id) }}" style="display:inline;" onsubmit="return confirm('Anda yakin?');">
             <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
         </form>
-    {% endif %}
-</td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="8" class="text-center">Belum ada data rombongan untuk edisi ini.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="alert alert-info">Belum ada data rombongan untuk edisi ini.</div>
+    </div>
+    {% endfor %}
 </div>
 {% endblock %}

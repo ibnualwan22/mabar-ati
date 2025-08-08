@@ -4,20 +4,23 @@
 
 {% block content %}
 <style>
-    .table-responsive {
-        border: 1px solid #dee2e6;
-        border-radius: .375rem;
-    }
-    .status-badge {
-        font-size: 0.8em;
-        font-weight: 600;
-        padding: 0.35em 0.65em;
-        border-radius: .375rem;
-    }
-    .status-aktif { background-color: #d1e7dd; color: #0f5132; }
-    .status-izin { background-color: #fff3cd; color: #664d03; }
-    .status-partisipan { background-color: #cff4fc; color: #055160; }
-    .status-terdaftar { background-color: #e2e3e5; color: #41464b; }
+    /* CSS untuk Modal */
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
+    .modal-content { background-color: #fefefe; margin: 10% auto; padding: 20px; border: 1px solid #888; width: 60%; border-radius: 8px; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px;}
+    .close-btn { color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
+    .search-results { max-height: 400px; overflow-y: auto; margin-top: 15px; border: 1px solid #eee; }
+    .result-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+    .result-item:last-child { border-bottom: none; }
+    .result-item button:disabled { background-color: #28a745; cursor: not-allowed; }
+    
+    /* CSS untuk Filter & Tabel */
+    .filter-form { margin-bottom: 20px; }
+    .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; align-items: center; }
+    .filter-grid input, .filter-grid select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+    .action-buttons { margin-top: 20px; margin-bottom: 20px; }
+    tbody tr:nth-child(even) { background-color: #f9f9f9; }
+    .pagination { margin-top: 20px; text-align: center; }
 </style>
 
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -36,14 +39,20 @@
                     <input type="text" name="nama" class="form-control" placeholder="Cari Nama Santri..." value="{{ request.args.get('nama', '') }}">
                 </div>
                 <div class="col-md-3">
-                    <select id="filter-alamat" name="alamat" multiple placeholder="Filter Alamat..."></select>
-                </div>
+<select name="alamat" id="filter-alamat" multiple placeholder="Cari Alamat...">
+    {% for kab in all_kabupaten %}
+        <option value="{{ kab }}" {% if kab in request.args.getlist('alamat') %}selected{% endif %}>{{ kab }}</option>
+    {% endfor %}
+</select>
+<datalist id="alamat-list"></datalist>
+</div>
                 <div class="col-md-3">
                     <select name="status" class="form-select">
                         <option value="">-- Semua Status Santri --</option>
                         <option value="Aktif" {% if request.args.get('status') == 'Aktif' %}selected{% endif %}>Aktif</option>
                         <option value="Izin" {% if request.args.get('status') == 'Izin' %}selected{% endif %}>Izin</option>
                         <option value="Partisipan" {% if request.args.get('status') == 'Partisipan' %}selected{% endif %}>Partisipan</option>
+                        <option value="Wisuda" {% if request.args.get('status') == 'Wisuda' %}selected{% endif %}>Wisuda</option>
                     </select>
                 </div>
                 <div class="col-md-3">
@@ -76,7 +85,7 @@
 
 <div class="card">
     <div class="card-header">
-        <h5>Daftar Santri (Total: {{ pagination.total }})</h5>
+        <h5>Daftar Santri Tersimpan (Total: {{ pagination.total }})</h5>
     </div>
     <div class="card-body">
         <div class="table-responsive">
@@ -110,13 +119,13 @@
                         </td>
                         <td>
                             {% if santri.status_santri == 'Aktif' %}
-                                <span class="status-badge status-aktif">Aktif</span>
+                                <span class="badge bg-success">Aktif</span>
                             {% elif santri.status_santri == 'Izin' %}
-                                <span class="status-badge status-izin">Izin</span>
+                                <span class="badge bg-warning text-dark">Izin</span>
                             {% elif santri.status_santri == 'Partisipan' %}
-                                <span class="status-badge status-partisipan">Partisipan</span>
+                                <span class="badge bg-info text-dark">Partisipan</span>
                             {% else %}
-                                <span class="status-badge">{{ santri.status_santri }}</span>
+                                <span class="badge bg-secondary">{{ santri.status_santri }}</span>
                             {% endif %}
                         </td>
                         <td>
@@ -124,7 +133,7 @@
                                 Pulang: <strong>{{ santri.pendaftaran.rombongan_pulang.nama_rombongan if santri.pendaftaran.rombongan_pulang else 'N/A' }}</strong><br>
                                 <small class="text-muted">Kembali: <strong>{{ santri.pendaftaran.rombongan_kembali.nama_rombongan if santri.pendaftaran.rombongan_kembali else 'N/A' }}</strong></small>
                             {% else %}
-                                <span class="status-badge status-terdaftar">Belum Terdaftar</span>
+                                <span class="badge bg-light text-dark">Belum Terdaftar</span>
                             {% endif %}
                         </td>
                         <td>
@@ -170,85 +179,127 @@
     </div>
 </div>
 
-<div id="impor-modal" class="modal">...</div>
+<div id="impor-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Cari & Impor Santri</h2>
+            <span class="close-btn">&times;</span>
+        </div>
+        <div>
+            <input type="text" id="search-santri-input" placeholder="Ketik nama santri..." style="width: 100%; padding: 10px; font-size: 1em;">
+            <div class="search-results" id="search-results-container">
+                <p style="text-align: center; color: #888;">Ketik nama untuk memulai pencarian.</p>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const modal = document.getElementById('impor-modal');
-    const openModalBtn = document.getElementById('open-impor-modal');
-    const closeModalBtn = modal.querySelector('.close-btn');
-    const searchInput = document.getElementById('search-santri-input');
-    const resultsContainer = document.getElementById('search-results-container');
-    let debounceTimer;
+    if (modal) {
+        const openModalBtn = document.getElementById('open-impor-modal');
+        const closeModalBtn = modal.querySelector('.close-btn');
+        const searchInput = document.getElementById('search-santri-input');
+        const resultsContainer = document.getElementById('search-results-container');
+        let debounceTimer;
 
-    openModalBtn.onclick = () => { modal.style.display = 'block'; searchInput.focus(); };
-    closeModalBtn.onclick = () => { modal.style.display = 'none'; };
-    window.onclick = (event) => { if (event.target == modal) { modal.style.display = 'none'; } };
+        openModalBtn.onclick = () => { modal.style.display = 'block'; searchInput.focus(); };
+        closeModalBtn.onclick = () => { modal.style.display = 'none'; };
+        window.onclick = (event) => { if (event.target == modal) { modal.style.display = 'none'; } };
+
+        searchInput.addEventListener('keyup', (e) => {
+            clearTimeout(debounceTimer);
+            const query = e.target.value;
+            if (query.length < 3) {
+                resultsContainer.innerHTML = '<p style="text-align: center; color: #888;">Ketik minimal 3 huruf.</p>';
+                return;
+            }
+            resultsContainer.innerHTML = '<p style="text-align: center; color: #888;">Mencari...</p>';
+            debounceTimer = setTimeout(() => {
+                fetch(`/admin/api/search-student?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        renderResults(data.data);
+                    });
+            }, 500);
+        });
+
+        function renderResults(santriList) {
+            resultsContainer.innerHTML = '';
+            if (!santriList || santriList.length === 0) {
+                resultsContainer.innerHTML = '<p style="text-align: center; color: #888;">Santri tidak ditemukan.</p>';
+                return;
+            }
+            santriList.forEach(santri => {
+                const item = document.createElement('div');
+                item.className = 'result-item';
+                item.innerHTML = `
+                    <div>
+                        <strong>${santri.name}</strong><br>
+                        <small>NIS: ${santri.nis || 'N/A'} | Asrama: ${santri.activeDormitory || 'N/A'}</small>
+                    </div>
+                    <button class="btn btn-primary impor-btn">+ Impor</button>
+                `;
+                item.querySelector('.impor-btn').dataset.santri = JSON.stringify(santri);
+                resultsContainer.appendChild(item);
+            });
+        }
+        
+        resultsContainer.addEventListener('click', function(e) {
+            if (e.target && e.target.classList.contains('impor-btn')) {
+                const btn = e.target;
+                const santriData = JSON.parse(btn.dataset.santri);
+                btn.textContent = 'Memproses...';
+                btn.disabled = true;
+
+                fetch('/admin/santri/impor', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(santriData)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        btn.textContent = 'Berhasil';
+                        btn.style.backgroundColor = '#28a745';
+                    } else {
+                        btn.textContent = result.message;
+                        btn.style.backgroundColor = '#dc3545';
+                    }
+                });
+            }
+        });
+    }
     new TomSelect('#filter-alamat',{
     plugins: ['remove_button'],
 });
+    const alamatInput = document.getElementById('filter-alamat-input');
+    const alamatDataList = document.getElementById('alamat-list');
+    let debounceTimer;
 
-    searchInput.addEventListener('keyup', (e) => {
+    alamatInput.addEventListener('keyup', function() {
         clearTimeout(debounceTimer);
-        const query = e.target.value;
-        if (query.length < 3) {
-            resultsContainer.innerHTML = '<p style="text-align: center; color: #888;">Ketik minimal 3 huruf.</p>';
+        const query = this.value;
+
+        if (query.length < 2) {
             return;
         }
-        resultsContainer.innerHTML = '<p style="text-align: center; color: #888;">Mencari...</p>';
+
         debounceTimer = setTimeout(() => {
-            fetch(`/admin/api/search-student?q=${encodeURIComponent(query)}`)
+            fetch(`/admin/api/search-wilayah?q=${encodeURIComponent(query)}`)
                 .then(response => response.json())
                 .then(data => {
-                    renderResults(data.data);
+                    alamatDataList.innerHTML = ''; // Kosongkan saran lama
+                    if (data.results) {
+                        data.results.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item.label;
+                            alamatDataList.appendChild(option);
+                        });
+                    }
                 });
-        }, 500);
-    });
-
-    function renderResults(santriList) {
-        resultsContainer.innerHTML = '';
-        if (!santriList || santriList.length === 0) {
-            resultsContainer.innerHTML = '<p style="text-align: center; color: #888;">Santri tidak ditemukan.</p>';
-            return;
-        }
-        santriList.forEach(santri => {
-            const item = document.createElement('div');
-            item.className = 'result-item';
-            item.innerHTML = `
-                <div>
-                    <strong>${santri.name}</strong><br>
-                    <small>NIS: ${santri.nis || 'N/A'} | Asrama: ${santri.activeDormitory || 'N/A'}</small>
-                </div>
-                <button class="btn btn-primary impor-btn">+ Impor</button>
-            `;
-            item.querySelector('.impor-btn').dataset.santri = JSON.stringify(santri);
-            resultsContainer.appendChild(item);
-        });
-    }
-    
-    resultsContainer.addEventListener('click', function(e) {
-        if (e.target && e.target.classList.contains('impor-btn')) {
-            const btn = e.target;
-            const santriData = JSON.parse(btn.dataset.santri);
-            btn.textContent = 'Memproses...';
-            btn.disabled = true;
-
-            fetch('/admin/santri/impor', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(santriData)
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.success) {
-                    btn.textContent = 'Berhasil';
-                    btn.style.backgroundColor = '#28a745';
-                } else {
-                    btn.textContent = result.message;
-                    btn.style.backgroundColor = '#dc3545';
-                }
-            });
-        }
+        }, 500); // Jeda 500ms
     });
 });
 </script>

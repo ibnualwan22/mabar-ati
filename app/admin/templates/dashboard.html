@@ -114,23 +114,54 @@
                     <thead>
                         <tr>
                             <th>Nama Rombongan</th>
-                            <th>Total Peserta</th>
+                            <th>Peserta Pulang</th>
+                            <th>Peserta Kembali</th>
                             <th>Lunas</th>
                             <th>Belum Lunas</th>
                             <th>Kuota Terisi</th>
-                            <th>Total Pemasukan</th>
+                            <th>Detail Peserta</th>
+                            <th>Detail Bus</th>
+                            <!-- <th>Total Pemasukan</th> -->
                         </tr>
                     </thead>
                     <tbody>
                         {% for rombongan in semua_rombongan %}
                         <tr>
                             <td><strong>{{ rombongan.nama_rombongan }}</strong></td>
-                            <td>{{ rombongan.pendaftar_pulang|length + rombongan.pendaftar_kembali|length }}</td>
+                            <td>{{ rombongan.jumlah_peserta_pulang }}</td>
+                            <td>{{ rombongan.jumlah_peserta_kembali }}</td>
                             <td>{{ (rombongan.pendaftar_pulang|selectattr('status_pulang', 'equalto', 'Lunas')|list|length) + (rombongan.pendaftar_kembali|selectattr('status_kembali', 'equalto', 'Lunas')|list|length) }}</td>
                             <td>{{ (rombongan.pendaftar_pulang|selectattr('status_pulang', 'equalto', 'Belum Bayar')|list|length) + (rombongan.pendaftar_kembali|selectattr('status_kembali', 'equalto', 'Belum Bayar')|list|length) }}</td>
-                            <td>{{ rombongan.pendaftar_pulang|length + rombongan.pendaftar_kembali|length }} / {{ rombongan.buses|sum(attribute='kuota') or '0' }}</td>
-                            <td>Rp {{ "{:,.0f}".format((rombongan.pendaftar_pulang|sum(attribute='total_biaya')) + (rombongan.pendaftar_kembali|sum(attribute='total_biaya'))).replace(',', '.') }}</td>                        </tr>
-                        {% endfor %}
+                            <td>{{ rombongan.pendaftar_pulang|length + rombongan.pendaftar_kembali|length }} / {{ (rombongan.buses|sum(attribute='kuota') or 0) * 2 }}</td>                             <td>
+                            <a href="{{ url_for('admin.daftar_peserta', rombongan_id=rombongan.id) }}" class="btn btn-primary btn-sm">
+                            Lihat Peserta ({{ (rombongan.pendaftar_pulang|length) + (rombongan.pendaftar_kembali|length) }})
+                            </a>
+                            </td>
+                            <td>
+                    {% if rombongan.buses %}
+                    <div class="dropdown">
+                        <button class="btn btn-info btn-sm dropdown-toggle w-100" type="button" data-bs-toggle="dropdown">
+                            Lihat Manifest
+                        </button>
+                        <ul class="dropdown-menu">
+                            {% for bus in rombongan.buses %}
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('admin.detail_bus', bus_id=bus.id) }}">
+                                        {{ bus.nama_armada }} - {{ bus.nomor_lambung or bus.plat_nomor }}
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% else %}
+                    <span class="text-muted">Belum ada bus</span>
+                    {% endif %}
+                </td>
+                            <!-- <td>
+                            {% set total_pemasukan_rombongan = (rombongan.pendaftar_pulang|sum(attribute='total_biaya')) + (rombongan.pendaftar_kembali|sum(attribute='total_biaya')) %}
+                            Rp {{ "{:,.0f}".format(total_pemasukan_rombongan).replace(',', '.') }}
+                            </td>                         -->
+                            {% endfor %}
                     </tbody>
                 </table>
             </div>
