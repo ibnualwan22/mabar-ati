@@ -20,17 +20,18 @@ class TarifForm(Form):
 
 class RombonganForm(FlaskForm):
     nama_rombongan = StringField('Nama Rombongan', validators=[DataRequired()])
-    penanggung_jawab_putra = StringField('PJ Putra', validators=[DataRequired()])
-    kontak_person_putra = StringField('Kontak PJ Putra (WA)', validators=[DataRequired()])
+    penanggung_jawab_putra = StringField('PJ Putra', validators=[Optional()])
+    kontak_person_putra = StringField('Kontak PJ Putra (WA)', validators=[Optional()])
     penanggung_jawab_putri = StringField('PJ Putri', validators=[Optional()])
     kontak_person_putri = StringField('Kontak PJ Putri (WA)', validators=[Optional()])
-    nomor_rekening = StringField('Nomor Rekening', validators=[DataRequired()])
-    jadwal_keberangkatan = DateTimeLocalField('Jadwal Keberangkatan', format='%Y-%m-%dT%H:%M', validators=[DataRequired()])
-    batas_pembayaran = DateField('Batas Akhir Pembayaran', format='%Y-%m-%d', validators=[Optional()])
-    titik_kumpul = StringField('Titik Kumpul', validators=[DataRequired()])
+    nomor_rekening = StringField('Nomor Rekening', validators=[Optional()])
     cakupan_wilayah = HiddenField('Cakupan Wilayah')
-    tarifs = FieldList(FormField(TarifForm), min_entries=1, label='Tarif Berdasarkan Titik Turun')
-    # Field kuota dan nama_armada sudah dihapus
+    jadwal_pulang = DateTimeLocalField('Jadwal Pulang (dari Pondok)', format='%Y-%m-%dT%H:%M', validators=[Optional()])
+    batas_pembayaran_pulang = DateField('Batas Bayar Pulang', format='%Y-%m-%d', validators=[Optional()])
+    jadwal_berangkat = DateTimeLocalField('Jadwal Berangkat (kembali ke Pondok)', format='%Y-%m-%dT%H:%M', validators=[Optional()])
+    batas_pembayaran_berangkat = DateField('Batas Bayar Berangkat', format='%Y-%m-%d', validators=[Optional()])
+    titik_jemput_berangkat = StringField('Titik Kumpul Berangkat (di Daerah)', validators=[Optional()])
+    tarifs = FieldList(FormField(TarifForm), min_entries=1, label='Detail Harga Titik Turun/Jemput')
     submit = SubmitField('Simpan Rombongan')
 
 def rombongan_query():
@@ -82,29 +83,29 @@ class PendaftaranForm(FlaskForm):
     santri = HiddenField('Pilih Santri', validators=[DataRequired()])
     
     # Detail Perjalanan Pulang
-    status_pulang = SelectField(
-        'Status Pembayaran Pulang',
-        choices=[('Belum Bayar', 'Belum Bayar'), ('Lunas', 'Lunas'), ('Tidak Ikut', 'Tidak Ikut')],
-        default='Belum Bayar',
-        validators=[DataRequired()]
-    )
+    status_pulang = SelectField('Status Pembayaran Pulang', choices=[('Belum Bayar', 'Belum Bayar'), ('Lunas', 'Lunas'), ('Tidak Ikut', 'Tidak Ikut')], default='Belum Bayar', validators=[DataRequired()])
     metode_pembayaran_pulang = SelectField('Metode Pembayaran (Pulang)', choices=[('', '-'), ('Cash', 'Cash'), ('Transfer', 'Transfer')], validators=[Optional()])
     bus_pulang = SelectField('Bus Pulang', validators=[Optional()])
     titik_turun = SelectField('Pilih Titik Turun', choices=[], validators=[DataRequired()])
 
     # Detail Perjalanan Kembali
-    status_kembali = SelectField(
-        'Status Pembayaran Kembali',
-        choices=[('Belum Bayar', 'Belum Bayar'), ('Lunas', 'Lunas'), ('Tidak Ikut', 'Tidak Ikut')],
-        default='Belum Bayar',
-        validators=[DataRequired()]
-    )
+    status_kembali = SelectField('Status Pembayaran Kembali', choices=[('Belum Bayar', 'Belum Bayar'), ('Lunas', 'Lunas'), ('Tidak Ikut', 'Tidak Ikut')], default='Belum Bayar', validators=[DataRequired()])
     metode_pembayaran_kembali = SelectField('Metode Pembayaran (Kembali)', choices=[('', '-'), ('Cash', 'Cash'), ('Transfer', 'Transfer')], validators=[Optional()])
     bus_kembali = SelectField('Bus Kembali', validators=[Optional()])
     
     submit = SubmitField('Daftarkan Santri')
 
 class PendaftaranEditForm(FlaskForm):
+    rombongan_pulang_nama = StringField('Rombongan Pulang', render_kw={'readonly': True})
+
+    # Field Rombongan Kembali (bisa diubah)
+    rombongan_kembali = QuerySelectField(
+        'Rombongan Kembali',
+        query_factory=rombongan_query, # Menggunakan query semua rombongan
+        get_label='nama_rombongan',
+        allow_blank=True,
+        blank_text='-- Sama dengan Rombongan Pulang --'
+    )
     # Field untuk Perjalanan Pulang
     status_pulang = SelectField(
         'Status Perjalanan Pulang',
@@ -112,6 +113,7 @@ class PendaftaranEditForm(FlaskForm):
         validators=[DataRequired()]
     )
     metode_pembayaran_pulang = SelectField('Metode Pembayaran (Pulang)', choices=[('', '-'), ('Cash', 'Cash'), ('Transfer', 'Transfer')], validators=[Optional()])
+    titik_turun = SelectField('Titik Turun', validators=[DataRequired()])
     bus_pulang = SelectField('Bus Pulang', validators=[Optional()])
     titik_turun = SelectField('Titik Turun', validators=[DataRequired()])
 
@@ -121,6 +123,8 @@ class PendaftaranEditForm(FlaskForm):
         choices=[('Belum Bayar', 'Belum Bayar'), ('Lunas', 'Lunas'), ('Tidak Ikut', 'Tidak Ikut')],
         validators=[DataRequired()]
     )
+    titik_jemput_kembali = SelectField('Titik Jemput Kembali', choices=[], validators=[Optional()])
+
     metode_pembayaran_kembali = SelectField('Metode Pembayaran (Kembali)', choices=[('', '-'), ('Cash', 'Cash'), ('Transfer', 'Transfer')], validators=[Optional()])
     bus_kembali = SelectField('Bus Kembali', validators=[Optional()])
     

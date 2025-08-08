@@ -3,6 +3,15 @@
 {% block title %}Manajemen Keuangan{% endblock %}
 
 {% block content %}
+<style>
+    .card-header h5 {
+        margin-bottom: 0;
+    }
+    .table-sm th, .table-sm td {
+        padding: 0.5rem;
+    }
+</style>
+
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Manajemen Keuangan</h1>
 </div>
@@ -81,7 +90,6 @@
                             Fee Pondok (Pulang)
                             <span class="badge bg-light text-dark rounded-pill">Rp {{ "{:,.0f}".format(data.alokasi_pondok_pulang).replace(',', '.') }}</span>
                         </li>
-
                     </ul>
 
                     <h6 class="card-title"><strong>Rincian Kembali</strong></h6>

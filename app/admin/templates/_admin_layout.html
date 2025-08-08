@@ -443,7 +443,7 @@
     </div>
     <div class="header-right">
         <div class="user-info d-none d-md-flex">
-            <span>Halo, {{ current_user.username }}</span>
+            <span>Irasshaimase, {{ current_user.username }}</span>
             <span class="badge bg-light text-dark">{{ current_user.role.name }}</span>
         </div>
         <a href="{{ url_for('admin.logout') }}" class="logout-link" title="Logout" aria-label="Logout">
@@ -551,7 +551,7 @@
     {% if active_edisi %}
     <div class="alert alert-primary text-center mb-0" role="alert">
         <i class="fas fa-info-circle me-2"></i>
-        Anda sedang bekerja pada edisi: <strong>{{ active_edisi.nama }}</strong>
+        Perpulangan Edisi: <strong>{{ active_edisi.nama }}</strong>
     </div>
     {% endif %}
     

@@ -1,20 +1,27 @@
 {% extends "_admin_layout.html" %}
 {% block title %}Edit Pendaftaran{% endblock %}
 {% block content %}
-    <h1>Edit Detail Pendaftaran</h1>
-    <p>
-        <strong>Santri:</strong> {{ pendaftaran.santri.nama }}<br>
-        <strong>Rombongan:</strong> {{ pendaftaran.rombongan.nama_rombongan }}
-    </p>
-    <a href="{{ url_for('admin.daftar_peserta', rombongan_id=pendaftaran.rombongan_id) }}">&larr; Kembali ke Daftar Peserta</a>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="h2">Edit Detail Pendaftaran</h1>
+            <h2 class="h5 text-muted">
+                <strong>Santri:</strong> {{ pendaftaran.santri.nama }}
+            </h2>
+        </div>
+        <a href="{{ url_for('admin.daftar_peserta', rombongan_id=pendaftaran.rombongan_pulang_id or pendaftaran.rombongan_kembali_id) }}">&larr; Kembali ke Daftar Peserta</a>
+    </div>
 
     <form method="POST" action="" class="mt-4">
         {{ form.hidden_tag() }}
         <div class="row g-4">
             <div class="col-md-6">
                 <div class="card h-100">
-                    <div class="card-header fw-bold">Detail Perjalanan Pulang (Meninggalkan Pondok)</div>
+                    <div class="card-header fw-bold">Detail Perjalanan Pulang</div>
                     <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Rombongan Pulang</label>
+                            <input type="text" class="form-control" value="{{ pendaftaran.rombongan_pulang.nama_rombongan if pendaftaran.rombongan_pulang else 'N/A' }}" readonly>
+                        </div>
                         <div class="mb-3">{{ form.status_pulang.label(class="form-label") }} {{ form.status_pulang(class="form-select") }}</div>
                         <div class="mb-3">{{ form.metode_pembayaran_pulang.label(class="form-label") }} {{ form.metode_pembayaran_pulang(class="form-select") }}</div>
                         <div class="mb-3">{{ form.titik_turun.label(class="form-label") }} {{ form.titik_turun(class="form-select") }}</div>
@@ -22,38 +29,65 @@
                     </div>
                 </div>
             </div>
+
             <div class="col-md-6">
                 <div class="card h-100">
-                    <div class="card-header fw-bold">Detail Perjalanan Kembali (Menuju Pondok)</div>
+                    <div class="card-header fw-bold">Detail Perjalanan Kembali</div>
                     <div class="card-body">
+                        <div class="mb-3">{{ form.rombongan_kembali.label(class="form-label") }} {{ form.rombongan_kembali(class="form-select") }}</div>
+                        <div class="mb-3" id="field-titik-jemput">
+                            {{ form.titik_jemput_kembali.label(class="form-label") }}
+                            {{ form.titik_jemput_kembali(class="form-select") }}
+                        </div>
+                        <div class="mb-3">{{ form.bus_kembali.label(class="form-label") }} {{ form.bus_kembali(class="form-select") }}</div>
                         <div class="mb-3">{{ form.status_kembali.label(class="form-label") }} {{ form.status_kembali(class="form-select") }}</div>
                         <div class="mb-3">{{ form.metode_pembayaran_kembali.label(class="form-label") }} {{ form.metode_pembayaran_kembali(class="form-select") }}</div>
-                        <div class="mb-3">{{ form.bus_kembali.label(class="form-label") }} {{ form.bus_kembali(class="form-select") }}</div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <div class="form-group mt-4">
-            {{ form.submit(class="btn btn-primary") }}
-        </div>
+        <div class="form-group mt-4">{{ form.submit(class="btn btn-primary") }}</div>
     </form>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const jenisPerjalananSelect = document.getElementById('jenis_perjalanan');
-    const fieldBusPulang = document.getElementById('field-bus-pulang');
-    const fieldBusKembali = document.getElementById('field-bus-kembali');
+    const rombonganKembaliSelect = document.getElementById('rombongan_kembali');
+    const busKembaliSelect = document.getElementById('bus_kembali');
+    const titikJemputSelect = document.getElementById('titik_jemput_kembali');
 
-    function toggleBusFields() {
-        const jenis = jenisPerjalananSelect.value;
-        fieldBusPulang.style.display = (jenis === 'Pulang Saja' || jenis === 'Pulang Pergi') ? 'grid' : 'none';
-        fieldBusKembali.style.display = (jenis === 'Kembali Saja' || jenis === 'Pulang Pergi') ? 'grid' : 'none';
+    function updateKembaliOptions(rombonganId) {
+        // Jika pilihan dikosongkan, gunakan rombongan pulang sebagai default
+        if (!rombonganId) {
+            rombonganId = {{ pendaftaran.rombongan_pulang_id or 'null' }};
+            if (!rombonganId) { // Keluar jika tidak ada rombongan pulang sama sekali
+                busKembaliSelect.innerHTML = '<option value="">-- Pilih Rombongan Dulu --</option>';
+                titikJemputSelect.innerHTML = '<option value="">-- Pilih Rombongan Dulu --</option>';
+                return;
+            }
+        }
+        
+         // Ambil data detail rombongan dari API
+        fetch(`/admin/api/rombongan-detail/${rombonganId}`)
+            .then(res => res.json())
+            .then(data => {
+                // Update pilihan Bus Kembali
+                const busChoices = data.buses.map(bus => `<option value="${bus.id}">${bus.nama_armada} - ${bus.nomor_lambung || bus.plat_nomor} (Sisa: ${bus.sisa_kuota_kembali})</option>`).join('');
+                busKembaliSelect.innerHTML = '<option value="">-- Pilih Bus --</option>' + busChoices;
+                
+                // Update pilihan Titik Jemput Kembali
+                const titikChoices = data.tarifs.map(t => `<option value="${t.titik_turun}">${t.titik_turun}</option>`).join('');
+                titikJemputSelect.innerHTML = '<option value="">-- Pilih Titik Jemput --</option>' + titikChoices;
+
+                // Set nilai bus kembali jika masih ada di pilihan baru
+                busKembaliSelect.value = "{{ pendaftaran.bus_kembali_id or '' }}";
+            });
     }
 
-    jenisPerjalananSelect.addEventListener('change', toggleBusFields);
-    // Panggil saat halaman dimuat
-    toggleBusFields();
+    // Tambahkan event listener untuk mengubah pilihan saat rombongan kembali diganti
+    rombonganKembaliSelect.addEventListener('change', () => updateKembaliOptions(rombonganKembaliSelect.value));
+    
+    // Panggil sekali saat halaman dimuat untuk mengisi data awal
+    updateKembaliOptions(rombonganKembaliSelect.value);
 });
 </script>
 {% endblock %}

@@ -1,8 +1,8 @@
-"""Re-arch: Implementasi Edisi, Bus, dan sistem Pulang-Kembali
+"""Re-arch Final: Implementasi Lintas Rombongan & Detail Perjalanan
 
-Revision ID: f1be79a41b38
+Revision ID: 014339160986
 Revises: 
-Create Date: 2025-08-06 23:51:05.160969
+Create Date: 2025-08-08 01:05:43.197091
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'f1be79a41b38'
+revision = '014339160986'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -74,15 +74,17 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('edisi_id', sa.Integer(), nullable=False),
     sa.Column('nama_rombongan', sa.String(length=100), nullable=False),
-    sa.Column('penanggung_jawab', sa.String(length=100), nullable=False),
-    sa.Column('kontak_person', sa.String(length=20), nullable=False),
-    sa.Column('nomor_rekening', sa.String(length=50), nullable=False),
+    sa.Column('penanggung_jawab_putra', sa.String(length=100), nullable=True),
+    sa.Column('kontak_person_putra', sa.String(length=20), nullable=True),
+    sa.Column('penanggung_jawab_putri', sa.String(length=100), nullable=True),
+    sa.Column('kontak_person_putri', sa.String(length=20), nullable=True),
+    sa.Column('nomor_rekening', sa.String(length=50), nullable=True),
     sa.Column('cakupan_wilayah', sa.JSON(), nullable=True),
-    sa.Column('jadwal_keberangkatan', sa.DateTime(), nullable=True),
-    sa.Column('titik_kumpul', sa.String(length=200), nullable=True),
-    sa.Column('jadwal_kembali', sa.DateTime(), nullable=True),
-    sa.Column('titik_kumpul_kembali', sa.String(length=200), nullable=True),
-    sa.Column('batas_pembayaran', sa.Date(), nullable=True),
+    sa.Column('jadwal_pulang', sa.DateTime(), nullable=True),
+    sa.Column('batas_pembayaran_pulang', sa.Date(), nullable=True),
+    sa.Column('jadwal_berangkat', sa.DateTime(), nullable=True),
+    sa.Column('batas_pembayaran_berangkat', sa.Date(), nullable=True),
+    sa.Column('titik_jemput_berangkat', sa.String(length=200), nullable=True),
     sa.ForeignKeyConstraint(['edisi_id'], ['edisi.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -125,7 +127,8 @@ def upgrade():
     op.create_table('pendaftaran',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('santri_id', sa.Integer(), nullable=False),
-    sa.Column('rombongan_id', sa.Integer(), nullable=False),
+    sa.Column('rombongan_pulang_id', sa.Integer(), nullable=True),
+    sa.Column('rombongan_kembali_id', sa.Integer(), nullable=True),
     sa.Column('status_pulang', sa.String(length=20), nullable=True),
     sa.Column('metode_pembayaran_pulang', sa.String(length=20), nullable=True),
     sa.Column('bus_pulang_id', sa.Integer(), nullable=True),
@@ -137,7 +140,8 @@ def upgrade():
     sa.Column('tanggal_pendaftaran', sa.DateTime(), server_default=sa.text('now()'), nullable=True),
     sa.ForeignKeyConstraint(['bus_kembali_id'], ['bus.id'], ),
     sa.ForeignKeyConstraint(['bus_pulang_id'], ['bus.id'], ),
-    sa.ForeignKeyConstraint(['rombongan_id'], ['rombongan.id'], ),
+    sa.ForeignKeyConstraint(['rombongan_kembali_id'], ['rombongan.id'], ),
+    sa.ForeignKeyConstraint(['rombongan_pulang_id'], ['rombongan.id'], ),
     sa.ForeignKeyConstraint(['santri_id'], ['santri.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('santri_id')

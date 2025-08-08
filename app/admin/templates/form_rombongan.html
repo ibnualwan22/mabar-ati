@@ -3,57 +3,46 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h1>{{ title }}</h1>
-    <a href="{{ url_for('admin.manajemen_rombongan') }}">&larr; Kembali ke Manajemen Rombongan</a>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h2">{{ title }}</h1>
+        <a href="{{ url_for('admin.manajemen_rombongan') }}" class="btn btn-secondary">&larr; Kembali</a>
+    </div>
 
-    <form method="POST" action="" class="mt-4">
+    <form method="POST" action="">
         {{ form.hidden_tag() }}
         
-        <div class="card">
+        <div class="card mb-4">
             <div class="card-header">
-                <h4>Detail Rombongan</h4>
+                <h5>Informasi Umum Rombongan</h5>
             </div>
             <div class="card-body">
-                <div class="form-group form-grid">
-                    {{ form.nama_rombongan.label }}
-                    {{ form.nama_rombongan(class="form-control") }}
-                </div>
-                <div class="form-group form-grid">
-                    {{ form.penanggung_jawab_putra.label(class="form-label") }}
-                    {{ form.penanggung_jawab_putra(class="form-control") }}
-                </div>
-                <div class="form-group form-grid">
-                    {{ form.kontak_person_putra.label(class="form-label") }}
-                    {{ form.kontak_person_putra(class="form-control") }}
-                </div>
-
-    <div class="form-group form-grid">
-        {{ form.penanggung_jawab_putri.label(class="form-label") }}
-        {{ form.penanggung_jawab_putri(class="form-control") }}
-    </div>
-    <div class="form-group form-grid">
-        {{ form.kontak_person_putri.label(class="form-label") }}
-        {{ form.kontak_person_putri(class="form-control") }}
-    </div>
-                <div class="form-group form-grid">
-        {{ form.nomor_rekening.label(class="form-label") }}
-        {{ form.nomor_rekening(class="form-control") }}
-    </div>
-                <div class="form-group form-grid">
-                    {{ form.jadwal_keberangkatan.label }}
-                    {{ form.jadwal_keberangkatan(class="form-control") }}
-                </div>
-                <div class="form-group form-grid">
-                    {{ form.batas_pembayaran.label }}
-                    {{ form.batas_pembayaran(class="form-control") }}
-                </div>
-                <div class="form-group form-grid">
-                    {{ form.titik_kumpul.label }}
-                    {{ form.titik_kumpul(class="form-control") }}
-                </div>
-                <div class="form-group form-grid">
-                    <label for="select-wilayah">Cakupan Wilayah</label>
-                    <div>
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        {{ form.nama_rombongan.label(class="form-label") }}
+                        {{ form.nama_rombongan(class="form-control") }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.penanggung_jawab_putra.label(class="form-label") }}
+                        {{ form.penanggung_jawab_putra(class="form-control") }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.kontak_person_putra.label(class="form-label") }}
+                        {{ form.kontak_person_putra(class="form-control") }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.penanggung_jawab_putri.label(class="form-label") }}
+                        {{ form.penanggung_jawab_putri(class="form-control") }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.kontak_person_putri.label(class="form-label") }}
+                        {{ form.kontak_person_putri(class="form-control") }}
+                    </div>
+                     <div class="col-md-12">
+                        {{ form.nomor_rekening.label(class="form-label") }}
+                        {{ form.nomor_rekening(class="form-control") }}
+                    </div>
+                    <div class="col-md-12">
+                        <label for="select-wilayah" class="form-label">Cakupan Wilayah</label>
                         <select id="select-wilayah" multiple placeholder="Cari & pilih beberapa wilayah..."></select>
                         {{ form.cakupan_wilayah() }}
                     </div>
@@ -61,17 +50,45 @@
             </div>
         </div>
 
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header"><h5>Detail Perjalanan Pulang</h5></div>
+                    <div class="card-body">
+                        <div class="mb-3">{{ form.jadwal_pulang.label(class="form-label") }} {{ form.jadwal_pulang(class="form-control") }}</div>
+                        <div class="mb-3">{{ form.batas_pembayaran_pulang.label(class="form-label") }} {{ form.batas_pembayaran_pulang(class="form-control") }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header"><h5>Detail Perjalanan Kembali (Berangkat)</h5></div>
+                    <div class="card-body">
+                        <div class="mb-3">{{ form.jadwal_berangkat.label(class="form-label") }} {{ form.jadwal_berangkat(class="form-control") }}</div>
+                        <div class="mb-3">{{ form.batas_pembayaran_berangkat.label(class="form-label") }} {{ form.batas_pembayaran_berangkat(class="form-control") }}</div>
+                        <div class="mb-3">{{ form.titik_jemput_berangkat.label(class="form-label") }} {{ form.titik_jemput_berangkat(class="form-control") }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="card mt-4">
             <div class="card-header">
-                <h4>Detail Harga per Titik Turun</h4>
+                <h5>Detail Harga Titik Turun / Jemput</h5>
             </div>
             <div class="card-body">
                 <div id="tarif-list">
                     {% for tarif_form in form.tarifs %}
                         <div class="row g-2 mb-2 tarif-row align-items-center">
-                            <div class="col-md-5"><input class="form-control" id="tarifs-{{loop.index-1}}-titik_turun" name="tarifs-{{loop.index-1}}-titik_turun" placeholder="Titik Turun" type="text" value="{{ tarif_form.titik_turun.data or '' }}"></div>
-                            <div class="col-md-3"><input class="form-control" id="tarifs-{{loop.index-1}}-harga_bus" name="tarifs-{{loop.index-1}}-harga_bus" placeholder="Harga Bus (Rp)" type="number" value="{{ tarif_form.harga_bus.data or '' }}"></div>
-                            <div class="col-md-3"><input class="form-control" id="tarifs-{{loop.index-1}}-fee_korda" name="tarifs-{{loop.index-1}}-fee_korda" placeholder="Fee Korda (Rp)" type="number" value="{{ tarif_form.fee_korda.data or '' }}"></div>
+                            <div class="col-md-5">
+                                {{ tarif_form.titik_turun(class="form-control", placeholder="Titik Turun/Jemput") }}
+                            </div>
+                            <div class="col-md-3">
+                                {{ tarif_form.harga_bus(class="form-control", placeholder="Harga Bus (Rp)") }}
+                            </div>
+                            <div class="col-md-3">
+                                {{ tarif_form.fee_korda(class="form-control", placeholder="Fee Korda (Rp)") }}
+                            </div>
                             <div class="col-md-1">
                                 <button type="button" class="btn btn-danger btn-sm remove-tarif w-100">X</button>
                             </div>
@@ -83,7 +100,7 @@
         </div>
         
         <div class="form-group mt-4">
-            <button type="submit" class="btn btn-primary">Simpan Rombongan</button>
+            {{ form.submit(class="btn btn-primary") }}
         </div>
     </form>
     
@@ -104,13 +121,12 @@
                     <td>{{ bus.nama_armada }}</td>
                     <td>{{ bus.nomor_lambung or '-' }}</td>
                     <td>{{ bus.plat_nomor or '-' }}</td>
-                    <td>{{ bus.kuota }}</td>
-                    <td>
-    <a href="{{ url_for('admin.detail_bus', bus_id=bus.id) }}" class="btn btn-primary btn-sm">Lihat Manifest</a>
-    <form method="POST" action="{{ url_for('admin.hapus_bus', bus_id=bus.id) }}" style="display:inline;" onsubmit="return confirm('Yakin ingin menghapus bus ini?');">
-        <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
-    </form>
-</td>
+                    <td>{{ bus.pendaftar_pulang|length + bus.pendaftar_kembali|length }} / {{ bus.kuota }}</td>                    <td>
+                        <a href="{{ url_for('admin.detail_bus', bus_id=bus.id) }}" class="btn btn-info btn-sm">Manifest</a>
+                        <form method="POST" action="{{ url_for('admin.hapus_bus', bus_id=bus.id) }}" style="display:inline;" onsubmit="return confirm('Yakin ingin menghapus bus ini?');">
+                            <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
+                        </form>
+                    </td>
                 </tr>
                 {% else %}
                 <tr><td colspan="5" class="text-center">Belum ada bus yang ditambahkan.</td></tr>
@@ -140,7 +156,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // --- LOGIKA UNTUK DROPDOWN WILAYAH ---
     const initialWilayahData = JSON.parse({{ form.cakupan_wilayah.data or "'[]'"|safe }});
     const hiddenWilayahInput = document.getElementById('cakupan_wilayah');
     const tomSelectWilayah = new TomSelect('#select-wilayah', {
@@ -163,7 +178,6 @@ document.addEventListener('DOMContentLoaded', function() {
         },
     });
 
-    // --- LOGIKA UNTUK TARIF DINAMIS ---
     const tarifList = document.getElementById('tarif-list');
     const addTarifBtn = document.getElementById('add-tarif');
     function updateRemoveButtons() {
@@ -172,11 +186,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     addTarifBtn.addEventListener('click', function() {
         const entryCount = tarifList.querySelectorAll('.tarif-row').length;
-        const newRowHtml = tarifList.querySelector('.tarif-row').outerHTML.replace(/-(\d+)-/g, `-${entryCount}-`);
-        const newRowDiv = document.createElement('div');
-        newRowDiv.innerHTML = newRowHtml;
-        newRowDiv.querySelector('.tarif-row').querySelectorAll('input').forEach(input => input.value = '');
-        tarifList.appendChild(newRowDiv.firstElementChild);
+        const newRow = tarifList.querySelector('.tarif-row').cloneNode(true);
+        newRow.querySelectorAll('input').forEach(input => {
+            const name = input.name.replace(/-\d+-/, `-${entryCount}-`);
+            input.name = name;
+            input.id = name;
+            input.value = '';
+        });
+        tarifList.appendChild(newRow);
         updateRemoveButtons();
     });
     tarifList.addEventListener('click', function(e) {

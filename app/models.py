@@ -64,7 +64,7 @@ class Santri(db.Model):
     jenis_kelamin = db.Column(db.String(10), default='Putra')
     kelas_formal = db.Column(db.String(50))
     kelas_ngaji = db.Column(db.String(50))
-    status_santri = db.Column(db.String(20), default='Aktif') 
+    status_santri = db.Column(db.String(20), default='Aktif')
     pendaftaran = db.relationship('Pendaftaran', back_populates='santri', uselist=False, cascade="all, delete-orphan")
     izin = db.relationship('Izin', backref='santri', uselist=False, cascade="all, delete-orphan")
     partisipan = db.relationship('Partisipan', backref='santri', uselist=False, cascade="all, delete-orphan")
@@ -79,46 +79,63 @@ class Bus(db.Model):
     plat_nomor = db.Column(db.String(20))
     kuota = db.Column(db.Integer, default=50, nullable=False)
     keterangan = db.Column(db.Text)
+    pendaftar_pulang = db.relationship('Pendaftaran', foreign_keys='Pendaftaran.bus_pulang_id', back_populates='bus_pulang')
+    pendaftar_kembali = db.relationship('Pendaftaran', foreign_keys='Pendaftaran.bus_kembali_id', back_populates='bus_kembali')
 
 class Rombongan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     edisi_id = db.Column(db.Integer, db.ForeignKey('edisi.id'), nullable=False)
     nama_rombongan = db.Column(db.String(100), nullable=False)
-    penanggung_jawab_putra = db.Column(db.String(100), nullable=False)
-    kontak_person_putra = db.Column(db.String(20), nullable=False)
+    penanggung_jawab_putra = db.Column(db.String(100))
+    kontak_person_putra = db.Column(db.String(20))
     penanggung_jawab_putri = db.Column(db.String(100))
     kontak_person_putri = db.Column(db.String(20))
-    nomor_rekening = db.Column(db.String(50), nullable=False)
+    nomor_rekening = db.Column(db.String(50))
     cakupan_wilayah = db.Column(db.JSON)
-    jadwal_keberangkatan = db.Column(db.DateTime) # Pulang
-    titik_kumpul = db.Column(db.String(200)) # Pulang
-    jadwal_kembali = db.Column(db.DateTime) # Kembali
-    titik_kumpul_kembali = db.Column(db.String(200)) # Kembali
-    batas_pembayaran = db.Column(db.Date)
+
+    # Info Perjalanan Pulang
+    jadwal_pulang = db.Column(db.DateTime)
+    batas_pembayaran_pulang = db.Column(db.Date)
+    
+    # Info Perjalanan Kembali (Berangkat)
+    jadwal_berangkat = db.Column(db.DateTime)
+    batas_pembayaran_berangkat = db.Column(db.Date)
+    titik_jemput_berangkat = db.Column(db.String(200))
+
+    # Relasi
     tarifs = db.relationship('Tarif', backref='rombongan', lazy='dynamic', cascade="all, delete-orphan")
     buses = db.relationship('Bus', backref='rombongan', lazy='dynamic', cascade="all, delete-orphan")
-    pendaftar = db.relationship('Pendaftaran', back_populates='rombongan', cascade="all, delete-orphan")
+    pendaftar_pulang = db.relationship('Pendaftaran', foreign_keys='Pendaftaran.rombongan_pulang_id', back_populates='rombongan_pulang')
+    pendaftar_kembali = db.relationship('Pendaftaran', foreign_keys='Pendaftaran.rombongan_kembali_id', back_populates='rombongan_kembali')
 
+    
 class Pendaftaran(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     santri_id = db.Column(db.Integer, db.ForeignKey('santri.id'), nullable=False, unique=True)
-    rombongan_id = db.Column(db.Integer, db.ForeignKey('rombongan.id'), nullable=False)
+    
+    # --- PERUBAHAN UTAMA DI SINI ---
+    rombongan_pulang_id = db.Column(db.Integer, db.ForeignKey('rombongan.id'), nullable=True)
+    rombongan_kembali_id = db.Column(db.Integer, db.ForeignKey('rombongan.id'), nullable=True)
     
     # Detail Perjalanan Pulang
-    status_pulang = db.Column(db.String(20), default='Belum Bayar') # Belum Bayar, Lunas, Tidak Ikut
+    status_pulang = db.Column(db.String(20), default='Tidak Ikut') # Belum Bayar, Lunas, Tidak Ikut
     metode_pembayaran_pulang = db.Column(db.String(20))
     bus_pulang_id = db.Column(db.Integer, db.ForeignKey('bus.id'), nullable=True)
     titik_turun = db.Column(db.String(100))
     
     # Detail Perjalanan Kembali
-    status_kembali = db.Column(db.String(20), default='Belum Bayar') # Belum Bayar, Lunas, Tidak Ikut
+    status_kembali = db.Column(db.String(20), default='Tidak Ikut') # Belum Bayar, Lunas, Tidak Ikut
     metode_pembayaran_kembali = db.Column(db.String(20))
     bus_kembali_id = db.Column(db.Integer, db.ForeignKey('bus.id'), nullable=True)
+    titik_jemput_kembali = db.Column(db.String(100), nullable=True)
+
     
     total_biaya = db.Column(db.Integer, nullable=False, default=0)
     tanggal_pendaftaran = db.Column(db.DateTime, server_default=db.func.now())
 
-    rombongan = db.relationship('Rombongan', back_populates='pendaftar')
+    # Relasi
+    rombongan_pulang = db.relationship('Rombongan', foreign_keys=[rombongan_pulang_id], back_populates='pendaftar_pulang')
+    rombongan_kembali = db.relationship('Rombongan', foreign_keys=[rombongan_kembali_id], back_populates='pendaftar_kembali')
     santri = db.relationship('Santri', back_populates='pendaftaran')
-    bus_pulang = db.relationship('Bus', foreign_keys=[bus_pulang_id])
-    bus_kembali = db.relationship('Bus', foreign_keys=[bus_kembali_id])
+    bus_pulang = db.relationship('Bus', foreign_keys=[bus_pulang_id], back_populates='pendaftar_pulang')
+    bus_kembali = db.relationship('Bus', foreign_keys=[bus_kembali_id], back_populates='pendaftar_kembali')

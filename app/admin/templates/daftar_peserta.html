@@ -4,11 +4,16 @@
 
 {% block content %}
 <style>
-    /* Sedikit style tambahan untuk badge */
-    .badge {
+    .status-badge {
         font-size: 0.85em;
+        font-weight: 600;
         padding: 0.4em 0.7em;
+        border-radius: .375rem;
     }
+    .status-lunas { background-color: #d4edda; color: #155724; }
+    .status-belum { background-color: #f8d7da; color: #721c24; }
+    .status-pulang { background-color: #cff4fc; color: #055160; }
+    .status-kembali { background-color: #e2e3e5; color: #41464b; }
 </style>
 
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -18,7 +23,7 @@
     </div>
     <a href="{{ url_for('admin.manajemen_rombongan') }}" class="btn btn-secondary">&larr; Kembali ke Manajemen Rombongan</a>
 </div>
-<p>Total Peserta di Rombongan Ini: <strong>{{ rombongan.pendaftar|length }}</strong></p>
+<p>Total Peserta di Rombongan Ini: <strong>{{ pendaftar|length }}</strong></p>
 
 <div class="card">
     <div class="card-body">
@@ -28,11 +33,11 @@
                     <tr>
                         <th>No.</th>
                         <th>Nama Santri</th>
-                        <th>Asrama</th>
-                        <th>Titik Turun</th>
-                        <th>Perjalanan Pulang</th>
-                        <th>Perjalanan Kembali</th>
-                        <th>Status Bayar</th>
+                        <th>Asrama & Alamat</th>
+                        <th>Titik Turun & Jemput</th>
+                        <th>Bus Pulang</th>
+                        <th>Bus Kembali</th>
+                        <th>Status Pembayaran</th>
                         <th>Aksi</th>
                     </tr>
                 </thead>
@@ -44,8 +49,14 @@
                             <strong>{{ pendaftaran.santri.nama }}</strong><br>
                             <small class="text-muted">NIS: {{ pendaftaran.santri.nis }}</small>
                         </td>
-                        <td>{{ pendaftaran.santri.asrama }}</td>
-                        <td>{{ pendaftaran.titik_turun or '-' }}</td>
+                        <td>
+                            {{ pendaftaran.santri.asrama or '-' }}<br>
+                            <small class="text-muted">{{ pendaftaran.santri.kabupaten or '-' }}</small>
+                        </td>
+                        <td>
+                            Turun: {{ pendaftaran.titik_turun or '-' }}<br>
+                            <small class="text-muted">Jemput: {{ pendaftaran.titik_jemput_kembali or pendaftaran.titik_turun or '-' }}</small>
+                        </td>
                         <td>
                             {% if pendaftaran.bus_pulang %}
                                 <span class="badge bg-info text-dark">
@@ -65,16 +76,13 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if pendaftaran.status_pembayaran == 'Lunas' %}
-                                <span class="badge bg-success">Lunas</span>
-                            {% else %}
-                                <span class="badge bg-warning text-dark">Belum Lunas</span>
-                            {% endif %}
+                            <span class="status-badge status-pulang">Pulang: {{ pendaftaran.status_pulang }}</span><br>
+                            <span class="status-badge status-kembali mt-1">Kembali: {{ pendaftaran.status_kembali }}</span>
                         </td>
                         <td>
                             {% if current_user.role.name == 'Korpus' or (current_user.role.name == 'Korda' and rombongan in current_user.managed_rombongan) %}
                                 <a href="{{ url_for('admin.edit_pendaftaran', pendaftaran_id=pendaftaran.id) }}" class="btn btn-secondary btn-sm">Edit</a>
-                                <form method="POST" action="{{ url_for('admin.hapus_pendaftaran', pendaftaran_id=pendaftaran.id) }}" style="display:inline;" onsubmit="return confirm('Anda yakin ingin menghapus pendaftaran untuk \'{{ pendaftaran.santri.nama }}\'?');">
+                                <form method="POST" action="{{ url_for('admin.hapus_pendaftaran', pendaftaran_id=pendaftaran.id) }}" class="mt-1" onsubmit="return confirm('Anda yakin ingin menghapus pendaftaran untuk \'{{ pendaftaran.santri.nama }}\'?');">
                                     <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
                                 </form>
                             {% endif %}

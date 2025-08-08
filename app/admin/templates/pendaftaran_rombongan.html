@@ -4,72 +4,77 @@
 
 {% block content %}
 <style>
-    .info-box { background-color: #e9ecef; border: 1px solid #ced4da; padding: 15px; border-radius: 5px; margin-top: 10px; }
-    #total-biaya { font-size: 1.5em; font-weight: bold; color: #007bff; }
+    .info-box { background-color: #e9ecef; border-radius: 5px; margin-top: 10px; }
+    #total-biaya { font-size: 1.5em; font-weight: bold; }
 </style>
 
-<h1>Pendaftaran Rombongan</h1>
-<p>Gunakan form ini untuk mendaftarkan santri ke rombongan yang tersedia.</p>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h2">Pendaftaran Rombongan</h1>
+</div>
+<p>Gunakan form ini untuk mendaftarkan santri ke rombongan yang tersedia untuk edisi aktif.</p>
 
-<form method="POST" id="pendaftaran-form" class="mt-4">
+<form method="POST" id="pendaftaran-form">
     {{ form.hidden_tag() }}
     
     <div class="card mb-4">
         <div class="card-body">
-            <h4>Langkah 1: Pilih Rombongan & Santri</h4>
-            <div class="form-group form-grid">
-                {{ form.rombongan.label(class="form-label") }}
-                {{ form.rombongan(class="form-select") }}
-            </div>
-            <div id="info-rombongan" class="info-box" style="display: none;"></div>
-            
-            <div class="form-group form-grid mt-3">
-                <label for="select-santri">Pilih Santri</label>
-                <div>
+            <h5 class="card-title">Langkah 1: Pilih Rombongan & Santri</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    {{ form.rombongan.label(class="form-label") }}
+                    {{ form.rombongan(class="form-select") }}
+                </div>
+                <div class="col-md-6">
+                    <label for="select-santri" class="form-label">Pilih Santri</label>
                     <select id="select-santri" placeholder="-- Cari dan Pilih Santri --"></select>
                     {{ form.santri() }} </div>
             </div>
+            <div id="info-rombongan" class="info-box p-3" style="display: none;"></div>
         </div>
     </div>
     
-    <h4>Langkah 2: Detail Partisipasi & Pembayaran</h4>
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card h-100">
-                <div class="card-header fw-bold">Perjalanan Pulang (Meninggalkan Pondok)</div>
-                <div class="card-body">
-                    <div class="mb-3">{{ form.status_pulang.label(class="form-label") }} {{ form.status_pulang(class="form-select") }}</div>
-                    <div class="mb-3">{{ form.metode_pembayaran_pulang.label(class="form-label") }} {{ form.metode_pembayaran_pulang(class="form-select") }}</div>
-                    <div class="mb-3">{{ form.titik_turun.label(class="form-label") }} {{ form.titik_turun(class="form-select", disabled=true) }}</div>
-                    <div class="mb-3">{{ form.bus_pulang.label(class="form-label") }} {{ form.bus_pulang(class="form-select") }}</div>
+    <div class="card">
+        <div class="card-header"><h5 class="mb-0">Langkah 2: Detail Partisipasi & Pembayaran</h5></div>
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header fw-bold">Perjalanan Pulang (Meninggalkan Pondok)</div>
+                        <div class="card-body">
+                            <div class="mb-3">{{ form.status_pulang.label(class="form-label") }} {{ form.status_pulang(class="form-select") }}</div>
+                            <div class="mb-3">{{ form.metode_pembayaran_pulang.label(class="form-label") }} {{ form.metode_pembayaran_pulang(class="form-select") }}</div>
+                            <div class="mb-3">{{ form.titik_turun.label(class="form-label") }} {{ form.titik_turun(class="form-select", disabled=true) }}</div>
+                            <div class="mb-3">{{ form.bus_pulang.label(class="form-label") }} {{ form.bus_pulang(class="form-select") }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header fw-bold">Perjalanan Kembali (Menuju Pondok)</div>
+                        <div class="card-body">
+                            <div class="mb-3">{{ form.status_kembali.label(class="form-label") }} {{ form.status_kembali(class="form-select") }}</div>
+                            <div class="mb-3">{{ form.metode_pembayaran_kembali.label(class="form-label") }} {{ form.metode_pembayaran_kembali(class="form-select") }}</div>
+                            <div class="mb-3">{{ form.bus_kembali.label(class="form-label") }} {{ form.bus_kembali(class="form-select") }}</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card h-100">
-                <div class="card-header fw-bold">Perjalanan Kembali (Menuju Pondok)</div>
-                <div class="card-body">
-                    <div class="mb-3">{{ form.status_kembali.label(class="form-label") }} {{ form.status_kembali(class="form-select") }}</div>
-                    <div class="mb-3">{{ form.metode_pembayaran_kembali.label(class="form-label") }} {{ form.metode_pembayaran_kembali(class="form-select") }}</div>
-                    <div class="mb-3">{{ form.bus_kembali.label(class="form-label") }} {{ form.bus_kembali(class="form-select") }}</div>
-                </div>
+            <div class="info-box p-3 mt-3">
+                <h5 class="mb-0">Estimasi Total Biaya: <span id="total-biaya" class="text-primary">Rp 0</span></h5>
             </div>
         </div>
     </div>
-
-    <div class="info-box mt-4">
-        <h4>Estimasi Total Biaya</h4>
-        <p id="total-biaya">Rp 0</p>
-    </div>
-
-    <div class="form-group mt-4">
-        {{ form.submit(class="btn btn-primary") }}
-    </div>
+    <div class="mt-4">{{ form.submit(class="btn btn-primary btn-lg") }}</div>
 </form>
+
+<hr>
+<h2>Daftar Peserta di Rombongan Terpilih</h2>
+<div id="daftar-peserta">
+    </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // --- Variabel Elemen HTML ---
+    // --- 1. DEKLARASI SEMUA VARIABEL DI ATAS ---
     const rombonganSelect = document.getElementById('rombongan');
     const titikTurunSelect = document.getElementById('titik_turun');
     const hiddenSantriInput = document.getElementById('santri');
@@ -77,14 +82,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const busKembaliSelect = document.getElementById('bus_kembali');
     const infoRombonganDiv = document.getElementById('info-rombongan');
     const totalBiayaP = document.getElementById('total-biaya');
+    const daftarPesertaDiv = document.getElementById('daftar-peserta');
     const statusPulangSelect = document.getElementById('status_pulang');
     const statusKembaliSelect = document.getElementById('status_kembali');
     
     let tarifData = [];
 
-
+    // --- 2. INISIALISASI TOM SELECT ---
     const tomSelectSantri = new TomSelect('#select-santri',{
-        valueField: 'id', searchField: 'nama',
+        valueField: 'id',
+        searchField: 'nama',
         render: {
             option: (data, escape) => `<div><strong>${escape(data.nama)}</strong><br><small class="text-muted">${escape(data.asrama || '')} - ${escape(data.kabupaten || '')}</small></div>`,
             item: (data, escape) => `<div>${escape(data.nama)}</div>`
@@ -103,15 +110,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // --- Fungsi Helper ---
+    // --- 3. KUMPULAN FUNGSI HELPER ---
     function loadRombonganDetails(rombonganId) {
-        if (!rombonganId) { return resetForm(); }
+        if (!rombonganId || rombonganId === '') { return resetForm(); }
         fetch(`/admin/api/rombongan-detail/${rombonganId}`)
             .then(response => response.json())
             .then(data => {
-                tarifData = data.tarifs; // Simpan data tarif
+                tarifData = data.tarifs;
                 updateInfoRombongan(data.cakupan_wilayah, data.tarifs);
                 updateDropdowns(data.tarifs, data.buses || []);
+                updateDaftarPeserta(data.pendaftar || []);
                 calculateBiaya();
             });
     }
@@ -121,24 +129,15 @@ document.addEventListener('DOMContentLoaded', function() {
         tarifs.forEach(t => titikTurunSelect.add(new Option(t.titik_turun, t.titik_turun)));
         titikTurunSelect.disabled = false;
         
-        const busChoicesPulang = buses.map(bus => {
-            const sisaKuota = bus.kuota - bus.terisi_pulang;
-            return `<option value="${bus.id}">${bus.nama_armada} - ${bus.nomor_lambung || bus.plat_nomor} (Sisa: ${sisaKuota})</option>`;
-        }).join('');
-
-        const busChoicesKembali = buses.map(bus => {
-            const sisaKuota = bus.kuota - bus.terisi_kembali;
-            return `<option value="${bus.id}">${bus.nama_armada} - ${bus.nomor_lambung || bus.plat_nomor} (Sisa: ${sisaKuota})</option>`;
-        }).join('');
-        
-        busPulangSelect.innerHTML = '<option value="">-- Pilih Bus --</option>' + busChoicesPulang;
-        busKembaliSelect.innerHTML = '<option value="">-- Pilih Bus --</option>' + busChoicesKembali;
+        const busPulangChoices = buses.map(bus => `<option value="${bus.id}">${bus.nama_armada} - ${bus.nomor_lambung || bus.plat_nomor} (Sisa: ${bus.sisa_kuota_pulang})</option>`).join('');
+        const busKembaliChoices = buses.map(bus => `<option value="${bus.id}">${bus.nama_armada} - ${bus.nomor_lambung || bus.plat_nomor} (Sisa: ${bus.sisa_kuota_kembali})</option>`).join('');
+        busPulangSelect.innerHTML = '<option value="">-- Pilih Bus --</option>' + busPulangChoices;
+        busKembaliSelect.innerHTML = '<option value="">-- Pilih Bus --</option>' + busKembaliChoices;
     }
 
-     function calculateBiaya() {
+    function calculateBiaya() {
         const selectedTitik = titikTurunSelect.value;
         const selectedTarif = tarifData.find(t => t.titik_turun === selectedTitik);
-        
         if (selectedTarif) {
             let biayaPerPerjalanan = selectedTarif.harga;
             let total = 0;
@@ -153,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function() {
             totalBiayaP.textContent = 'Rp 0';
         }
     }
-
+    
     function updateInfoRombongan(wilayah, tarifs) {
         let wilayahText = wilayah ? wilayah.map(w => w.label).join(', ') : 'Tidak ada';
         let hargaHtml = '<ul>';
@@ -161,16 +160,16 @@ document.addEventListener('DOMContentLoaded', function() {
             hargaHtml += `<li>${t.titik_turun}: Rp ${t.harga.toLocaleString('id-ID')}</li>`;
         });
         hargaHtml += '</ul>';
-        infoRombonganDiv.innerHTML = `<h4>Cakupan: ${wilayahText}</h4><h4>Daftar Harga:</h4>${hargaHtml}`;
+        infoRombonganDiv.innerHTML = `<h6>Cakupan: ${wilayahText}</h6><h6>Daftar Harga:</h6>${hargaHtml}`;
         infoRombonganDiv.style.display = 'block';
     }
 
     function updateDaftarPeserta(pendaftar) {
         if(!pendaftar || pendaftar.length === 0) {
-            daftarPesertaDiv.innerHTML = '<p style="color: #888;">Belum ada pendaftar di rombongan ini.</p>';
+            daftarPesertaDiv.innerHTML = '<p class="text-muted text-center mt-3">Belum ada pendaftar di rombongan ini.</p>';
             return;
         }
-        let tableHtml = '<table class="table table-sm table-striped"><thead><tr><th>Nama</th><th>NIS</th><th>Titik Turun</th><th>Total Biaya</th></tr></thead><tbody>';
+        let tableHtml = '<table class="table table-sm table-striped mt-3"><thead><tr><th>Nama</th><th>NIS</th><th>Titik Turun</th><th>Total Biaya</th></tr></thead><tbody>';
         pendaftar.forEach(p => {
             tableHtml += `<tr><td>${p.nama}</td><td>${p.nis}</td><td>${p.titik_turun}</td><td>Rp ${p.total_biaya.toLocaleString('id-ID')}</td></tr>`;
         });
@@ -183,16 +182,16 @@ document.addEventListener('DOMContentLoaded', function() {
         titikTurunSelect.innerHTML = '';
         titikTurunSelect.disabled = true;
         totalBiayaP.textContent = 'Rp 0';
-        daftarPesertaDiv.innerHTML = '<p style="color: #888;">Pilih rombongan di atas untuk melihat daftar pesertanya.</p>';
+        daftarPesertaDiv.innerHTML = '<p class="text-muted text-center mt-3">Pilih rombongan di atas untuk melihat daftar pesertanya.</p>';
     }
 
-    // --- Event Listeners ---
+    // --- 4. EVENT LISTENERS ---
     rombonganSelect.addEventListener('change', () => loadRombonganDetails(rombonganSelect.value));
     titikTurunSelect.addEventListener('change', calculateBiaya);
     statusPulangSelect.addEventListener('change', calculateBiaya);
     statusKembaliSelect.addEventListener('change', calculateBiaya);
 
-    // --- Logika Saat Halaman Dimuat ---
+    // --- 5. LOGIKA SAAT HALAMAN DIMUAT ---
     const urlParams = new URLSearchParams(window.location.search);
     const rombonganIdOnLoad = urlParams.get('rombongan_id') || rombonganSelect.value;
     if (rombonganIdOnLoad && rombonganIdOnLoad !== '') {
@@ -211,7 +210,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
     }
-    toggleBusFields();
 });
 </script>
 {% endblock %}
