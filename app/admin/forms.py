@@ -212,4 +212,14 @@ class BusForm(FlaskForm):
     keterangan = TextAreaField('Keterangan', validators=[Optional()])
     submit = SubmitField('Simpan Bus')
 
+class KorlapdaForm(FlaskForm):
+    username = StringField('Username Korlapda', validators=[DataRequired(), Length(min=4, max=25)])
+    password = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
+    confirm_password = PasswordField('Konfirmasi Password', validators=[DataRequired(), EqualTo('password')])
+    
+    # Dropdown untuk memilih bus, pilihannya akan kita isi secara dinamis di route
+    bus = SelectField('Tugaskan ke Bus', validators=[DataRequired()])
+
+    submit = SubmitField('Simpan User Korlapda')
+
 

@@ -36,6 +36,8 @@ def create_app(config_name):
     from .admin import admin_bp
     app.register_blueprint(admin_bp, url_prefix='/admin')
     # -----------------------
+    from .lapangan import lapangan_bp
+    app.register_blueprint(lapangan_bp, url_prefix='/lapangan')
 
     # Contoh route sederhana untuk testing
     @app.route('/')

@@ -542,7 +542,15 @@
             </a>
         </li>
         {% endif %}
+        {% if current_user.role.name in ['Korpus', 'Korda'] %}
+<li class="nav-item">
+    <a href="{{ url_for('admin.manajemen_korlapda') }}" class="nav-link {{ 'active' if 'manajemen_korlapda' in request.endpoint else '' }}">
+        <i class="fas fa-street-view"></i> Manajemen Korlapda
+    </a>
+</li>
+{% endif %}
     </ul>
+    
 </nav>
 
 <div id="overlay" class="overlay"></div>

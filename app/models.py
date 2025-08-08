@@ -28,6 +28,8 @@ class User(db.Model, UserMixin):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
     role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
+    bus_id = db.Column(db.Integer, db.ForeignKey('bus.id'), nullable=True)
+    bus = db.relationship('Bus', backref='korlapda')
     managed_rombongan = db.relationship('Rombongan', secondary=user_rombongan, lazy='subquery', backref=db.backref('managers', lazy=True))
     def set_password(self, password): self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
     def check_password(self, password): return bcrypt.check_password_hash(self.password_hash, password)
@@ -139,3 +141,14 @@ class Pendaftaran(db.Model):
     santri = db.relationship('Santri', back_populates='pendaftaran')
     bus_pulang = db.relationship('Bus', foreign_keys=[bus_pulang_id], back_populates='pendaftar_pulang')
     bus_kembali = db.relationship('Bus', foreign_keys=[bus_kembali_id], back_populates='pendaftar_kembali')
+
+class Absen(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    pendaftaran_id = db.Column(db.Integer, db.ForeignKey('pendaftaran.id'), nullable=False)
+    nama_absen = db.Column(db.String(100), nullable=False) # Contoh: "Naik Bus Awal", "Rest Area KM 102"
+    status = db.Column(db.String(20), nullable=False) # Contoh: "Hadir", "Tidak Hadir"
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    dicatat_oleh_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+    pendaftaran = db.relationship('Pendaftaran', backref='absensi')
+    dicatat_oleh = db.relationship('User', backref='absen_dicatat')

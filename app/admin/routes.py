@@ -1,7 +1,7 @@
 from . import admin_bp
 from flask import render_template, redirect, url_for, flash, request, jsonify, abort
-from app.models import Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, User, Edisi, Bus
-from app.admin.forms import RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, UserForm, UserEditForm, EdisiForm, BusForm
+from app.models import Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, User, Edisi, Bus, Role
+from app.admin.forms import RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, UserForm, UserEditForm, EdisiForm, BusForm, KorlapdaForm
 from app import db, login_manager
 import json, requests
 from collections import defaultdict
@@ -1445,3 +1445,88 @@ def api_rombongan_detail(rombongan_id):
         'tarifs': tarifs_data,
         'buses': buses_data
     })
+
+@admin_bp.route('/korlapda')
+@login_required
+@role_required('Korpus', 'Korda')
+def manajemen_korlapda():
+    active_edisi = get_active_edisi()
+    
+    # Query dasar untuk user dengan peran Korlapda
+    users_query = User.query.join(Role).filter(Role.name == 'Korlapda')
+
+    # Filter berdasarkan edisi aktif
+    if active_edisi:
+        users_query = users_query.join(Bus).join(Rombongan).filter(Rombongan.edisi_id == active_edisi.id)
+    else:
+        users_query = users_query.filter(db.false()) # Tampilkan kosong jika tidak ada edisi aktif
+
+    # Terapkan filter hak akses untuk Korda
+    if current_user.role.name == 'Korda':
+        managed_bus_ids = [bus.id for rombongan in current_user.managed_rombongan for bus in rombongan.buses]
+        users_query = users_query.filter(User.bus_id.in_(managed_bus_ids))
+
+    all_korlapda = users_query.all()
+    return render_template('manajemen_korlapda.html', all_korlapda=all_korlapda)
+
+@admin_bp.route('/korlapda/tambah', methods=['GET', 'POST'])
+@login_required
+@role_required('Korpus', 'Korda')
+def tambah_korlapda():
+    form = KorlapdaForm()
+    active_edisi = get_active_edisi()
+
+    # Logika untuk mengisi pilihan bus
+    bus_choices = []
+    if active_edisi:
+        if current_user.role.name == 'Korda':
+            bus_choices = [
+                (bus.id, f"{bus.rombongan.nama_rombongan}: {bus.nama_armada} - {bus.nomor_lambung or bus.plat_nomor}")
+                for rombongan in current_user.managed_rombongan for bus in rombongan.buses
+            ]
+        else: # Untuk Korpus
+            all_buses = Bus.query.join(Rombongan).filter(Rombongan.edisi_id == active_edisi.id).all()
+            bus_choices = [(bus.id, f"{bus.rombongan.nama_rombongan}: {bus.nama_armada}...") for bus in all_buses]
+    
+    form.bus.choices = [('', '-- Pilih Bus --')] + bus_choices
+    
+    if form.validate_on_submit():
+        if not active_edisi:
+            flash("Tidak bisa menambah Korlapda karena tidak ada edisi aktif.", "danger")
+            return redirect(url_for('admin.manajemen_korlapda'))
+
+        korlapda_role = Role.query.filter_by(name='Korlapda').first()
+        if not korlapda_role:
+            # Buat role jika belum ada
+            korlapda_role = Role(name='Korlapda')
+            db.session.add(korlapda_role)
+            db.session.commit()
+            
+        new_user = User(
+            username=form.username.data,
+            role=korlapda_role,
+            bus_id=form.bus.data
+        )
+        new_user.set_password(form.password.data)
+        db.session.add(new_user)
+        db.session.commit()
+        flash(f'User Korlapda "{new_user.username}" berhasil dibuat.', 'success')
+        return redirect(url_for('admin.manajemen_korlapda'))
+        
+    return render_template('form_korlapda.html', form=form, title="Tambah Korlapda Baru")
+
+@admin_bp.route('/korlapda/hapus/<int:user_id>', methods=['POST'])
+@login_required
+@role_required('Korpus', 'Korda')
+def hapus_korlapda(user_id):
+    user = User.query.get_or_404(user_id)
+    # Verifikasi kepemilikan untuk Korda
+    if current_user.role.name == 'Korda':
+        managed_bus_ids = [bus.id for rombongan in current_user.managed_rombongan for bus in rombongan.buses]
+        if user.bus_id not in managed_bus_ids:
+            abort(403)
+            
+    db.session.delete(user)
+    db.session.commit()
+    flash(f'User Korlapda "{user.username}" berhasil dihapus.', 'info')
+    return redirect(url_for('admin.manajemen_korlapda'))

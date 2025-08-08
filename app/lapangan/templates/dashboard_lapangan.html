@@ -1,0 +1,169 @@
+{% extends "lapangan_layout.html" %}
+{% block title %}Dashboard Lapangan{% endblock %}
+
+{% block content %}
+{# Siapkan variabel untuk link WhatsApp #}
+{% set kontak_pj = bus.rombongan.kontak_person_putra or bus.rombongan.kontak_person_putri %}
+{% set pesan_wa = "Laporan Kendala dari Korlapda Bus " ~ bus.nama_armada ~ " (" ~ (bus.nomor_lambung or bus.plat_nomor) ~ ") Rombongan " ~ bus.rombongan.nama_rombongan ~ ":" %}
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Bus Anda: {{ bus.nama_armada }} - {{ bus.nomor_lambung or bus.plat_nomor }}</h5>
+        {% if kontak_pj %}
+        <a href="https://wa.me/{{ kontak_pj }}?text={{ pesan_wa|urlencode }}" target="_blank" class="btn btn-danger">
+            <i class="fas fa-bullhorn me-2"></i>Lapor Kendala
+        </a>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        <strong>Rombongan:</strong> {{ bus.rombongan.nama_rombongan }} <br>
+        <strong>Kontak PJ Rombongan:</strong> {{ kontak_pj or 'N/A' }}
+    </div>
+</div>
+
+<ul class="nav nav-tabs" id="manifestTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="pulang-tab" data-bs-toggle="tab" data-bs-target="#pulang-tab-pane" type="button" role="tab">Absen Mudik</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="kembali-tab" data-bs-toggle="tab" data-bs-target="#kembali-tab-pane" type="button" role="tab">Absen Balpon</button>
+    </li>
+</ul>
+
+<div class="tab-content" id="manifestTabContent">
+    <div class="tab-pane fade show active" id="pulang-tab-pane" role="tabpanel">
+        <div class="p-3">
+            <div class="mb-3">
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#absenBaruModal" data-arah="Pulang">
+                    <i class="fas fa-plus-circle me-2"></i>Tambah Check Point Absen Baru (Pulang)
+                </button>
+            </div>
+            <form method="POST" action="{{ url_for('lapangan.simpan_absen') }}">
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead>
+                            <tr>
+                                <th>No.</th>
+                                <th>Nama Santri</th>
+                                {% for cp in checkpoints_pulang %}
+                                <th class="text-center">{{ cp.split('(')[0] }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for titik_turun, pendaftar_list in grouped_pulang.items()|sort %}
+                                <tr class="table-light"><td colspan="{{ 2 + checkpoints_pulang|length }}"><strong>Titik Turun: {{ titik_turun }}</strong></td></tr>
+                                {% for p in pendaftar_list|sort(attribute='santri.nama') %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ p.santri.nama }}</td>
+                                    {% for cp in checkpoints_pulang %}
+                                    <td class="text-center">
+                                        {% set absen_key = p.id ~ '-' ~ cp %}
+                                        <input type="checkbox" class="form-check-input" name="hadir-{{ cp }}" value="{{ p.id }}"
+                                               {% if absen_map.get(absen_key) == 'Hadir' %}checked{% endif %}>
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan="{{ 2 + checkpoints_pulang|length }}" class="text-center text-muted">Tidak ada peserta untuk perjalanan pulang.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if grouped_pulang %}
+                <button type="submit" class="btn btn-success mt-3"><i class="fas fa-check-circle me-2"></i>Simpan Semua Perubahan Absen</button>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="kembali-tab-pane" role="tabpanel">
+        <div class="p-3">
+            <div class="mb-3">
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#absenBaruModal" data-arah="Kembali">
+                    <i class="fas fa-plus-circle me-2"></i>Tambah Check Point Absen Baru (Berangkat)
+                </button>
+            </div>
+            <form method="POST" action="{{ url_for('lapangan.simpan_absen') }}">
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead>
+                            <tr>
+                                <th>No.</th>
+                                <th>Nama Santri</th>
+                                <th>Asrama</th>
+                                {% for cp in checkpoints_kembali %}
+                                <th class="text-center">{{ cp.split('(')[0] }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for kabupaten, pendaftar_list in grouped_kembali.items()|sort %}
+                                <tr class="table-light"><td colspan="{{ 3 + checkpoints_kembali|length }}"><strong>Asal Kabupaten: {{ kabupaten }}</strong></td></tr>
+                                {% for p in pendaftar_list|sort(attribute='santri.nama') %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ p.santri.nama }}</td>
+                                    <td>{{ p.santri.asrama }}</td>
+                                    {% for cp in checkpoints_kembali %}
+                                    <td class="text-center">
+                                        {% set absen_key = p.id ~ '-' ~ cp %}
+                                        <input type="checkbox" class="form-check-input" name="hadir-{{ cp }}" value="{{ p.id }}"
+                                               {% if absen_map.get(absen_key) == 'Hadir' %}checked{% endif %}>
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan="{{ 3 + checkpoints_kembali|length }}" class="text-center text-muted">Tidak ada peserta untuk perjalanan kembali.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                 {% if grouped_kembali %}
+                <button type="submit" class="btn btn-success mt-3"><i class="fas fa-check-circle me-2"></i>Simpan Semua Perubahan Absen</button>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="absenBaruModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('lapangan.tambah_checkpoint_absen') }}">
+        <div class="modal-header">
+          <h5 class="modal-title">Buat Check Point Absen Baru</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" name="arah_perjalanan" id="modal-arah-perjalanan">
+            <div class="mb-3">
+                <label for="nama_absen_baru" class="form-label">Nama Check Point</label>
+                <input type="text" class="form-control" name="nama_absen_baru" id="nama_absen_baru" placeholder="Contoh: Rest Area KM 102" required>
+            </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-primary">Simpan dan Tambah</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+    // Pastikan modal hanya diinisialisasi jika elemennya ada
+    const absenBaruModal = document.getElementById('absenBaruModal');
+    if (absenBaruModal) {
+        absenBaruModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const arah = button.getAttribute('data-arah');
+            const modalInput = absenBaruModal.querySelector('#modal-arah-perjalanan');
+            modalInput.value = arah;
+        });
+    }
+</script>
+{% endblock %}

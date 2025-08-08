@@ -12,7 +12,8 @@ def seed_data():
         role_korda = Role(name='Korda')
         role_keamanan = Role(name='Keamanan')
         role_pj_acara = Role(name='PJ Acara')
-        db.session.add_all([role_korpus, role_korwil, role_korda, role_keamanan, role_pj_acara])
+        role_korlapda = Role(name='Korlapda') # <-- TAMBAHKAN INI
+        db.session.add_all([role_korpus, role_korwil, role_korda, role_keamanan, role_pj_acara, role_korlapda])
         db.session.commit()
         print("-> Semua role berhasil dibuat.")
     else:

@@ -1,0 +1,18 @@
+{% extends "_admin_layout.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+    <h1 class="h2">{{ title }}</h1>
+    <a href="{{ url_for('admin.manajemen_korlapda') }}">&larr; Kembali ke Manajemen Korlapda</a>
+    <div class="card mt-3">
+        <div class="card-body">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">{{ form.username.label(class="form-label") }} {{ form.username(class="form-control") }}</div>
+                <div class="mb-3">{{ form.password.label(class="form-label") }} {{ form.password(class="form-control") }}</div>
+                <div class="mb-3">{{ form.confirm_password.label(class="form-label") }} {{ form.confirm_password(class="form-control") }}</div>
+                <div class="mb-3">{{ form.bus.label(class="form-label") }} {{ form.bus(class="form-select") }}</div>
+                {{ form.submit(class="btn btn-primary") }}
+            </form>
+        </div>
+    </div>
+{% endblock %}
