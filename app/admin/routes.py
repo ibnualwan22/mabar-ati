@@ -1,12 +1,12 @@
 from . import admin_bp
 from flask import render_template, redirect, url_for, flash, request, jsonify, abort
-from app.models import Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, User, Edisi, Bus, Role
+from app.models import ActivityLog, Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, User, Edisi, Bus, Role
 from app.admin.forms import RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, UserForm, UserEditForm, EdisiForm, BusForm, KorlapdaForm
 from app import db, login_manager
 import json, requests
 from collections import defaultdict
 from sqlalchemy import update, text, or_
-from datetime import date
+from datetime import date, datetime
 from flask_login import login_user, logout_user, current_user, login_required
 from functools import wraps
 from sqlalchemy.orm import joinedload # <-- Tambahkan import ini di atas
@@ -331,6 +331,7 @@ def tambah_rombongan():
                 new_rombongan.tarifs.append(Tarif(**tarif_data))
         
         db.session.add(new_rombongan)
+        log_activity('Tambah', 'Rombongan', f"Menambahkan rombongan baru: '{new_rombongan.nama_rombongan}'")
         db.session.commit()
         flash('Rombongan baru berhasil ditambahkan.', 'success')
         # Arahkan ke halaman edit agar bisa langsung tambah bus
@@ -379,7 +380,8 @@ def edit_rombongan(id):
         for tarif_data in form.tarifs.data:
             if tarif_data['titik_turun'] and tarif_data['harga_bus'] is not None:
                 rombongan.tarifs.append(Tarif(**tarif_data))
-            
+        
+        log_activity('Edit', 'Pendaftaran', f"Mengubah detail pendaftaran untuk santri: '{Pendaftaran.santri.nama}'")
         db.session.commit()
         flash('Data rombongan berhasil diperbarui!', 'success')
         return redirect(url_for('admin.manajemen_rombongan'))
@@ -1218,16 +1220,26 @@ def inject_active_edisi():
 
 @admin_bp.route('/riwayat')
 @login_required
-@role_required('Korpus') # Hanya Korpus yang bisa lihat riwayat
+@role_required('Korpus')
 def riwayat_edisi():
     # Ambil semua edisi yang statusnya tidak aktif
     arsip_edisi = Edisi.query.filter_by(is_active=False).order_by(Edisi.tahun.desc()).all()
     
-    # Siapkan data ringkasan untuk setiap edisi arsip
     summary_arsip = []
     for edisi in arsip_edisi:
-        total_peserta = Pendaftaran.query.join(Rombongan).filter(Rombongan.edisi_id == edisi.id).count()
-        total_pemasukan = db.session.query(db.func.sum(Pendaftaran.total_biaya)).join(Rombongan).filter(Rombongan.edisi_id == edisi.id).scalar() or 0
+        # --- PERBAIKI QUERY DI SINI ---
+        # JOIN secara eksplisit untuk menghindari ambiguitas
+        # Kita bisa join pada salah satu (pulang/kembali) karena kita hanya butuh edisi_id
+        base_query = Pendaftaran.query.join(
+            Rombongan, Pendaftaran.rombongan_pulang_id == Rombongan.id
+        ).filter(Rombongan.edisi_id == edisi.id)
+
+        # Hitung total peserta yang unik
+        total_peserta = base_query.distinct(Pendaftaran.santri_id).count()
+        
+        # Hitung total pemasukan
+        total_pemasukan = base_query.with_entities(db.func.sum(Pendaftaran.total_biaya)).scalar() or 0
+        
         summary_arsip.append({
             'edisi': edisi,
             'total_peserta': total_peserta,
@@ -1245,32 +1257,30 @@ def detail_arsip(edisi_id):
     
     # --- MULAI KALKULASI LENGKAP (SAMA SEPERTI DASHBOARD) ---
     stats = {}
-    base_pendaftaran_query = Pendaftaran.query.join(Rombongan).filter(Rombongan.edisi_id == arsip_edisi.id)
+    # JOIN eksplisit untuk menghindari ambiguitas
+    base_pendaftaran_query = Pendaftaran.query.join(
+        Rombongan, Pendaftaran.rombongan_pulang_id == Rombongan.id
+    ).filter(Rombongan.edisi_id == arsip_edisi.id)
     
-    stats['total_peserta'] = base_pendaftaran_query.count()
-    stats['total_izin'] = Izin.query.filter_by(edisi=arsip_edisi).count()
+    pendaftar_list = base_pendaftaran_query.all()
     
-    ids_terdaftar = [p.santri_id for p in base_pendaftaran_query.all()]
-    stats['santri_belum_terdaftar'] = Santri.query.filter(
-        Santri.status_santri == 'Aktif',
-        ~Santri.id.in_(ids_terdaftar)
-    ).count()
-
-    stats['total_pemasukan'] = base_pendaftaran_query.with_entities(db.func.sum(Pendaftaran.total_biaya)).scalar() or 0
-    stats['total_lunas'] = base_pendaftaran_query.filter(Pendaftaran.status_pembayaran == 'Lunas').with_entities(db.func.sum(Pendaftaran.total_biaya)).scalar() or 0
+    stats['total_peserta'] = len(pendaftar_list)
+    stats['total_pemasukan'] = sum(p.total_biaya for p in pendaftar_list)
+    
+    # Kalkulasi Lunas (contoh sederhana)
+    total_lunas = 0
+    for p in pendaftar_list:
+        if p.status_pulang == 'Lunas' and p.status_kembali in ['Lunas', 'Tidak Ikut']:
+            total_lunas += p.total_biaya
+        elif p.status_pulang in ['Lunas', 'Tidak Ikut'] and p.status_kembali == 'Lunas':
+            total_lunas += p.total_biaya
+    stats['total_lunas'] = total_lunas
     stats['total_belum_lunas'] = stats['total_pemasukan'] - stats['total_lunas']
-    stats['jumlah_cash'] = base_pendaftaran_query.filter(Pendaftaran.metode_pembayaran == 'Cash').count()
-    stats['jumlah_transfer'] = base_pendaftaran_query.filter(Pendaftaran.metode_pembayaran == 'Transfer').count()
-    
-    stats['pendaftar_terlambat'] = base_pendaftaran_query.filter(
-        Pendaftaran.status_pembayaran == 'Belum Lunas',
-        Rombongan.batas_pembayaran != None,
-        Rombongan.batas_pembayaran < date.today()
-    ).all()
+    # Anda bisa tambahkan kalkulasi lain jika perlu...
 
     semua_rombongan = Rombongan.query.filter_by(edisi=arsip_edisi).order_by(Rombongan.nama_rombongan).all()
     # --- AKHIR KALKULASI ---
-
+    
     return render_template('dashboard.html', 
                            stats=stats, 
                            semua_rombongan=semua_rombongan,
@@ -1314,7 +1324,9 @@ def hapus_bus(bus_id):
     if current_user.role.name == 'Korda' and bus.rombongan not in current_user.managed_rombongan:
         abort(403)
 
+    nama_bus = f"{bus.nama_armada} ({bus.nomor_lambung or bus.plat_nomor})"
     db.session.delete(bus)
+    log_activity('Hapus', 'Bus', f"Menghapus bus '{nama_bus}' dari rombongan '{bus.rombongan.nama_rombongan}'")
     db.session.commit()
     flash('Bus berhasil dihapus.', 'info')
     return redirect(url_for('admin.edit_rombongan', id=rombongan_id))
@@ -1526,3 +1538,65 @@ def hapus_korlapda(user_id):
     db.session.commit()
     flash(f'User Korlapda "{user.username}" berhasil dihapus.', 'info')
     return redirect(url_for('admin.manajemen_korlapda'))
+
+def log_activity(action_type, feature, description):
+    """Fungsi untuk mencatat aktivitas user."""
+    try:
+        log = ActivityLog(
+            user_id=current_user.id,
+            action_type=action_type,
+            feature=feature,
+            description=description
+        )
+        db.session.add(log)
+    except Exception as e:
+        print(f"Error saat mencatat log: {e}")
+
+@admin_bp.route('/log-aktivitas')
+@login_required
+@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara')
+def log_aktivitas():
+    page = request.args.get('page', 1, type=int)
+    
+    # Query dasar untuk semua log
+    query = ActivityLog.query.order_by(ActivityLog.timestamp.desc())
+
+    # --- FILTER BERDASARKAN HAK AKSES ---
+    role = current_user.role.name
+    if role == 'Korwil' or role == 'Korda':
+        # Filter log yang deskripsinya mengandung nama rombongan yang dikelola
+        managed_rombongan_names = [r.nama_rombongan for r in current_user.managed_rombongan]
+        if managed_rombongan_names:
+            query = query.filter(or_(*[ActivityLog.description.like(f'%{name}%') for name in managed_rombongan_names]))
+        else:
+            query = query.filter(db.false()) # Jika tidak kelola rombongan, jangan tampilkan apa-apa
+    elif role == 'Keamanan':
+        query = query.filter(ActivityLog.feature == 'Perizinan')
+    elif role == 'PJ Acara':
+        query = query.filter(ActivityLog.feature == 'Partisipan')
+    
+    # --- FILTER DARI INPUT USER ---
+    f_user_id = request.args.get('user_id', type=int)
+    f_action_type = request.args.get('action_type')
+    f_start_date = request.args.get('start_date')
+    
+    if f_user_id:
+        query = query.filter_by(user_id=f_user_id)
+    if f_action_type:
+        query = query.filter_by(action_type=f_action_type)
+    if f_start_date:
+        start_date = datetime.strptime(f_start_date, '%Y-%m-%d')
+        query = query.filter(ActivityLog.timestamp >= start_date)
+
+    logs = query.paginate(page=page, per_page=50, error_out=False)
+    
+    # Ambil data untuk mengisi dropdown filter
+    all_users = User.query.order_by(User.username).all()
+    action_types = db.session.query(ActivityLog.action_type).distinct().all()
+
+    return render_template(
+        'log_aktivitas.html', 
+        logs=logs,
+        all_users=all_users,
+        action_types=[a[0] for a in action_types]
+    )

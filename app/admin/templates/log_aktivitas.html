@@ -1,0 +1,86 @@
+{% extends "_admin_layout.html" %}
+
+{% block title %}Log Aktivitas{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h2">Log Aktivitas Sistem</h1>
+</div>
+<p>Halaman ini mencatat semua aktivitas penting yang dilakukan oleh pengguna di dalam sistem.</p>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5><i class="fas fa-filter me-2"></i>Filter Log</h5>
+    </div>
+    <div class="card-body">
+        <form method="GET">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="user_id" class="form-label">Pengguna</label>
+                    <select name="user_id" id="user_id" class="form-select">
+                        <option value="">-- Semua Pengguna --</option>
+                        {% for user in all_users %}
+                            <option value="{{ user.id }}" {% if request.args.get('user_id')|int == user.id %}selected{% endif %}>
+                                {{ user.username }} ({{ user.role.name }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="action_type" class="form-label">Jenis Aksi</label>
+                    <select name="action_type" id="action_type" class="form-select">
+                        <option value="">-- Semua Aksi --</option>
+                        {% for action in action_types %}
+                            <option value="{{ action }}" {% if request.args.get('action_type') == action %}selected{% endif %}>{{ action }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="start_date" class="form-label">Dari Tanggal</label>
+                    <input type="date" name="start_date" id="start_date" class="form-control" value="{{ request.args.get('start_date', '') }}">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Filter</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Waktu</th>
+                        <th>Pengguna</th>
+                        <th>Peran</th>
+                        <th>Fitur</th>
+                        <th>Aksi</th>
+                        <th>Deskripsi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs.items %}
+                    <tr>
+                        <td><small>{{ log.timestamp|datetime_wib }}</small></td>
+                        <td>{{ log.user.username }}</td>
+                        <td><span class="badge bg-secondary">{{ log.user.role.name }}</span></td>
+                        <td>{{ log.feature }}</td>
+                        <td>{{ log.action_type }}</td>
+                        <td>{{ log.description }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center">Tidak ada log aktivitas yang cocok dengan filter Anda.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-4 d-flex justify-content-center">
+            </div>
+    </div>
+</div>
+{% endblock %}

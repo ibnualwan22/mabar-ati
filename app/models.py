@@ -152,3 +152,17 @@ class Absen(db.Model):
 
     pendaftaran = db.relationship('Pendaftaran', backref='absensi')
     dicatat_oleh = db.relationship('User', backref='absen_dicatat')
+
+class ActivityLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    action_type = db.Column(db.String(20), index=True) # Tambah, Edit, Hapus
+    feature = db.Column(db.String(50), index=True) # Rombongan, Santri, Pendaftaran, dll.
+    description = db.Column(db.Text)
+
+    # Relasi untuk mengambil data user yang melakukan aksi
+    user = db.relationship('User', backref='activities')
+
+    def __repr__(self):
+        return f'<Log: {self.user.username} - {self.action_type} - {self.feature}>'

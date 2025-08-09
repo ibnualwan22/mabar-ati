@@ -59,7 +59,7 @@
     </div>
     <div class="card-body">
         <p>
-            <strong>Jadwal Kembali:</strong> {{ bus.rombongan.jadwal_kembali.strftime('%d %b %Y %H:%M') if bus.rombongan.jadwal_kembali else 'Belum diatur' }}<br>
+            <strong>Jadwal Kembali:</strong> {{ bus.rombongan.jadwal_kembali|datetime_wib if bus.rombongan.jadwal_kembali else 'Belum diatur' }}<br>
             <strong>Titik Kumpul Kembali:</strong> {{ bus.rombongan.titik_kumpul_kembali or 'Belum diatur' }}
         </p>
         <p class="h5">Kapasitas Kembali: <span class="fw-bold">{{ jumlah_peserta_kembali }} / {{ bus.kuota }}</span> Terisi</p>

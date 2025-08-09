@@ -49,8 +49,8 @@
                 <hr>
                 <h6 class="text-muted">Jadwal</h6>
                 <p>
-                    <i class="fas fa-arrow-right-from-bracket me-2"></i> <strong>Pulang:</strong> {{ rombongan.jadwal_pulang.strftime('%d %b %Y, %H:%M') if rombongan.jadwal_pulang else 'N/A' }}<br>
-                    <i class="fas fa-arrow-right-to-bracket me-2"></i> <strong>Kembali:</strong> {{ rombongan.jadwal_berangkat.strftime('%d %b %Y, %H:%M') if rombongan.jadwal_berangkat else 'N/A' }}
+                    <i class="fas fa-arrow-right-from-bracket me-2"></i> <strong>Pulang:</strong> {{ rombongan.jadwal_pulang|datetime_wib if rombongan.jadwal_pulang else 'N/A' }}<br>
+                    <i class="fas fa-arrow-right-to-bracket me-2"></i> <strong>Kembali:</strong> {{ rombongan.jadwal_berangkat|datetime_wib if rombongan.jadwal_berangkat else 'N/A' }}
                 </p>
                 <hr>
                 <h6 class="text-muted">Detail Harga Titik Turun/Jemput</h6>

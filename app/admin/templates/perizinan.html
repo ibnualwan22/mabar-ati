@@ -64,7 +64,7 @@
                 <td>{{ izin.santri.nama }}</td>
                 <td>{{ izin.santri.asrama }}</td>
                 <td>{{ izin.santri.kabupaten }}</td>
-                <td>{{ izin.tanggal_berakhir.strftime('%d %b %Y') }}</td>
+                <td>{{ izin.tanggal_berakhir|date_wib }}</td>
                 {% if current_user.role.name in ['Korpus', 'Keamanan'] %}
                 <td>{{ izin.keterangan }}</td>
                 {% endif %}

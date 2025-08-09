@@ -549,6 +549,11 @@
     </a>
 </li>
 {% endif %}
+<li class="nav-item">
+    <a href="{{ url_for('admin.log_aktivitas') }}" class="nav-link {{ 'active' if 'log_aktivitas' in request.endpoint else '' }}">
+        <i class="fas fa-clipboard-list"></i> Log Aktivitas
+    </a>
+</li>
     </ul>
     
 </nav>
