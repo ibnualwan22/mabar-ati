@@ -110,6 +110,10 @@ def tambah_checkpoint_absen():
     flash(f'Checkpoint absen "{nama_absen_baru}" berhasil dibuat.', 'success')
     return redirect(url_for('lapangan.dashboard'))
 
+@lapangan_bp.errorhandler(403)
+def forbidden(error):
+    return render_template('errors/403.html'), 403
+
 @lapangan_bp.route('/simpan-absen', methods=['POST'])
 @login_required
 def simpan_absen():

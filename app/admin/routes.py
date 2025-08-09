@@ -169,6 +169,7 @@ def hapus_user(user_id):
 
 @admin_bp.route('/')
 @login_required
+@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara')
 def dashboard():
     active_edisi = get_active_edisi()
     stats = { 'total_peserta': 0, 'total_izin': 0, 'santri_belum_terdaftar': 0, 
@@ -424,22 +425,13 @@ def search_wilayah_proxy():
         print(f"Error fetching API: {e}")
         return jsonify({"error": "Gagal mengambil data dari API"}), 500
     
-# @admin_bp.route('/rombongan/<int:rombongan_id>/kelola-santri')
-# def kelola_santri(rombongan_id):
-#     # Ambil data rombongan saat ini
-#     rombongan = Rombongan.query.get_or_404(rombongan_id)
-    
-#     # Untuk saat ini, kita hanya akan menampilkan halaman kosong
-#     # Logika untuk filter dan search akan ditambahkan nanti
-    
-#     # Ambil semua santri yang terhubung dengan rombongan ini
-#     # (Relasi `rombongan.santris` sudah kita buat di model)
-#     peserta = rombongan.santris
-
-#     return render_template('kelola_santri.html', rombongan=rombongan, peserta=peserta)
+@admin_bp.errorhandler(403)
+def forbidden(error):
+    return render_template('errors/403.html'), 403
 
 @admin_bp.route('/santri')
 @login_required
+@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara')
 def manajemen_santri():
     page = request.args.get('page', 1, type=int)
     active_edisi = get_active_edisi()
@@ -915,6 +907,7 @@ def daftar_peserta(rombongan_id):
     return render_template('daftar_peserta.html', rombongan=rombongan, pendaftar=unique_pendaftar)
 
 @admin_bp.route('/peserta')
+@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara')
 @login_required
 def daftar_peserta_global():
     page = request.args.get('page', 1, type=int)
@@ -965,6 +958,7 @@ def daftar_peserta_global():
 
 @admin_bp.route('/perizinan', methods=['GET', 'POST'])
 @login_required
+@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara')
 def perizinan():
     form = IzinForm()
     active_edisi = get_active_edisi()
@@ -1036,6 +1030,8 @@ def cabut_izin(izin_id):
     return redirect(url_for('admin.perizinan'))
 
 @admin_bp.route('/partisipan')
+@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara')
+@login_required
 def data_partisipan():
     active_edisi = get_active_edisi()
     

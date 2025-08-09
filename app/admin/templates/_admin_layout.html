@@ -513,7 +513,7 @@
             </a>
         </li>
         {% if current_user.role.name in ['Korpus', 'Korda', 'Korwil'] %}
-        <li class="nav-heading">Manajemen Keuangan</li>
+        <li class="nav-heading">Manajemen Keuangan & User</li>
         <li class="nav-item">
             <a href="{{ url_for('admin.manajemen_keuangan') }}" 
                class="nav-link {{ 'active' if 'manajemen_keuangan' in request.endpoint else '' }}">

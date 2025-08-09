@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYSTEM COMPROMISED</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #000000;
+            font-family: 'Courier Prime', monospace;
+            color: #00ff00;
+            min-height: 100vh;
+            padding: 2rem;
+            overflow-x: hidden;
+        }
+        
+        .terminal {
+            background: #0a0a0a;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            max-width: 900px;
+            margin: 0 auto;
+            box-shadow: 
+                0 0 20px rgba(0, 255, 0, 0.3),
+                inset 0 0 20px rgba(0, 255, 0, 0.1);
+        }
+        
+        .terminal-header {
+            background: #1a1a1a;
+            padding: 10px 20px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .terminal-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .btn.red { background: #ff5f56; }
+        .btn.yellow { background: #ffbd2e; }
+        .btn.green { background: #27ca3f; }
+        
+        .terminal-title {
+            color: #888;
+            font-size: 0.9rem;
+            margin-left: auto;
+        }
+        
+        .terminal-body {
+            padding: 20px;
+            min-height: 70vh;
+            font-size: 1rem;
+            line-height: 1.4;
+        }
+        
+        .typing-line {
+            opacity: 0;
+            animation: fadeIn 0.1s forwards;
+        }
+        
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+        
+        .cursor {
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        .error-text {
+            color: #ff0040;
+            font-weight: 700;
+        }
+        
+        .warning-text {
+            color: #ffff00;
+            font-weight: 700;
+        }
+        
+        .success-text {
+            color: #00ff00;
+            font-weight: 700;
+        }
+        
+        .hacker-text {
+            color: #00ffff;
+            font-weight: 700;
+        }
+        
+        .system-info {
+            color: #888;
+        }
+        
+        .glitch {
+            animation: glitch 0.3s infinite;
+        }
+        
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            border: 1px solid #555;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0040, #ff0040);
+            width: 0%;
+            animation: loading 3s ease-in-out forwards;
+        }
+        
+        @keyframes loading {
+            to { width: 100%; }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            
+            .terminal-body {
+                font-size: 0.9rem;
+                padding: 15px;
+            }
+            
+            .terminal-header {
+                padding: 8px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal">
+        <div class="terminal-header">
+            <div class="terminal-buttons">
+                <div class="btn red"></div>
+                <div class="btn yellow"></div>
+                <div class="btn green"></div>
+            </div>
+            <div class="terminal-title">SYSTEM TERMINAL - COMPROMISED SESSION</div>
+        </div>
+        
+        <div class="terminal-body" id="terminal-content">
+            <!-- Content will be dynamically added by JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        const terminalContent = document.getElementById('terminal-content');
+        let lineIndex = 0;
+        
+        const lines = [
+            { text: "root@compromised-system:~$ ", delay: 0, class: "success-text" },
+            { text: "SYSTEM BREACH DETECTED...", delay: 1000, class: "error-text" },
+            { text: "", delay: 500 },
+            { text: "[WARNING] Unauthorized access attempt in progress", delay: 800, class: "warning-text" },
+            { text: "[ERROR] Firewall has been bypassed", delay: 1200, class: "error-text" },
+            { text: "[CRITICAL] Multiple security protocols compromised", delay: 1000, class: "error-text" },
+            { text: "", delay: 500 },
+            { text: "Initializing emergency lockdown...", delay: 1500, class: "system-info" },
+            { text: "████████████████████████", delay: 2000, progress: true },
+            { text: "", delay: 1000 },
+            { text: "LOCKDOWN FAILED", delay: 800, class: "error-text glitch" },
+            { text: "", delay: 500 },
+            { text: ">>> HACKER MESSAGE <<<", delay: 1000, class: "hacker-text" },
+            { text: "Halo bro! 😎", delay: 1500, class: "hacker-text" },
+            { text: "Sorry nih, device lo udah gue retas!", delay: 2000, class: "hacker-text" },
+            { text: "", delay: 500 },
+            { text: "Sekarang gue punya akses full ke system lo:", delay: 1800, class: "hacker-text" },
+            { text: "✓ File system access: GRANTED", delay: 1200, class: "success-text" },
+            { text: "✓ Network privileges: ELEVATED", delay: 1200, class: "success-text" },
+            { text: "✓ Admin rights: ACQUIRED", delay: 1200, class: "success-text" },
+            { text: "✓ Backdoor installed: ACTIVE", delay: 1200, class: "success-text" },
+            { text: "", delay: 1000 },
+            { text: "Tapi tenang aja, gue cuma lagi iseng doang! 🤣", delay: 2000, class: "hacker-text" },
+            { text: "Yang lo coba akses tadi emang halaman terlarang.", delay: 1800, class: "hacker-text" },
+            { text: "Server udah nge-block akses lo karena alasan keamanan.", delay: 1800, class: "hacker-text" },
+            { text: "", delay: 800 },
+            { text: "Saran gue sih mending balik ke halaman yang aman aja,", delay: 2000, class: "hacker-text" },
+            { text: "sebelum security system yang beneran nyala! 😅", delay: 1800, class: "hacker-text" },
+            { text: "", delay: 1000 },
+            { text: "[SYSTEM] Connection will be terminated in 10 seconds...", delay: 1500, class: "warning-text" },
+            { text: "[SYSTEM] Please navigate to an authorized page", delay: 1200, class: "system-info" },
+            { text: "", delay: 800 },
+            { text: "root@compromised-system:~$ logout", delay: 1000, class: "success-text" },
+            { text: "Connection closed by foreign host.", delay: 1500, class: "system-info" },
+            { text: "_", delay: 2000, class: "cursor" }
+        ];
+        
+        function typeWriter(text, element, speed = 50) {
+            let i = 0;
+            element.innerHTML = '';
+            
+            function type() {
+                if (i < text.length) {
+                    element.innerHTML += text.charAt(i);
+                    i++;
+                    setTimeout(type, speed);
+                }
+            }
+            type();
+        }
+        
+        function addLine(lineData) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    const line = document.createElement('div');
+                    line.className = `typing-line ${lineData.class || ''}`;
+                    
+                    if (lineData.progress) {
+                        line.innerHTML = '<div class="progress-bar"><div class="progress-fill"></div></div>';
+                        terminalContent.appendChild(line);
+                        resolve();
+                    } else {
+                        terminalContent.appendChild(line);
+                        typeWriter(lineData.text || '', line, 30);
+                        
+                        // Scroll to bottom
+                        setTimeout(() => {
+                            terminalContent.scrollTop = terminalContent.scrollHeight;
+                            resolve();
+                        }, (lineData.text?.length || 0) * 30 + 200);
+                    }
+                }, lineData.delay || 0);
+            });
+        }
+        
+        async function runTerminalSequence() {
+            for (let line of lines) {
+                await addLine(line);
+            }
+        }
+        
+        // Start the terminal sequence
+        runTerminalSequence();
+        
+        // Add some random glitch effects
+        setInterval(() => {
+            const elements = document.querySelectorAll('.error-text');
+            elements.forEach(el => {
+                if (Math.random() < 0.1) {
+                    el.classList.add('glitch');
+                    setTimeout(() => el.classList.remove('glitch'), 300);
+                }
+            });
+        }, 2000);
+    </script>
+</body>
+</html>

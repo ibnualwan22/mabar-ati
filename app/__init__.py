@@ -44,6 +44,6 @@ def create_app(config_name):
     def index():
         # Menampilkan mode yang sedang berjalan
         mode = app.config['MODE']
-        return f'<h1>Selamat Datang di Mabar-Ati!</h1><p>Mode saat ini: <strong>{mode}</strong></p>'
+        return f'<h1>Selamat Datang di Mabar Ati</h1><p>Mudik Akbar Santri Amtsilati</p>'
 
     return app

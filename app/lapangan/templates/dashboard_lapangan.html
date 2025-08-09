@@ -23,10 +23,10 @@
 
 <ul class="nav nav-tabs" id="manifestTab" role="tablist">
     <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="pulang-tab" data-bs-toggle="tab" data-bs-target="#pulang-tab-pane" type="button" role="tab">Absen Mudik</button>
+        <button class="nav-link active" id="pulang-tab" data-bs-toggle="tab" data-bs-target="#pulang-tab-pane" type="button" role="tab">Manifest Pulang</button>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link" id="kembali-tab" data-bs-toggle="tab" data-bs-target="#kembali-tab-pane" type="button" role="tab">Absen Balpon</button>
+        <button class="nav-link" id="kembali-tab" data-bs-toggle="tab" data-bs-target="#kembali-tab-pane" type="button" role="tab">Manifest Kembali</button>
     </li>
 </ul>
 
@@ -35,7 +35,7 @@
         <div class="p-3">
             <div class="mb-3">
                 <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#absenBaruModal" data-arah="Pulang">
-                    <i class="fas fa-plus-circle me-2"></i>Tambah Check Point Absen Baru (Pulang)
+                    <i class="fas fa-plus-circle me-2"></i>Tambah Check Point Absen Baru
                 </button>
             </div>
             <form method="POST" action="{{ url_for('lapangan.simpan_absen') }}">
@@ -83,7 +83,7 @@
         <div class="p-3">
             <div class="mb-3">
                 <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#absenBaruModal" data-arah="Kembali">
-                    <i class="fas fa-plus-circle me-2"></i>Tambah Check Point Absen Baru (Berangkat)
+                    <i class="fas fa-plus-circle me-2"></i>Tambah Check Point Absen Baru
                 </button>
             </div>
             <form method="POST" action="{{ url_for('lapangan.simpan_absen') }}">
