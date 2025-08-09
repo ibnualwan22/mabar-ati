@@ -32,13 +32,12 @@
                 <h6><strong>Titik Turun: {{ titik_turun }}</strong> (Jumlah: {{ pendaftar_list|length }})</h6>
                 <div class="table-responsive">
                     <table class="table table-sm table-striped">
-                        <thead><tr><th>No.</th><th>Nama Santri</th><th>NIS</th><th>Asrama</th></tr></thead>
+                        <thead><tr><th>No.</th><th>Nama Santri</th><th>Asrama</th></tr></thead>
                         <tbody>
                             {% for p in pendaftar_list|sort(attribute='santri.nama') %}
                             <tr>
                                 <td>{{ loop.index }}</td>
                                 <td>{{ p.santri.nama }}</td>
-                                <td>{{ p.santri.nis }}</td>
                                 <td>{{ p.santri.asrama }}</td>
                             </tr>
                             {% endfor %}

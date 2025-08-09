@@ -141,6 +141,8 @@ class Pendaftaran(db.Model):
     santri = db.relationship('Santri', back_populates='pendaftaran')
     bus_pulang = db.relationship('Bus', foreign_keys=[bus_pulang_id], back_populates='pendaftar_pulang')
     bus_kembali = db.relationship('Bus', foreign_keys=[bus_kembali_id], back_populates='pendaftar_kembali')
+    absensi = db.relationship('Absen', backref='pendaftaran', lazy='dynamic', cascade="all, delete-orphan")
+
 
 class Absen(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -150,7 +152,6 @@ class Absen(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     dicatat_oleh_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
-    pendaftaran = db.relationship('Pendaftaran', backref='absensi')
     dicatat_oleh = db.relationship('User', backref='absen_dicatat')
 
 class ActivityLog(db.Model):

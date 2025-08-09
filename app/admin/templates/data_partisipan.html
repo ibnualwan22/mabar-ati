@@ -18,12 +18,12 @@
         {% for kategori, partisipan_list in grouped_partisipan.items()|sort %}
             <div class="info-box" style="margin-bottom: 2rem;">
                 <h3>Kategori: {{ kategori }} (Jumlah: {{ partisipan_list|length }} orang)</h3>
-                <table>
+                <table class="table table-striped">
+
                     <thead>
                         <tr>
                             <th>No.</th>
                             <th>Nama Santri</th>
-                            <th>NIS</th>
                             <th>Asrama</th>
                             <th>Kelas Formal</th>
                             <th>Kelas Ngaji</th>
@@ -37,7 +37,6 @@
                         <tr>
                             <td>{{ loop.index }}</td>
                             <td>{{ partisipan.santri.nama }}</td>
-                            <td>{{ partisipan.santri.nis }}</td>
                             <td>{{ partisipan.santri.asrama }}</td>
                             <td>{{ partisipan.santri.kelas_formal or '-' }}</td>
                             <td>{{ partisipan.santri.kelas_ngaji or '-' }}</td>

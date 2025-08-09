@@ -10,11 +10,40 @@ from datetime import date, datetime
 from flask_login import login_user, logout_user, current_user, login_required
 from functools import wraps
 from sqlalchemy.orm import joinedload # <-- Tambahkan import ini di atas
+from datetime import date, datetime # Pastikan datetime diimpor
 
 
+def check_and_update_expired_izin():
+    """Mencari semua izin yang sudah kadaluwarsa dan memperbarui status santri."""
+    today = date.today()
+    
+    # Cari semua record Izin yang tanggal berakhirnya sudah lewat hari ini
+    expired_izins = Izin.query.filter(Izin.tanggal_berakhir < today).all()
+    
+    if not expired_izins:
+        return # Keluar jika tidak ada yang perlu diupdate
 
+    updated_count = 0
+    for izin in expired_izins:
+        santri = izin.santri
+        if santri and santri.status_santri == 'Izin':
+            # Kembalikan status santri menjadi 'Aktif'
+            santri.status_santri = 'Aktif'
+            
+            # Hapus record izin yang sudah tidak berlaku
+            db.session.delete(izin)
+            updated_count += 1
+            
+            # Catat aktivitas ini di log
+            log_activity(
+                'Update Otomatis', 
+                'Perizinan', 
+                f"Izin untuk santri '{santri.nama}' telah berakhir dan statusnya dikembalikan ke Aktif."
+            )
 
-
+    if updated_count > 0:
+        db.session.commit()
+        print(f"Update otomatis: {updated_count} status izin telah diperbarui.")
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -102,6 +131,7 @@ def tambah_user():
             
         # Simpan user baru ke database
         db.session.add(new_user)
+        log_activity('Tambah', 'User', f"Menambahkan user baru: '{form.username.data}' dengan peran '{form.role.data.name}'")
         db.session.commit()
         
         flash('User baru berhasil ditambahkan.', 'success')
@@ -138,7 +168,7 @@ def edit_user(user_id):
         if form.password.data:
             user.set_password(form.password.data)
             
-        # Simpan semua perubahan
+        log_activity('Edit', 'User', f"Mengubah data user: '{user.username}'")
         db.session.commit()
         
         flash('Data user berhasil diperbarui.', 'success')
@@ -161,6 +191,8 @@ def hapus_user(user_id):
     if user == current_user:
         flash('Anda tidak bisa menghapus akun Anda sendiri.', 'danger')
         return redirect(url_for('admin.manajemen_user'))
+    username_dihapus = user.username
+    log_activity('Hapus', 'User', f"Menghapus user: '{username_dihapus}'")
     db.session.delete(user)
     db.session.commit()
     flash('User berhasil dihapus.', 'info')
@@ -171,6 +203,7 @@ def hapus_user(user_id):
 @login_required
 @role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara')
 def dashboard():
+    check_and_update_expired_izin()
     active_edisi = get_active_edisi()
     stats = { 'total_peserta': 0, 'total_izin': 0, 'santri_belum_terdaftar': 0, 
               'total_pemasukan': 0, 'total_lunas': 0, 'total_belum_lunas': 0, 
@@ -212,8 +245,9 @@ def dashboard():
     stats['total_partisipan'] = Partisipan.query.filter_by(edisi=active_edisi).count()
 
     # Kalkulasi keuangan
-    total_pemasukan = sum(p.total_biaya for p in pendaftar_list)
+    total_pemasukan = 0
     total_lunas = 0
+
     for p in pendaftar_list:
         tarif_pulang = Tarif.query.filter_by(rombongan_id=p.rombongan_pulang_id, titik_turun=p.titik_turun).first()
         biaya_pulang = tarif_pulang.harga_bus + tarif_pulang.fee_korda + 10000 if tarif_pulang else 0
@@ -221,10 +255,18 @@ def dashboard():
         tarif_kembali = Tarif.query.filter_by(rombongan_id=p.rombongan_kembali_id, titik_turun=p.titik_jemput_kembali).first()
         biaya_kembali = tarif_kembali.harga_bus + tarif_kembali.fee_korda + 10000 if tarif_kembali else 0
 
-        if p.status_pulang == 'Lunas':
-            total_lunas += biaya_pulang
-        if p.status_kembali == 'Lunas':
-            total_lunas += biaya_kembali
+        # Hanya hitung jika Korda/Korwil mengelola rombongan terkait
+        if current_user.role.name == 'Korpus' or (p.rombongan_pulang in current_user.managed_rombongan):
+            if p.status_pulang != 'Tidak Ikut':
+                total_pemasukan += biaya_pulang
+                if p.status_pulang == 'Lunas':
+                    total_lunas += biaya_pulang
+        
+        if current_user.role.name == 'Korpus' or (p.rombongan_kembali in current_user.managed_rombongan):
+            if p.status_kembali != 'Tidak Ikut':
+                total_pemasukan += biaya_kembali
+                if p.status_kembali == 'Lunas':
+                    total_lunas += biaya_kembali
     
     stats['total_pemasukan'] = total_pemasukan
     stats['total_lunas'] = total_lunas
@@ -401,6 +443,8 @@ def edit_rombongan(id):
 @role_required('Korpus') # Hanya Korpus yang bisa buat rombongan baru
 def hapus_rombongan(id):
     rombongan = Rombongan.query.get_or_404(id)
+    nama_rombongan = rombongan.nama_rombongan
+    log_activity('Hapus', 'Rombongan', f"Menghapus rombongan: '{nama_rombongan}'")
     db.session.delete(rombongan)
     db.session.commit()
     flash('Rombongan berhasil dihapus.', 'info')
@@ -426,6 +470,7 @@ def search_wilayah_proxy():
         # Tangani jika ada error koneksi ke API
         print(f"Error fetching API: {e}")
         return jsonify({"error": "Gagal mengambil data dari API"}), 500
+    
     
 @admin_bp.errorhandler(403)
 def forbidden(error):
@@ -529,6 +574,8 @@ def impor_santri():
     
     db.session.add(new_santri)
     db.session.commit()
+    log_activity('Tambah', 'Santri', f"Mengimpor santri individual: '{new_santri.nama}'")
+
     
     return jsonify({"success": True, "message": f"{new_santri.nama} berhasil diimpor."})
 
@@ -595,6 +642,7 @@ def impor_semua_santri():
             new_count = len(to_create)
 
         db.session.commit()
+        log_activity('Sinkronisasi', 'Santri', f"Sinkronisasi massal: {new_count} baru, {updated_count} diperbarui.")
         flash(f"Proses selesai! Berhasil mengimpor {new_count} santri baru dan memperbarui {updated_count} data santri.", "success")
 
     except requests.exceptions.RequestException as e:
@@ -620,6 +668,7 @@ def edit_santri(id):
 def hapus_santri(id):
     santri = Santri.query.get_or_404(id)
     nama_santri = santri.nama
+    log_activity('Hapus', 'Santri', f"Menghapus data santri: '{nama_santri}' (ID: {santri.id})")
     db.session.delete(santri)
     db.session.commit()
     flash(f"Santri '{nama_santri}' berhasil dihapus dari sistem.", "info")
@@ -686,9 +735,10 @@ def pendaftaran_rombongan():
             titik_turun=form.titik_turun.data, status_kembali=form.status_kembali.data,
             metode_pembayaran_kembali=form.metode_pembayaran_kembali.data or None,
             bus_kembali_id=int(form.bus_kembali.data) if form.bus_kembali.data else None,
-            total_biaya=total_biaya
+            titik_jemput_kembali=form.titik_turun.data,total_biaya=total_biaya
         )
         db.session.add(pendaftaran)
+        log_activity('Tambah', 'Pendaftaran', f"Mendaftarkan santri '{santri.nama}' ke rombongan '{rombongan.nama_rombongan}'")
         db.session.commit()
         flash(f"{santri.nama} berhasil didaftarkan ke {rombongan.nama_rombongan}!", "success")
         return redirect(url_for('admin.daftar_peserta', rombongan_id=rombongan.id))
@@ -782,6 +832,7 @@ def edit_pendaftaran(pendaftaran_id):
         )
         
         db.session.execute(stmt)
+        log_activity('Edit', 'Pendaftaran', f"Mengubah pendaftaran untuk santri: '{pendaftaran.santri.nama}'")
         db.session.commit()
         
         flash(f"Data pendaftaran untuk {pendaftaran.santri.nama} berhasil diperbarui.", "success")
@@ -820,6 +871,7 @@ def hapus_pendaftaran(pendaftaran_id):
     nama_santri = pendaftaran.santri.nama
     
     db.session.delete(pendaftaran)
+    log_activity('Hapus', 'Pendaftaran', f"Menghapus pendaftaran untuk santri: '{nama_santri}'")
     db.session.commit()
     
     flash(f"Pendaftaran untuk '{nama_santri}' telah berhasil dihapus.", "info")
@@ -979,6 +1031,7 @@ def perizinan():
         )
         santri.status_santri = 'Izin'
         db.session.add(new_izin)
+        log_activity('Tambah', 'Perizinan', f"Memberikan izin kepada santri: '{santri.nama}'")
         db.session.commit()
         flash(f"Izin untuk {santri.nama} telah berhasil dicatat.", "success")
         return redirect(url_for('admin.perizinan'))
@@ -1022,7 +1075,7 @@ def cabut_izin(izin_id):
     # 3. Kembalikan status santri menjadi 'Aktif'
     santri.status_santri = 'Aktif'
     
-    # 4. Hapus record izin dari database
+    log_activity('Hapus', 'Perizinan', f"Mencabut izin untuk santri: '{nama_santri}'")
     db.session.delete(izin)
     
     # 5. Simpan semua perubahan
@@ -1077,6 +1130,7 @@ def tambah_partisipan():
             santri.status_santri = 'Partisipan'
             
             db.session.add(new_partisipan)
+            log_activity('Tambah', 'Partisipan', f"Menetapkan santri '{santri.nama}' sebagai partisipan dengan kategori '{form.kategori.data}'")
             db.session.commit()
             flash(f"Status partisipan untuk {santri.nama} berhasil ditambahkan.", "success")
             return redirect(url_for('admin.data_partisipan'))
@@ -1120,6 +1174,7 @@ def edit_partisipan(partisipan_id):
 
     if form.validate_on_submit():
         partisipan.kategori = form.kategori.data
+        log_activity('Edit', 'Partisipan', f"Mengubah kategori partisipan untuk '{partisipan.santri.nama}' menjadi '{form.kategori.data}'")
         db.session.commit()
         flash(f"Kategori untuk {partisipan.santri.nama} berhasil diubah.", "success")
         return redirect(url_for('admin.data_partisipan'))
@@ -1138,7 +1193,7 @@ def hapus_partisipan(partisipan_id):
     # Kembalikan status santri menjadi 'Aktif'
     santri.status_santri = 'Aktif'
     
-    # Hapus record partisipan
+    log_activity('Hapus', 'Partisipan', f"Menghapus status partisipan untuk '{nama_santri}'")
     db.session.delete(partisipan)
     
     db.session.commit()
@@ -1169,6 +1224,7 @@ def tambah_edisi():
             is_active=form.is_active.data
         )
         db.session.add(new_edisi)
+        log_activity('Tambah', 'Edisi', f"Menambahkan edisi baru: '{form.nama.data}'")
         db.session.commit()
         flash('Edisi baru berhasil ditambahkan.', 'success')
         return redirect(url_for('admin.manajemen_edisi'))
@@ -1188,6 +1244,7 @@ def edit_edisi(edisi_id):
         edisi.nama = form.nama.data
         edisi.tahun = form.tahun.data
         edisi.is_active = form.is_active.data
+        log_activity('Edit', 'Edisi', f"Mengubah data edisi: '{edisi.nama}'")
         db.session.commit()
         flash('Data edisi berhasil diperbarui.', 'success')
         return redirect(url_for('admin.manajemen_edisi'))
@@ -1203,6 +1260,8 @@ def hapus_edisi(edisi_id):
         flash('Edisi ini tidak bisa dihapus karena masih memiliki data rombongan.', 'danger')
         return redirect(url_for('admin.manajemen_edisi'))
     
+    nama_edisi = edisi.nama
+    log_activity('Hapus', 'Edisi', f"Menghapus edisi: '{nama_edisi}'")
     db.session.delete(edisi)
     db.session.commit()
     flash('Edisi berhasil dihapus.', 'info')
@@ -1307,6 +1366,7 @@ def tambah_bus(rombongan_id):
             keterangan=form.keterangan.data
         )
         db.session.add(new_bus)
+        log_activity('Tambah', 'Bus', f"Menambah bus '{form.nama_armada.data}' ke rombongan '{rombongan.nama_rombongan}'")
         db.session.commit()
         flash('Bus baru berhasil ditambahkan.', 'success')
     else:
@@ -1378,8 +1438,11 @@ def manajemen_keuangan():
     }
 
     if active_edisi:
-        pendaftaran_query = Pendaftaran.query.join(Rombongan, Pendaftaran.rombongan_pulang_id == Rombongan.id).filter(Rombongan.edisi_id == active_edisi.id)
+        pendaftaran_query = Pendaftaran.query.join(
+            Rombongan, Pendaftaran.rombongan_pulang_id == Rombongan.id
+        ).filter(Rombongan.edisi_id == active_edisi.id)
 
+        managed_rombongan_ids = []
         if current_user.role.name in ['Korwil', 'Korda']:
             managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
             if not managed_rombongan_ids:
@@ -1396,32 +1459,35 @@ def manajemen_keuangan():
         all_pendaftaran = pendaftaran_query.all()
 
         for p in all_pendaftaran:
-            # --- PERBAIKAN LOGIKA DI SINI ---
-            
             # Kalkulasi untuk perjalanan pulang
-            if p.status_pulang != 'Tidak Ikut' and p.rombongan_pulang_id and p.titik_turun:
-                tarif_pulang = Tarif.query.filter_by(rombongan_id=p.rombongan_pulang_id, titik_turun=p.titik_turun).first()
-                if tarif_pulang:
-                    biaya_pulang = tarif_pulang.harga_bus + tarif_pulang.fee_korda + 10000
-                    financial_data['pulang_total'] += biaya_pulang
-                    financial_data['alokasi_bus_pulang'] += tarif_pulang.harga_bus
-                    financial_data['alokasi_korda_pulang'] += tarif_pulang.fee_korda
-                    financial_data['alokasi_pondok_pulang'] += 10000
-                    if p.status_pulang == 'Lunas':
-                        financial_data['pulang_lunas'] += biaya_pulang
+            if p.status_pulang != 'Tidak Ikut' and p.rombongan_pulang_id:
+                # --- PENGECEKAN KEPEMILIKAN BARU ---
+                if current_user.role.name == 'Korpus' or p.rombongan_pulang_id in managed_rombongan_ids:
+                    tarif_pulang = Tarif.query.filter_by(rombongan_id=p.rombongan_pulang_id, titik_turun=p.titik_turun).first()
+                    if tarif_pulang:
+                        biaya_pulang = tarif_pulang.harga_bus + tarif_pulang.fee_korda + 10000
+                        financial_data['pulang_total'] += biaya_pulang
+                        financial_data['alokasi_bus_pulang'] += tarif_pulang.harga_bus
+                        financial_data['alokasi_korda_pulang'] += tarif_pulang.fee_korda
+                        financial_data['alokasi_pondok_pulang'] += 10000
+                        if p.status_pulang == 'Lunas':
+                            financial_data['pulang_lunas'] += biaya_pulang
             
             # Kalkulasi untuk perjalanan kembali
             if p.status_kembali != 'Tidak Ikut' and p.rombongan_kembali_id and p.titik_jemput_kembali:
-                tarif_kembali = Tarif.query.filter_by(rombongan_id=p.rombongan_kembali_id, titik_turun=p.titik_jemput_kembali).first()
-                if tarif_kembali:
-                    biaya_kembali = tarif_kembali.harga_bus + tarif_kembali.fee_korda + 10000
-                    financial_data['kembali_total'] += biaya_kembali
-                    financial_data['alokasi_bus_kembali'] += tarif_kembali.harga_bus
-                    financial_data['alokasi_korda_kembali'] += tarif_kembali.fee_korda
-                    financial_data['alokasi_pondok_kembali'] += 10000
-                    if p.status_kembali == 'Lunas':
-                        financial_data['kembali_lunas'] += biaya_kembali
-            
+                # --- PENGECEKAN KEPEMILIKAN BARU ---
+                if current_user.role.name == 'Korpus' or p.rombongan_kembali_id in managed_rombongan_ids:
+                    tarif_kembali = Tarif.query.filter_by(rombongan_id=p.rombongan_kembali_id, titik_turun=p.titik_jemput_kembali).first()
+                    if tarif_kembali:
+                        biaya_kembali = tarif_kembali.harga_bus + tarif_kembali.fee_korda + 10000
+                        financial_data['kembali_total'] += biaya_kembali
+                        financial_data['alokasi_bus_kembali'] += tarif_kembali.harga_bus
+                        financial_data['alokasi_korda_kembali'] += tarif_kembali.fee_korda
+                        financial_data['alokasi_pondok_kembali'] += 10000
+                        if p.status_kembali == 'Lunas':
+                            financial_data['kembali_lunas'] += biaya_kembali
+
+        # Kalkulasi total turunan
         financial_data['pulang_belum_lunas'] = financial_data['pulang_total'] - financial_data['pulang_lunas']
         financial_data['kembali_belum_lunas'] = financial_data['kembali_total'] - financial_data['kembali_lunas']
         financial_data['global_total'] = financial_data['pulang_total'] + financial_data['kembali_total']

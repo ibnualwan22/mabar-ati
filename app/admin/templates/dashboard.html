@@ -41,7 +41,19 @@
             </a>
         </div>
         <div class="col-lg-3 col-md-6">
-            <a href="{{ url_for('admin.manajemen_santri', rombongan_id='belum_terdaftar') }}" class="stat-card-link">
+    {% if current_user.role.name in ['Korwil', 'Korda'] %}
+        {% set managed_regions = [] %}
+        {% for rombongan in current_user.managed_rombongan %}
+            {% if rombongan.cakupan_wilayah %}
+                {% for wilayah in rombongan.cakupan_wilayah %}
+                    {% if managed_regions.append(wilayah.get('label')) %}{% endif %}
+                {% endfor %}
+            {% endif %}
+        {% endfor %}
+        <a href="{{ url_for('admin.manajemen_santri', rombongan_id='belum_terdaftar', alamat=managed_regions|list) }}" class="stat-card-link">
+    {% else %}
+        <a href="{{ url_for('admin.manajemen_santri', rombongan_id='belum_terdaftar') }}" class="stat-card-link">
+    {% endif %}
                 <div class="card shadow-sm stat-card">
                     <div class="card-body text-center">
                         <h6 class="card-subtitle mb-2 text-muted">Santri Belum Terdaftar</h6>
