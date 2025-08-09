@@ -14,36 +14,23 @@ from datetime import date, datetime # Pastikan datetime diimpor
 
 
 def check_and_update_expired_izin():
-    """Mencari semua izin yang sudah kadaluwarsa dan memperbarui status santri."""
+    """Mencari izin yang kadaluwarsa, mengubah statusnya, dan mengembalikan status santri."""
     today = date.today()
-    
-    # Cari semua record Izin yang tanggal berakhirnya sudah lewat hari ini
-    expired_izins = Izin.query.filter(Izin.tanggal_berakhir < today).all()
+    # Cari izin yang statusnya 'Aktif' dan sudah lewat tanggal
+    expired_izins = Izin.query.filter(Izin.status == 'Aktif', Izin.tanggal_berakhir < today).all()
     
     if not expired_izins:
-        return # Keluar jika tidak ada yang perlu diupdate
+        return
 
-    updated_count = 0
     for izin in expired_izins:
         santri = izin.santri
         if santri and santri.status_santri == 'Izin':
-            # Kembalikan status santri menjadi 'Aktif'
             santri.status_santri = 'Aktif'
-            
-            # Hapus record izin yang sudah tidak berlaku
-            db.session.delete(izin)
-            updated_count += 1
-            
-            # Catat aktivitas ini di log
-            log_activity(
-                'Update Otomatis', 
-                'Perizinan', 
-                f"Izin untuk santri '{santri.nama}' telah berakhir dan statusnya dikembalikan ke Aktif."
-            )
+            izin.status = 'Selesai' # <-- Ubah status, bukan hapus
+            log_activity('Update Otomatis', 'Perizinan', f"Izin untuk '{santri.nama}' telah berakhir.")
 
-    if updated_count > 0:
-        db.session.commit()
-        print(f"Update otomatis: {updated_count} status izin telah diperbarui.")
+    db.session.commit()
+    print(f"Update otomatis: {len(expired_izins)} status izin telah diperbarui.")
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -1017,6 +1004,20 @@ def perizinan():
     form = IzinForm()
     active_edisi = get_active_edisi()
 
+    view_mode = request.args.get('view', 'aktif')
+    query = Izin.query.filter_by(edisi=active_edisi)
+
+    if view_mode == 'riwayat':
+        query = query.filter_by(status='Selesai')
+    else: # Default ke 'aktif'
+        query = query.filter_by(status='Aktif')
+
+    search_nama = request.args.get('nama')
+    if search_nama:
+        query = query.join(Santri).filter(Santri.nama.ilike(f'%{search_nama}%'))
+    
+    semua_izin = query.order_by(Izin.tanggal_berakhir.desc()).all()
+
     if form.validate_on_submit():
         if not active_edisi:
             flash("Tidak bisa menambah izin karena tidak ada edisi aktif.", "danger")
@@ -1036,15 +1037,47 @@ def perizinan():
         flash(f"Izin untuk {santri.nama} telah berhasil dicatat.", "success")
         return redirect(url_for('admin.perizinan'))
 
-    # Logika untuk filter
-    query = Izin.query.filter_by(edisi=active_edisi)
-    search_nama = request.args.get('nama')
-    if search_nama:
-        query = query.join(Santri).filter(Santri.nama.ilike(f'%{search_nama}%'))
-    
-    semua_izin = query.order_by(Izin.tanggal_berakhir).all()
+    return render_template('perizinan.html', 
+                           form=form, 
+                           semua_izin=semua_izin,
+                           view_mode=view_mode)
 
-    return render_template('perizinan.html', form=form, semua_izin=semua_izin)
+@admin_bp.route('/izin/edit/<int:izin_id>', methods=['GET', 'POST'])
+@login_required
+@role_required('Korpus', 'Keamanan')
+def edit_izin(izin_id):
+    izin = Izin.query.get_or_404(izin_id)
+    # Gunakan form yang sama, tapi isi dengan data yang ada
+    form = IzinForm(obj=izin)
+    # Nonaktifkan pilihan santri karena kita tidak mengubah santrinya
+    form.santri.render_kw = {'disabled': 'disabled'}
+
+    if form.validate_on_submit():
+        # Karena field santri di-disable, kita perlu mengisinya manual
+        izin.tanggal_berakhir = form.tanggal_berakhir.data
+        izin.keterangan = form.keterangan.data
+        db.session.commit()
+        log_activity('Edit', 'Perizinan', f"Memperpanjang izin untuk santri '{izin.santri.nama}'.")
+        flash(f"Data izin untuk {izin.santri.nama} berhasil diperbarui.", "success")
+        return redirect(url_for('admin.perizinan'))
+        
+    return render_template('form_izin.html', form=form, title=f"Edit Izin: {izin.santri.nama}", is_edit=True, izin=izin)
+
+@admin_bp.route('/izin/cabut/<int:izin_id>', methods=['POST'])
+@login_required
+@role_required('Korpus', 'Keamanan') # Keamanan dan Korpus
+def cabut_izin(izin_id):
+    izin = Izin.query.get_or_404(izin_id)    
+    santri = izin.santri
+    nama_santri = santri.nama
+    santri.status_santri = 'Aktif'
+    
+    log_activity('Hapus', 'Perizinan', f"Mencabut izin untuk santri: '{nama_santri}'")
+    db.session.delete(izin)
+    db.session.commit()
+    
+    flash(f"Izin untuk santri '{nama_santri}' telah berhasil dicabut.", "success")
+    return redirect(url_for('admin.perizinan'))
 
 @admin_bp.route('/api/search-active-santri')
 def search_active_santri_api():
@@ -1061,28 +1094,7 @@ def search_active_santri_api():
     results = [{'id': s.id, 'nama': s.nama} for s in santri_results]
     return jsonify({'results': results})
 
-@admin_bp.route('/izin/cabut/<int:izin_id>', methods=['POST'])
-@login_required
-@role_required('Korpus', 'Keamanan') # Keamanan dan Korpus
-def cabut_izin(izin_id):
-    # 1. Cari data izin berdasarkan ID-nya
-    izin = Izin.query.get_or_404(izin_id)
-    
-    # 2. Ambil data santri yang terhubung
-    santri = izin.santri
-    nama_santri = santri.nama
-    
-    # 3. Kembalikan status santri menjadi 'Aktif'
-    santri.status_santri = 'Aktif'
-    
-    log_activity('Hapus', 'Perizinan', f"Mencabut izin untuk santri: '{nama_santri}'")
-    db.session.delete(izin)
-    
-    # 5. Simpan semua perubahan
-    db.session.commit()
-    
-    flash(f"Izin untuk santri '{nama_santri}' telah berhasil dicabut.", "success")
-    return redirect(url_for('admin.perizinan'))
+
 
 @admin_bp.route('/partisipan')
 @role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara')

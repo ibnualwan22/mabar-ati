@@ -47,6 +47,8 @@ class Izin(db.Model):
     tanggal_berakhir = db.Column(db.Date, nullable=False)
     keterangan = db.Column(db.Text, nullable=False)
     edisi_id = db.Column(db.Integer, db.ForeignKey('edisi.id'), nullable=False)
+    status = db.Column(db.String(20), default='Aktif', nullable=False)
+
 
 class Partisipan(db.Model):
     id = db.Column(db.Integer, primary_key=True)

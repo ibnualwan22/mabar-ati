@@ -1,0 +1,46 @@
+{% extends "_admin_layout.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+    <h1 class="h2">{{ title }}</h1>
+    <a href="{{ url_for('admin.perizinan') }}">&larr; Kembali ke Manajemen Perizinan</a>
+    
+    <div class="card mt-3">
+        <div class="card-body">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                {% if is_edit %}
+                <div class="mb-3">
+                    <label class="form-label">Santri</label>
+                    <input type="text" class="form-control" value="{{ izin.santri.nama }}" readonly>
+                </div>
+                {% else %}
+                <div class="form-group form-grid">
+                    <label for="select-santri-izin">Pilih Santri</label>
+                    <div>
+                        <select id="select-santri-izin" placeholder="-- Cari Santri Aktif --"></select>
+                        {{ form.santri() }}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="form-group form-grid mt-3">
+                    {{ form.tanggal_berakhir.label(class="form-label") }}
+                    {{ form.tanggal_berakhir(class="form-control") }}
+                </div>
+                <div class="form-group form-grid mt-3">
+                    {{ form.keterangan.label(class="form-label") }}
+                    {{ form.keterangan(rows=3, class="form-control") }}
+                </div>
+                <div class="form-group mt-4">
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+
+{% if not is_edit %}
+<script>
+    // JavaScript untuk TomSelect (dari kode sebelumnya)
+</script>
+{% endif %}
+{% endblock %}
