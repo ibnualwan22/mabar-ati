@@ -85,6 +85,7 @@ class Bus(db.Model):
     plat_nomor = db.Column(db.String(20))
     kuota = db.Column(db.Integer, default=50, nullable=False)
     keterangan = db.Column(db.Text)
+    gmaps_share_url = db.Column(db.Text, nullable=True) # Untuk menyimpan URL Google Maps
     pendaftar_pulang = db.relationship('Pendaftaran', foreign_keys='Pendaftaran.bus_pulang_id', back_populates='bus_pulang')
     pendaftar_kembali = db.relationship('Pendaftaran', foreign_keys='Pendaftaran.bus_kembali_id', back_populates='bus_kembali')
 

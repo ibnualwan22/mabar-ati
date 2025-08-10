@@ -6,8 +6,9 @@ from sqlalchemy.orm import joinedload
 from . import lapangan_bp
 from app import db
 from app.models import User, Bus, Pendaftaran, Absen, Role, Rombongan
-from app.admin.forms import LoginForm
-from app.admin.routes import get_active_edisi
+from app.admin.forms import LoginForm, LokasiBusForm
+from app.admin.routes import get_active_edisi, log_activity
+
 
 @lapangan_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -141,3 +142,21 @@ def simpan_absen():
     db.session.commit()
     flash('Data absensi berhasil disimpan.', 'success')
     return redirect(url_for('lapangan.dashboard'))
+
+@lapangan_bp.route('/lokasi', methods=['GET', 'POST'])
+@login_required
+def update_lokasi():
+    if current_user.role.name != 'Korlapda' or not current_user.bus_id:
+        abort(403)
+    
+    bus = Bus.query.get_or_404(current_user.bus_id)
+    form = LokasiBusForm(obj=bus)
+
+    if form.validate_on_submit():
+        bus.gmaps_share_url = form.gmaps_share_url.data
+        db.session.commit()
+        flash('Lokasi bus berhasil diperbarui!', 'success')
+        # Catat di log aktivitas
+        log_activity('Update', 'Lokasi Bus', f"Korlapda '{current_user.username}' memperbarui lokasi untuk bus '{bus.nama_armada} - {bus.nomor_lambung or bus.plat_nomor}'")
+
+    return render_template('update_lokasi.html', form=form, bus=bus)

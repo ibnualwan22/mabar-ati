@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, TextAreaField, IntegerField, DateTimeLocalField, FieldList, FormField, SubmitField, Form, HiddenField, SelectField, PasswordField, BooleanField, DateTimeLocalField
-from wtforms.validators import DataRequired, Optional, EqualTo, Length
+from wtforms.validators import DataRequired, Optional, EqualTo, Length, URL
 from wtforms_sqlalchemy.fields import QuerySelectField, QuerySelectMultipleField
 from app.models import Rombongan, Santri, Role
 from wtforms.fields import DateField
@@ -227,5 +227,9 @@ class KorlapdaForm(FlaskForm):
     bus = SelectField('Tugaskan ke Bus', validators=[DataRequired()])
 
     submit = SubmitField('Simpan User Korlapda')
+
+class LokasiBusForm(FlaskForm):
+    gmaps_share_url = StringField('URL Google Maps Share Location', validators=[DataRequired(), URL()])
+    submit = SubmitField('Update Lokasi Bus')
 
 

@@ -20,9 +20,9 @@
                 <h4 class="mt-4">Jadwal Penting</h4>
                 <ul>
                     <li><strong>Batas Akhir Pembayaran Pulang:</strong> {{ active_edisi.batas_pembayaran_pulang|date_wib if active_edisi and active_edisi.batas_pembayaran_pulang else 'Akan diumumkan' }}</li>
-                    <li><strong>Jadwal Pulang dari Pondok:</strong> {{ active_edisi.jadwal_pulang|datetime_wib if active_edisi and active_edisi.jadwal_pulang else 'Akan diumumkan' }}</li>
+                    <li><strong>Jadwal Pulang dari Pondok:</strong> {{ active_edisi.jadwal_pulang|datetime_wib if active_edisi and active_edisi.jadwal_pulang else '27 September 2025' }}</li>
                     <li><strong>Batas Akhir Pembayaran Kembali:</strong> {{ active_edisi.batas_pembayaran_berangkat|date_wib if active_edisi and active_edisi.batas_pembayaran_berangkat else 'Akan diumumkan' }}</li>
-                    <li><strong>Jadwal Kembali ke Pondok:</strong> {{ active_edisi.jadwal_berangkat|datetime_wib if active_edisi and active_edisi.jadwal_berangkat else 'Akan diumumkan' }}</li>
+                    <li><strong>Jadwal Kembali ke Pondok:</strong> {{ active_edisi.jadwal_berangkat|datetime_wib if active_edisi and active_edisi.jadwal_berangkat else '16 Oktober 2025' }}</li>
                 </ul>
 
                 <h4 class="mt-4">Tata Tertib</h4>

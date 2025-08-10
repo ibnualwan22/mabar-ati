@@ -13,114 +13,312 @@
 
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(to right, #e0eafc, #cfdef3);
-      height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Animated background elements */
+    .bg-decoration {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .cloud {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50px;
+      animation: float 6s ease-in-out infinite;
+    }
+
+    .cloud:nth-child(1) {
+      width: 80px;
+      height: 40px;
+      top: 20%;
+      left: 10%;
+      animation-delay: 0s;
+    }
+
+    .cloud:nth-child(2) {
+      width: 60px;
+      height: 30px;
+      top: 30%;
+      right: 15%;
+      animation-delay: 2s;
+    }
+
+    .cloud:nth-child(3) {
+      width: 100px;
+      height: 50px;
+      top: 60%;
+      left: 5%;
+      animation-delay: 4s;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) translateX(0px); }
+      50% { transform: translateY(-20px) translateX(10px); }
     }
 
     .login-container {
-      background: #ffffff;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
       padding: 40px;
-      border-radius: 12px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
       width: 100%;
-      max-width: 400px;
-      animation: fadeIn 0.5s ease-in-out;
+      max-width: 420px;
+      animation: slideIn 0.6s ease-out;
+      position: relative;
+      z-index: 2;
+      border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-20px); }
-      to { opacity: 1; transform: translateY(0); }
+    @keyframes slideIn {
+      from { 
+        opacity: 0; 
+        transform: translateY(30px) scale(0.95); 
+      }
+      to { 
+        opacity: 1; 
+        transform: translateY(0) scale(1); 
+      }
+    }
+
+    .header-section {
+      text-align: center;
+      margin-bottom: 35px;
+    }
+
+    .bus-icon {
+      width: 80px;
+      height: 50px;
+      margin: 0 auto 20px;
+      position: relative;
+      animation: busMove 3s ease-in-out infinite;
+    }
+
+    @keyframes busMove {
+      0%, 100% { transform: translateX(0px); }
+      50% { transform: translateX(5px); }
+    }
+
+    .bus-icon svg {
+      width: 100%;
+      height: 100%;
+      fill: #f39c12;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
     }
 
     .login-title {
       font-size: 28px;
-      color: #333;
-      margin-bottom: 30px;
-      text-align: center;
-      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    .login-subtitle {
+      font-size: 14px;
+      color: #7f8c8d;
+      font-weight: 500;
     }
 
     .form-group {
-      margin-bottom: 20px;
+      margin-bottom: 25px;
+      position: relative;
     }
 
     .form-group label {
       display: block;
       margin-bottom: 8px;
-      font-weight: 500;
-      color: #333;
+      font-weight: 600;
+      color: #2c3e50;
+      font-size: 14px;
     }
 
     .form-group input[type="text"],
     .form-group input[type="password"] {
       width: 100%;
-      padding: 12px 14px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
+      padding: 15px 20px;
+      border: 2px solid #e9ecef;
+      border-radius: 12px;
       font-size: 16px;
-      transition: border-color 0.3s;
+      transition: all 0.3s ease;
+      background: #f8f9fa;
     }
 
     .form-group input:focus {
       outline: none;
-      border-color: #1877f2;
+      border-color: #3498db;
+      background: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(52, 152, 219, 0.15);
     }
 
     .form-group-remember {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       font-size: 14px;
-      margin-bottom: 20px;
+      margin-bottom: 30px;
+      color: #5a6c7d;
+    }
+
+    .form-group-remember input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #3498db;
     }
 
     .btn {
       width: 100%;
-      padding: 14px;
-      background-color: #1877f2;
+      padding: 16px;
+      background: linear-gradient(135deg, #3498db, #2980b9);
       color: #fff;
       border: none;
-      border-radius: 8px;
+      border-radius: 12px;
       font-size: 16px;
-      font-weight: bold;
+      font-weight: 700;
       cursor: pointer;
-      transition: background-color 0.3s;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn:before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .btn:hover:before {
+      left: 100%;
     }
 
     .btn:hover {
-      background-color: #145cc9;
+      background: linear-gradient(135deg, #2980b9, #1f4e79);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(52, 152, 219, 0.3);
+    }
+
+    .btn:active {
+      transform: translateY(0);
     }
 
     .alert {
-      padding: 1rem;
-      margin-bottom: 1.5rem;
-      border-radius: 6px;
+      padding: 15px 20px;
+      margin-bottom: 25px;
+      border-radius: 10px;
       font-size: 14px;
+      font-weight: 500;
+      animation: alertSlide 0.3s ease-out;
+    }
+
+    @keyframes alertSlide {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .alert-info {
-      background-color: #e7f3fe;
-      color: #0c5460;
+      background: linear-gradient(135deg, #d4edda, #c3e6cb);
+      color: #155724;
+      border-left: 4px solid #28a745;
     }
 
     .alert-danger {
-      background-color: #f8d7da;
+      background: linear-gradient(135deg, #f8d7da, #f5c6cb);
       color: #721c24;
+      border-left: 4px solid #dc3545;
+    }
+
+    .footer-decoration {
+      text-align: center;
+      margin-top: 25px;
+      padding-top: 20px;
+      border-top: 1px solid #e9ecef;
+    }
+
+    .journey-text {
+      font-size: 12px;
+      color: #95a5a6;
+      font-style: italic;
     }
 
     @media (max-width: 480px) {
       .login-container {
-        padding: 30px 20px;
+        padding: 30px 25px;
+        margin: 10px;
       }
+      
+      .login-title {
+        font-size: 24px;
+      }
+      
+      .bus-icon {
+        width: 60px;
+        height: 40px;
+      }
+    }
+
+    /* Loading animation for submit */
+    .btn.loading {
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
+    .btn.loading:after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      top: 50%;
+      left: 50%;
+      margin-left: -10px;
+      margin-top: -10px;
+      border: 2px solid #ffffff;
+      border-top: 2px solid transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
   </style>
 </head>
 <body>
+  <div class="bg-decoration">
+    <div class="cloud"></div>
+    <div class="cloud"></div>
+    <div class="cloud"></div>
+  </div>
+
   <div class="login-container">
-    <div class="login-title">Login Korlapda</div>
+    <div class="header-section">
+      <div class="bus-icon">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 16c0 .88.39 1.67 1 2.22V20a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1h8v1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10M6.5 17.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5m11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5M5 11V6h14v5H5z"/>
+        </svg>
+      </div>
+      <div class="login-title">Login Korlapda</div>
+      <div class="login-subtitle">🚌 Siap untuk perjalanan rombongan? 🚌</div>
+    </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
@@ -130,27 +328,55 @@
       {% endif %}
     {% endwith %}
 
-    <form method="POST" action="">
+    <form method="POST" action="" id="loginForm">
       {{ form.hidden_tag() }}
-
+      
       <div class="form-group">
         {{ form.username.label }}
-        {{ form.username(class="input") }}
+        {{ form.username(class="input", placeholder="Masukkan username Anda") }}
       </div>
 
       <div class="form-group">
         {{ form.password.label }}
-        {{ form.password(class="input") }}
+        {{ form.password(class="input", placeholder="Masukkan password Anda") }}
       </div>
 
       <div class="form-group-remember">
-        {{ form.remember_me() }} {{ form.remember_me.label }}
+        {{ form.remember_me() }} 
+        <label for="{{ form.remember_me.id }}">{{ form.remember_me.label.text }}</label>
       </div>
 
       <div>
-        {{ form.submit(class="btn") }}
+        {{ form.submit(class="btn", id="submitBtn") }}
       </div>
     </form>
+
+    <div class="footer-decoration">
+      <div class="journey-text">
+        "Setiap perjalanan dimulai dengan langkah pertama" 🌟
+      </div>
+    </div>
   </div>
+
+  <script>
+    // Add loading state to submit button
+    document.getElementById('loginForm').addEventListener('submit', function() {
+      const btn = document.getElementById('submitBtn');
+      btn.classList.add('loading');
+      btn.disabled = true;
+    });
+
+    // Add focus effects
+    const inputs = document.querySelectorAll('input[type="text"], input[type="password"]');
+    inputs.forEach(input => {
+      input.addEventListener('focus', function() {
+        this.parentElement.style.transform = 'scale(1.02)';
+      });
+      
+      input.addEventListener('blur', function() {
+        this.parentElement.style.transform = 'scale(1)';
+      });
+    });
+  </script>
 </body>
 </html>

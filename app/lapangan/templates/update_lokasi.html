@@ -1,0 +1,21 @@
+{% extends "lapangan_layout.html" %}
+{% block title %}Update Lokasi Bus{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Update Lokasi Bus</h5>
+    </div>
+    <div class="card-body">
+        <p>Anda ditugaskan di bus: <strong>{{ bus.nama_armada }} - {{ bus.nomor_lambung or bus.plat_nomor }}</strong></p>
+        <p>Buka aplikasi Google Maps, gunakan fitur "Share Location" (Bagikan Lokasi), salin linknya, dan tempel di bawah ini.</p>
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <div class="mb-3">
+                {{ form.gmaps_share_url.label(class="form-label") }}
+                {{ form.gmaps_share_url(class="form-control", placeholder="https://maps.app.goo.gl/...") }}
+            </div>
+            {{ form.submit(class="btn btn-primary") }}
+        </form>
+    </div>
+</div>
+{% endblock %}

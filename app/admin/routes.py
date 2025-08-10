@@ -880,7 +880,9 @@ def rombongan_detail(id):
             'nomor_lambung': bus.nomor_lambung, 'plat_nomor': bus.plat_nomor,
             'kuota': bus.kuota,
             'sisa_kuota_pulang': bus.kuota - terisi_pulang,
-            'sisa_kuota_kembali': bus.kuota - terisi_kembali
+            'sisa_kuota_kembali': bus.kuota - terisi_kembali,
+            'gmaps_share_url': bus.gmaps_share_url # <-- Pastikan ini ada
+
         })
     semua_pendaftar_objek = list(rombongan.pendaftar_pulang) + list(rombongan.pendaftar_kembali)
     unique_pendaftar_objek = {p.id: p for p in semua_pendaftar_objek}.values()
