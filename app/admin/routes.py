@@ -1233,7 +1233,9 @@ def tambah_edisi():
         new_edisi = Edisi(
             nama=form.nama.data,
             tahun=form.tahun.data,
-            is_active=form.is_active.data
+            is_active=form.is_active.data,
+            countdown_title=form.countdown_title.data,
+            countdown_target_date=form.countdown_target_date.data
         )
         db.session.add(new_edisi)
         log_activity('Tambah', 'Edisi', f"Menambahkan edisi baru: '{form.nama.data}'")
@@ -1256,6 +1258,8 @@ def edit_edisi(edisi_id):
         edisi.nama = form.nama.data
         edisi.tahun = form.tahun.data
         edisi.is_active = form.is_active.data
+        edisi.countdown_title = form.countdown_title.data
+        edisi.countdown_target_date = form.countdown_target_date.data
         log_activity('Edit', 'Edisi', f"Mengubah data edisi: '{edisi.nama}'")
         db.session.commit()
         flash('Data edisi berhasil diperbarui.', 'success')

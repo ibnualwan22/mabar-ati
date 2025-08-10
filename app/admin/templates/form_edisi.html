@@ -7,10 +7,20 @@
     <form method="POST" style="margin-top: 2rem;">
         {{ form.hidden_tag() }}
         <div class="form-group form-grid">
-            {{ form.nama.label }}
-            {{ form.nama(placeholder=form.nama.description) }}
-        </div>
-        <div class="form-group form-grid">
+        {{ form.nama.label(class="form-label") }}
+        {{ form.nama(class="form-control", placeholder=form.nama.description) }}
+    </div>
+    <hr>
+    <h5>Pengaturan Hitung Mundur (Opsional)</h5>
+    <div class="form-group form-grid">
+        {{ form.countdown_title.label(class="form-label") }}
+        {{ form.countdown_title(class="form-control", placeholder=form.countdown_title.description) }}
+    </div>
+    <div class="form-group form-grid">
+        {{ form.countdown_target_date.label(class="form-label") }}
+        {{ form.countdown_target_date(class="form-control") }}
+    </div>
+    <div class="form-group form-grid">
             {{ form.tahun.label }}
             {{ form.tahun(placeholder=form.tahun.description) }}
         </div>

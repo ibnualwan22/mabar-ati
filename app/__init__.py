@@ -79,6 +79,9 @@ def create_app(config_name):
     from .lapangan import lapangan_bp
     app.register_blueprint(lapangan_bp, url_prefix='/lapangan')
 
+    from .main import main_bp
+    app.register_blueprint(main_bp)
+
     # Contoh route sederhana untuk testing
     @app.route('/')
     def index():

@@ -69,7 +69,7 @@
     <div class="btn-group">
         <a href="{{ url_for('admin.daftar_peserta', rombongan_id=rombongan.id) }}" class="btn btn-primary btn-sm">Lihat Peserta</a>
         
-        {% if rombongan.buses.count() > 0 %}
+{% if rombongan.buses|length > 0 %}
         <div class="btn-group">
             <button type="button" class="btn btn-info btn-sm dropdown-toggle" data-bs-toggle="dropdown">
                 Lihat Manifest Bus

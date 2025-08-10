@@ -9,6 +9,8 @@ class Edisi(db.Model):
     nama = db.Column(db.String(100), unique=True, nullable=False)
     tahun = db.Column(db.Integer, nullable=False)
     is_active = db.Column(db.Boolean, default=False, nullable=False)
+    countdown_title = db.Column(db.String(200))
+    countdown_target_date = db.Column(db.DateTime)
     rombongans = db.relationship('Rombongan', backref='edisi', lazy='dynamic')
     izins = db.relationship('Izin', backref='edisi', lazy='dynamic')
     partisipans = db.relationship('Partisipan', backref='edisi', lazy='dynamic')
@@ -107,8 +109,8 @@ class Rombongan(db.Model):
     titik_jemput_berangkat = db.Column(db.String(200))
 
     # Relasi
-    tarifs = db.relationship('Tarif', backref='rombongan', lazy='dynamic', cascade="all, delete-orphan")
-    buses = db.relationship('Bus', backref='rombongan', lazy='dynamic', cascade="all, delete-orphan")
+    tarifs = db.relationship('Tarif', backref='rombongan', cascade="all, delete-orphan")
+    buses = db.relationship('Bus', backref='rombongan', cascade="all, delete-orphan")
     pendaftar_pulang = db.relationship('Pendaftaran', foreign_keys='Pendaftaran.rombongan_pulang_id', back_populates='rombongan_pulang')
     pendaftar_kembali = db.relationship('Pendaftaran', foreign_keys='Pendaftaran.rombongan_kembali_id', back_populates='rombongan_kembali')
 

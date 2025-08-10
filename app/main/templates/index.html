@@ -1,0 +1,316 @@
+{% extends "main_layout.html" %}
+
+{% block title %}Halaman Utama{% endblock %}
+
+{% block content %}
+    <header class="masthead" style="background-image: url('{{ url_for('static', filename='assets/img/header-bg.jpg') }}');">
+        <div class="container">
+            <div class="masthead-subheading">Selamat Datang di Platform Koordinasi Perpulangan</div>
+            <div class="masthead-heading text-uppercase">Mabar Ati</div>
+            {% if active_edisi and active_edisi.countdown_target_date %}
+                <div id="countdown-title" class="masthead-subheading">{{ active_edisi.countdown_title }}</div>
+                <div id="countdown" class="h1 text-warning mb-4"></div>
+            {% endif %}
+<a class="btn btn-primary btn-xl text-uppercase" href="{{ url_for('main.informasi_perpulangan') }}">Informasi Perpulangan</a>        </div>
+    </header>
+        <section class="page-section" id="services">
+            <div class="container">
+                <div class="text-center">
+                    <h2 class="section-heading text-uppercase">Alur Pendaftaran</h2>
+                    <h3 class="section-subheading text-muted">Ikuti langkah-langkah mudah berikut untuk mendaftar.</h3>
+                </div>
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <span class="fa-stack fa-4x">
+                            <i class="fas fa-circle fa-stack-2x text-primary"></i>
+                            <i class="fas fa-search fa-stack-1x fa-inverse"></i>
+                        </span>
+                        <h4 class="my-3">1. Cari Rombongan</h4>
+                        <p class="text-muted">Gulir ke bawah ke bagian "Daftar Rombongan" dan temukan rombongan yang sesuai dengan daerah tujuan Anda.</p>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="fa-stack fa-4x">
+                            <i class="fas fa-circle fa-stack-2x text-primary"></i>
+                            <i class="fab fa-whatsapp fa-stack-1x fa-inverse"></i>
+                        </span>
+                        <h4 class="my-3">2. Hubungi Penanggung Jawab</h4>
+                        <p class="text-muted">Klik pada rombongan untuk melihat detail. Hubungi nomor Penanggung Jawab (PJ) yang tertera untuk konfirmasi.</p>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="fa-stack fa-4x">
+                            <i class="fas fa-circle fa-stack-2x text-primary"></i>
+                            <i class="fas fa-money-check-alt fa-stack-1x fa-inverse"></i>
+                        </span>
+                        <h4 class="my-3">3. Lakukan Pembayaran</h4>
+                        <p class="text-muted">Selesaikan pendaftaran dengan melakukan pembayaran ke nomor rekening yang tertera pada detail rombongan.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section class="page-section bg-light" id="portfolio">
+    <div class="container">
+        <div class="text-center">
+            <h2 class="section-heading text-uppercase">Daftar Rombongan</h2>
+            {% if active_edisi %}
+                <h3 class="section-subheading text-muted">Edisi {{ active_edisi.nama }}</h3>
+            {% else %}
+                <h3 class="section-subheading text-muted">Saat ini belum ada edisi perpulangan yang aktif.</h3>
+            {% endif %}
+        </div>
+        <div class="row">
+            {% for rombongan in semua_rombongan %}
+            <div class="col-lg-4 col-sm-6 mb-4">
+                <div class="portfolio-item h-100">
+                    <a class="portfolio-link" data-bs-toggle="modal" href="#portfolioModal{{ rombongan.id }}">
+                        <div class="portfolio-hover">
+                            <div class="portfolio-hover-content"><i class="fas fa-plus fa-3x"></i></div>
+                        </div>
+                        <img class="img-fluid" src="{{ url_for('static', filename='assets/img/about/4.jpg') }}" alt="Gambar Rombongan" />
+                    </a>
+                    <div class="portfolio-caption">
+                        <div class="portfolio-caption-heading">{{ rombongan.nama_rombongan }}</div>
+                        <div class="portfolio-caption-subheading text-muted">{{ rombongan.cakupan_wilayah|map(attribute='label')|join(', ') }}</div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12 text-center">
+                <p>Belum ada rombongan yang dibuat untuk edisi ini.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+{% if semua_rombongan %}
+{% for rombongan in semua_rombongan %}
+<div class="portfolio-modal modal fade" id="portfolioModal{{ rombongan.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-lg-10">
+                        <div class="modal-body">
+                            <h2 class="text-uppercase">{{ rombongan.nama_rombongan }}</h2>
+                            <p class="item-intro text-muted">Edisi {{ active_edisi.nama }}</p>
+                            
+                            <hr>
+                            
+                            <div class="row text-start g-4">
+                                <div class="col-md-6">
+                                    <h5><i class="fas fa-users me-2"></i>Penanggung Jawab</h5>
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item">
+                                            <strong>PJ Putra:</strong> {{ rombongan.penanggung_jawab_putra or '-' }}
+                                            {% if rombongan.kontak_person_putra %}
+                                            <a href="https://wa.me/{{ rombongan.kontak_person_putra }}" target="_blank" class="btn btn-success btn-sm float-end"><i class="fab fa-whatsapp"></i> Hubungi</a>
+                                            {% endif %}
+                                        </li>
+                                        <li class="list-group-item">
+                                            <strong>PJ Putri:</strong> {{ rombongan.penanggung_jawab_putri or '-' }}
+                                            {% if rombongan.kontak_person_putri %}
+                                            <a href="https://wa.me/{{ rombongan.kontak_person_putri }}" target="_blank" class="btn btn-success btn-sm float-end"><i class="fab fa-whatsapp"></i> Hubungi</a>
+                                            {% endif %}
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <h5><i class="fas fa-calendar-alt me-2"></i>Jadwal</h5>
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item"><strong>Pulang:</strong> {{ rombongan.jadwal_pulang|datetime_wib if rombongan.jadwal_pulang else 'N/A' }}</li>
+                                        <li class="list-group-item"><strong>Kembali:</strong> {{ rombongan.jadwal_berangkat|datetime_wib if rombongan.jadwal_berangkat else 'N/A' }}</li>
+                                    </ul>
+                                </div>
+
+                                <div class="col-md-12 mt-4">
+                                     <h5><i class="fas fa-map-marked-alt me-2"></i>Cakupan Wilayah</h5>
+                                     <p class="text-muted">
+                                         {% if rombongan.cakupan_wilayah %}
+                                             {{ rombongan.cakupan_wilayah|map(attribute='label')|join(', ') }}
+                                         {% else %}
+                                             Informasi cakupan wilayah belum tersedia.
+                                         {% endif %}
+                                     </p>
+
+                                     <h5 class="mt-4"><i class="fas fa-credit-card me-2"></i>Informasi Pembayaran</h5>
+<p>
+    No. Rekening: <strong>{{ rombongan.nomor_rekening or 'Belum tersedia' }}</strong>
+    {% if rombongan.nomor_rekening %}
+    <button class="btn btn-sm btn-outline-secondary ms-2" onclick="copyToClipboard('{{ rombongan.nomor_rekening }}', this)">
+        <i class="fas fa-copy me-1"></i> Salin
+    </button>
+    {% endif %}
+</p>                                </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <h5><i class="fas fa-money-bill-wave me-2"></i>Detail Harga per Titik Turun/Jemput</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-bordered">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>Titik Turun/Jemput</th>
+                                                <th>Biaya per Perjalanan</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for tarif in rombongan.tarifs %}
+                                            <tr>
+                                                <td>{{ tarif.titik_turun }}</td>
+                                                <td><strong>Rp {{ "{:,.0f}".format((tarif.harga_bus|default(0)) + (tarif.fee_korda|default(0)) + 10000).replace(',', '.') }}</strong></td>
+                                            </tr>
+                                            {% else %}
+                                            <tr><td colspan="2" class="text-center">Informasi tarif belum tersedia.</td></tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <button class="btn btn-primary btn-xl text-uppercase mt-4" data-bs-dismiss="modal" type="button">
+                                <i class="fas fa-times me-1"></i>
+                                Tutup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+
+        <section class="page-section" id="about">
+            <div class="container">
+                <div class="text-center">
+                    <h2 class="section-heading text-uppercase">Lini Masa</h2>
+                    <h3 class="section-subheading text-muted">Perjalanan Mabar Ati dalam melayani koordinasi perpulangan.</h3>
+                </div>
+                <ul class="timeline">
+                    <li>
+                        <div class="timeline-image"><img class="rounded-circle img-fluid" src="{{ url_for('static', filename='assets/img/about/1.jpg') }}" alt="..." /></div>
+                        <div class="timeline-panel">
+                            <div class="timeline-heading">
+                                <h4>2022</h4>
+                                <h4 class="subheading">Awal Mula Koordinasi</h4>
+                            </div>
+                            <div class="timeline-body"><p class="text-muted">Berawal dari kebutuhan untuk mengorganisir kepulangan bersama, sistem koordinasi pertama kali dibentuk secara manual melalui grup chat.</p></div>
+                        </div>
+                    </li>
+                    <li class="timeline-inverted">
+                        <div class="timeline-image"><img class="rounded-circle img-fluid" src="{{ url_for('static', filename='assets/img/about/2.jpg') }}" alt="..." /></div>
+                        <div class="timeline-panel">
+                            <div class="timeline-heading">
+                                <h4>2023</h4>
+                                <h4 class="subheading">Pembentukan Tim & Rute</h4>
+                            </div>
+                            <div class="timeline-body"><p class="text-muted">Tim inti terbentuk dan mulai memetakan rute-rute utama serta menunjuk Penanggung Jawab (PJ) untuk setiap daerah.</p></div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="timeline-image"><img class="rounded-circle img-fluid" src="{{ url_for('static', filename='assets/img/about/3.jpg') }}" alt="..." /></div>
+                        <div class="timeline-panel">
+                            <div class="timeline-heading">
+                                <h4>2024</h4>
+                                <h4 class="subheading">Digitalisasi Sistem</h4>
+                            </div>
+                            <div class="timeline-body"><p class="text-muted">Platform digital Mabar-Ati diluncurkan untuk mempermudah pendaftaran, pembayaran, dan penyebaran informasi.</p></div>
+                        </div>
+                    </li>
+                    <li class="timeline-inverted">
+                        <div class="timeline-image"><img class="rounded-circle img-fluid" src="{{ url_for('static', filename='assets/img/about/4.jpg') }}" alt="..." /></div>
+                        <div class="timeline-panel">
+                            <div class="timeline-heading">
+                                <h4>2025 - Sekarang</h4>
+                                <h4 class="subheading">Ekspansi & Peningkatan</h4>
+                            </div>
+                            <div class="timeline-body"><p class="text-muted">Terus melakukan ekspansi rute dan menyempurnakan fitur platform untuk memberikan layanan yang lebih baik dan komprehensif.</p></div>
+                        </div>
+                    </li>
+                    <li class="timeline-inverted">
+                        <div class="timeline-image">
+                            <h4>Mari<br />Bergabung<br />Bersama!</h4>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="page-section bg-light" id="team">
+            <div class="container">
+                <div class="text-center">
+                    <h2 class="section-heading text-uppercase">Tim Kepengurusan</h2>
+                    <h3 class="section-subheading text-muted">Orang-orang hebat di balik layanan Mabar Ati.</h3>
+                </div>
+                <div class="row justify-content-center">
+                    <div class="col-lg-4">
+                        <div class="team-member">
+                            <img class="mx-auto rounded-circle" src="{{ url_for('static', filename='assets/img/team/1.jpg') }}" alt="..." />
+                            <h4>Koordinator Pusat</h4>
+                            <p class="text-muted">Mengelola sistem dan memastikan semua rombongan berjalan lancar.</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="team-member">
+                            <img class="mx-auto rounded-circle" src="{{ url_for('static', filename='assets/img/team/2.jpg') }}" alt="..." />
+                            <h4>Bendahara Pusat</h4>
+                            <p class="text-muted">Mengelola dan memverifikasi semua alur keuangan.</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="team-member">
+                            <img class="mx-auto rounded-circle" src="{{ url_for('static', filename='assets/img/team/3.jpg') }}" alt="..." />
+                            <h4>Koordinator Lapangan</h4>
+                            <p class="text-muted">Memastikan keamanan dan kelancaran santri selama perjalanan.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+   <script>
+    // --- LOGIKA UNTUK COUNTDOWN TIMER ---
+    const countdownElement = document.getElementById('countdown');
+    // Ambil tanggal target dari data yang dikirim Flask/Jinja2
+    const targetDate = new Date("{{ active_edisi.countdown_target_date.isoformat() if active_edisi and active_edisi.countdown_target_date else '' }}").getTime();
+
+    if (countdownElement && targetDate) {
+        const interval = setInterval(function() {
+            const now = new Date().getTime();
+            const distance = targetDate - now;
+
+            // Kalkulasi waktu
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            // Tampilkan hasilnya
+            countdownElement.innerHTML = days + "Hari " + hours + "j " + minutes + "m " + seconds + "d Lagi";
+
+            // Jika hitung mundur selesai
+            if (distance < 0) {
+                clearInterval(interval);
+                countdownElement.innerHTML = "WAKTU TELAH TIBA";
+            }
+        }, 1000);
+    }
+    function copyToClipboard(text, buttonElement) {
+    navigator.clipboard.writeText(text).then(function() {
+        // Beri tahu user bahwa teks sudah disalin
+        const originalText = buttonElement.innerHTML;
+        buttonElement.innerHTML = '<i class="fas fa-check me-1"></i> Tersalin!';
+        setTimeout(function() {
+            buttonElement.innerHTML = originalText;
+        }, 2000); // Kembalikan ke teks semula setelah 2 detik
+    }, function(err) {
+        alert('Gagal menyalin nomor rekening.');
+    });
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "main_layout.html" %} {# Asumsi Anda punya layout dasar untuk frontend #}
+
+{% block title %}Informasi & Tata Tertib{% endblock %}
+
+{% block content %}
+<section class="page-section">
+    <div class="container">
+        <div class="text-center">
+            <h2 class="section-heading text-uppercase">Informasi & Tata Tertib</h2>
+            {% if active_edisi %}
+                <h3 class="section-subheading text-muted">Perpulangan Edisi {{ active_edisi.nama }}</h3>
+            {% endif %}
+        </div>
+        
+        <div class="row mt-5">
+            <div class="col-lg-8 mx-auto">
+                <h4>Informasi Umum</h4>
+                <p>Selamat datang di halaman informasi perpulangan santri. Halaman ini berisi semua hal yang perlu Anda ketahui mengenai jadwal, alur pendaftaran, dan peraturan selama kegiatan perpulangan.</p>
+                
+                <h4 class="mt-4">Jadwal Penting</h4>
+                <ul>
+                    <li><strong>Batas Akhir Pembayaran Pulang:</strong> {{ active_edisi.batas_pembayaran_pulang|date_wib if active_edisi and active_edisi.batas_pembayaran_pulang else 'Akan diumumkan' }}</li>
+                    <li><strong>Jadwal Pulang dari Pondok:</strong> {{ active_edisi.jadwal_pulang|datetime_wib if active_edisi and active_edisi.jadwal_pulang else 'Akan diumumkan' }}</li>
+                    <li><strong>Batas Akhir Pembayaran Kembali:</strong> {{ active_edisi.batas_pembayaran_berangkat|date_wib if active_edisi and active_edisi.batas_pembayaran_berangkat else 'Akan diumumkan' }}</li>
+                    <li><strong>Jadwal Kembali ke Pondok:</strong> {{ active_edisi.jadwal_berangkat|datetime_wib if active_edisi and active_edisi.jadwal_berangkat else 'Akan diumumkan' }}</li>
+                </ul>
+
+                <h4 class="mt-4">Tata Tertib</h4>
+                <ol>
+                    <li>Seluruh santri diwajibkan mengikuti rombongan yang telah ditentukan.</li>
+                    <li>Santri wajib menjaga nama baik almamater selama di perjalanan dan di rumah.</li>
+                    <li>Barang bawaan tidak boleh melebihi kapasitas yang ditentukan oleh masing-masing rombongan.</li>
+                    <li>Santri wajib kembali ke pondok tepat waktu sesuai dengan jadwal yang ada.</li>
+                    <li>(Anda bisa menambahkan poin-poin lain di sini)</li>
+                </ol>
+                
+                <a href="{{ url_for('main.index') }}#portfolio" class="btn btn-primary mt-4">Lihat Daftar Rombongan</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

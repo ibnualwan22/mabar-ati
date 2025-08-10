@@ -6,152 +6,325 @@
 {% set kontak_pj = bus.rombongan.kontak_person_putra or bus.rombongan.kontak_person_putri %}
 {% set pesan_wa = "Laporan Kendala dari Korlapda Bus " ~ bus.nama_armada ~ " (" ~ (bus.nomor_lambung or bus.plat_nomor) ~ ") Rombongan " ~ bus.rombongan.nama_rombongan ~ ":" %}
 
-<div class="card mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Bus Anda: {{ bus.nama_armada }} - {{ bus.nomor_lambung or bus.plat_nomor }}</h5>
-        {% if kontak_pj %}
-        <a href="https://wa.me/{{ kontak_pj }}?text={{ pesan_wa|urlencode }}" target="_blank" class="btn btn-danger">
+<style>
+    /* Custom styles untuk tampilan mobile-first */
+    .info-bus {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .tab-minimal {
+        border: none;
+        background: #f8f9fa;
+        border-radius: 25px;
+        padding: 0.5rem;
+        margin-bottom: 1rem;
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .tab-minimal .nav-link {
+        flex: 1;
+        border: none;
+        background: transparent;
+        color: #6c757d;
+        border-radius: 20px;
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+        transition: all 0.3s;
+    }
+    
+    .tab-minimal .nav-link.active {
+        background: white;
+        color: #667eea;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .absen-card {
+        background: white;
+        border-radius: 12px;
+        margin-bottom: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+    
+    .absen-header {
+        background: #f8f9fa;
+        padding: 0.75rem;
+        font-weight: 600;
+        color: #495057;
+        font-size: 0.85rem;
+    }
+    
+    .absen-item {
+        padding: 0.75rem;
+        border-bottom: 1px solid #f1f3f5;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .absen-item:last-child {
+        border-bottom: none;
+    }
+    
+    .santri-info {
+        flex: 1;
+    }
+    
+    .santri-nama {
+        font-size: 0.9rem;
+        color: #212529;
+        margin-bottom: 0.25rem;
+    }
+    
+    .santri-meta {
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
+    
+    .checkpoint-group {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .checkpoint-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 45px;
+    }
+    
+    .checkpoint-label {
+        font-size: 0.65rem;
+        color: #6c757d;
+        margin-bottom: 0.25rem;
+        text-align: center;
+    }
+    
+    .checkbox-custom {
+        width: 24px;
+        height: 24px;
+        accent-color: #667eea;
+    }
+    
+    .btn-float {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+    }
+    
+    .btn-add-checkpoint {
+        background: white;
+        border: 2px solid #667eea;
+        color: #667eea;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        color: #dee2e6;
+        margin-bottom: 1rem;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 576px) {
+        .info-bus {
+            padding: 0.75rem;
+        }
+        
+        .checkpoint-item {
+            min-width: 40px;
+        }
+        
+        .checkbox-custom {
+            width: 20px;
+            height: 20px;
+        }
+    }
+</style>
+
+<!-- Info Bus Card -->
+<div class="info-bus">
+    <div class="d-flex justify-content-between align-items-start">
+        <div>
+            <h6 class="fas fa-bus me-2"> </i>{{ bus.nama_armada }} {{ bus.nomor_lambung or bus.plat_nomor }}</h6>
+            <div class="mt-2">
+                <small class="d-block"><i class="fas fa-users me-1"></i> {{ bus.rombongan.nama_rombongan }}</small>
+                {% if kontak_pj %}
+                <small class="d-block"><i class="fas fa-phone me-1"></i> {{ kontak_pj }}</small>
+                {% endif %}
+            </div>
+        </div>
+        <div>
+            {% if kontak_pj %}
+        <a href="https://wa.me/{{ kontak_pj }}?text={{ pesan_wa|urlencode }}" target="_blank" class="btn btn-report text-white">
             <i class="fas fa-bullhorn me-2"></i>Lapor Kendala
         </a>
         {% endif %}
-    </div>
-    <div class="card-body">
-        <strong>Rombongan:</strong> {{ bus.rombongan.nama_rombongan }} <br>
-        <strong>Kontak PJ Rombongan:</strong> {{ kontak_pj or 'N/A' }}
-    </div>
+        </div>
+        </div>
 </div>
 
-<ul class="nav nav-tabs" id="manifestTab" role="tablist">
+<!-- Tab Navigation -->
+<ul class="nav tab-minimal" id="manifestTab" role="tablist">
     <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="pulang-tab" data-bs-toggle="tab" data-bs-target="#pulang-tab-pane" type="button" role="tab">Manifest Pulang</button>
+        <button class="nav-link active" id="pulang-tab" data-bs-toggle="tab" data-bs-target="#pulang-tab-pane" type="button" role="tab">
+            <i class="fas fa-home me-1"></i> Pulang
+        </button>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link" id="kembali-tab" data-bs-toggle="tab" data-bs-target="#kembali-tab-pane" type="button" role="tab">Manifest Kembali</button>
+        <button class="nav-link" id="kembali-tab" data-bs-toggle="tab" data-bs-target="#kembali-tab-pane" type="button" role="tab">
+            <i class="fas fa-undo me-1"></i> Kembali
+        </button>
     </li>
 </ul>
 
+<!-- Tab Content -->
 <div class="tab-content" id="manifestTabContent">
+    <!-- Tab Pulang -->
     <div class="tab-pane fade show active" id="pulang-tab-pane" role="tabpanel">
-        <div class="p-3">
-            <div class="mb-3">
-                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#absenBaruModal" data-arah="Pulang">
-                    <i class="fas fa-plus-circle me-2"></i>Tambah Check Point Absen Baru
-                </button>
-            </div>
-            <form method="POST" action="{{ url_for('lapangan.simpan_absen') }}">
-                <div class="table-responsive">
-                    <table class="table table-sm table-bordered">
-                        <thead>
-                            <tr>
-                                <th>No.</th>
-                                <th>Nama Santri</th>
-                                {% for cp in checkpoints_pulang %}
-                                <th class="text-center">{{ cp.split('(')[0] }}</th>
-                                {% endfor %}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for titik_turun, pendaftar_list in grouped_pulang.items()|sort %}
-                                <tr class="table-light"><td colspan="{{ 2 + checkpoints_pulang|length }}"><strong>Titik Turun: {{ titik_turun }}</strong></td></tr>
-                                {% for p in pendaftar_list|sort(attribute='santri.nama') %}
-                                <tr>
-                                    <td>{{ loop.index }}</td>
-                                    <td>{{ p.santri.nama }}</td>
-                                    {% for cp in checkpoints_pulang %}
-                                    <td class="text-center">
-                                        {% set absen_key = p.id ~ '-' ~ cp %}
-                                        <input type="checkbox" class="form-check-input" name="hadir-{{ cp }}" value="{{ p.id }}"
-                                               {% if absen_map.get(absen_key) == 'Hadir' %}checked{% endif %}>
-                                    </td>
-                                    {% endfor %}
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr><td colspan="{{ 2 + checkpoints_pulang|length }}" class="text-center text-muted">Tidak ada peserta untuk perjalanan pulang.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        <button type="button" class="btn-add-checkpoint" data-bs-toggle="modal" data-bs-target="#absenBaruModal" data-arah="Pulang">
+            <i class="fas fa-plus-circle"></i> Tambah Check Point
+        </button>
+        
+        <form method="POST" action="{{ url_for('lapangan.simpan_absen') }}">
+            {% for titik_turun, pendaftar_list in grouped_pulang.items()|sort %}
+            <div class="absen-card">
+                <div class="absen-header">
+                    <i class="fas fa-map-marker-alt me-1"></i> {{ titik_turun }}
                 </div>
-                {% if grouped_pulang %}
-                <button type="submit" class="btn btn-success mt-3"><i class="fas fa-check-circle me-2"></i>Simpan Semua Perubahan Absen</button>
-                {% endif %}
-            </form>
-        </div>
+                {% for p in pendaftar_list|sort(attribute='santri.nama') %}
+                <div class="absen-item">
+                    <div class="santri-info">
+                        <div class="santri-nama">{{ p.santri.nama }}</div>
+                        <div class="santri-meta">No. {{ loop.index }}</div>
+                    </div>
+                    <div class="checkpoint-group">
+                        {% for cp in checkpoints_pulang %}
+                        <div class="checkpoint-item">
+                            <label class="checkpoint-label">{{ cp.split('(')[0][:3] }}</label>
+                            {% set absen_key = p.id ~ '-' ~ cp %}
+                            <input type="checkbox" class="checkbox-custom" name="hadir-{{ cp }}" value="{{ p.id }}"
+                                   {% if absen_map.get(absen_key) == 'Hadir' %}checked{% endif %}>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <p>Tidak ada peserta untuk perjalanan pulang</p>
+            </div>
+            {% endfor %}
+            
+            {% if grouped_pulang %}
+            <button type="submit" class="btn btn-primary btn-float">
+                <i class="fas fa-save"></i>
+            </button>
+            {% endif %}
+        </form>
     </div>
-
+    
+    <!-- Tab Kembali -->
     <div class="tab-pane fade" id="kembali-tab-pane" role="tabpanel">
-        <div class="p-3">
-            <div class="mb-3">
-                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#absenBaruModal" data-arah="Kembali">
-                    <i class="fas fa-plus-circle me-2"></i>Tambah Check Point Absen Baru
-                </button>
-            </div>
-            <form method="POST" action="{{ url_for('lapangan.simpan_absen') }}">
-                <div class="table-responsive">
-                    <table class="table table-sm table-bordered">
-                        <thead>
-                            <tr>
-                                <th>No.</th>
-                                <th>Nama Santri</th>
-                                <th>Asrama</th>
-                                {% for cp in checkpoints_kembali %}
-                                <th class="text-center">{{ cp.split('(')[0] }}</th>
-                                {% endfor %}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for kabupaten, pendaftar_list in grouped_kembali.items()|sort %}
-                                <tr class="table-light"><td colspan="{{ 3 + checkpoints_kembali|length }}"><strong>Asal Kabupaten: {{ kabupaten }}</strong></td></tr>
-                                {% for p in pendaftar_list|sort(attribute='santri.nama') %}
-                                <tr>
-                                    <td>{{ loop.index }}</td>
-                                    <td>{{ p.santri.nama }}</td>
-                                    <td>{{ p.santri.asrama }}</td>
-                                    {% for cp in checkpoints_kembali %}
-                                    <td class="text-center">
-                                        {% set absen_key = p.id ~ '-' ~ cp %}
-                                        <input type="checkbox" class="form-check-input" name="hadir-{{ cp }}" value="{{ p.id }}"
-                                               {% if absen_map.get(absen_key) == 'Hadir' %}checked{% endif %}>
-                                    </td>
-                                    {% endfor %}
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr><td colspan="{{ 3 + checkpoints_kembali|length }}" class="text-center text-muted">Tidak ada peserta untuk perjalanan kembali.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        <button type="button" class="btn-add-checkpoint" data-bs-toggle="modal" data-bs-target="#absenBaruModal" data-arah="Kembali">
+            <i class="fas fa-plus-circle"></i> Tambah Check Point
+        </button>
+        
+        <form method="POST" action="{{ url_for('lapangan.simpan_absen') }}">
+            {% for kabupaten, pendaftar_list in grouped_kembali.items()|sort %}
+            <div class="absen-card">
+                <div class="absen-header">
+                    <i class="fas fa-map-marker-alt me-1"></i> {{ kabupaten }}
                 </div>
-                 {% if grouped_kembali %}
-                <button type="submit" class="btn btn-success mt-3"><i class="fas fa-check-circle me-2"></i>Simpan Semua Perubahan Absen</button>
-                {% endif %}
-            </form>
-        </div>
+                {% for p in pendaftar_list|sort(attribute='santri.nama') %}
+                <div class="absen-item">
+                    <div class="santri-info">
+                        <div class="santri-nama">{{ p.santri.nama }}</div>
+                        <div class="santri-meta">{{ p.santri.asrama }} • No. {{ loop.index }}</div>
+                    </div>
+                    <div class="checkpoint-group">
+                        {% for cp in checkpoints_kembali %}
+                        <div class="checkpoint-item">
+                            <label class="checkpoint-label">{{ cp.split('(')[0][:3] }}</label>
+                            {% set absen_key = p.id ~ '-' ~ cp %}
+                            <input type="checkbox" class="checkbox-custom" name="hadir-{{ cp }}" value="{{ p.id }}"
+                                   {% if absen_map.get(absen_key) == 'Hadir' %}checked{% endif %}>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <p>Tidak ada peserta untuk perjalanan kembali</p>
+            </div>
+            {% endfor %}
+            
+            {% if grouped_kembali %}
+            <button type="submit" class="btn btn-primary btn-float">
+                <i class="fas fa-save"></i>
+            </button>
+            {% endif %}
+        </form>
     </div>
 </div>
 
+<!-- Modal Add Checkpoint (Simplified) -->
 <div class="modal fade" id="absenBaruModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <form method="POST" action="{{ url_for('lapangan.tambah_checkpoint_absen') }}">
-        <div class="modal-header">
-          <h5 class="modal-title">Buat Check Point Absen Baru</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 12px;">
+            <form method="POST" action="{{ url_for('lapangan.tambah_checkpoint_absen') }}">
+                <div class="modal-header border-0">
+                    <h6 class="modal-title">Check Point Baru</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="arah_perjalanan" id="modal-arah-perjalanan">
+                    <div class="mb-3">
+                        <label for="nama_absen_baru" class="form-label small text-muted">Nama Lokasi</label>
+                        <input type="text" class="form-control" name="nama_absen_baru" id="nama_absen_baru" 
+                               placeholder="Contoh: Rest Area KM 102" required style="border-radius: 8px;">
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i> Tambah
+                    </button>
+                </div>
+            </form>
         </div>
-        <div class="modal-body">
-            <input type="hidden" name="arah_perjalanan" id="modal-arah-perjalanan">
-            <div class="mb-3">
-                <label for="nama_absen_baru" class="form-label">Nama Check Point</label>
-                <input type="text" class="form-control" name="nama_absen_baru" id="nama_absen_baru" placeholder="Contoh: Rest Area KM 102" required>
-            </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-          <button type="submit" class="btn btn-primary">Simpan dan Tambah</button>
-        </div>
-      </form>
     </div>
-  </div>
 </div>
 
 <script>

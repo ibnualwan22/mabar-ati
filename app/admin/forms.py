@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, IntegerField, DateTimeLocalField, FieldList, FormField, SubmitField, Form, HiddenField, SelectField, PasswordField, BooleanField
+from wtforms import StringField, TextAreaField, IntegerField, DateTimeLocalField, FieldList, FormField, SubmitField, Form, HiddenField, SelectField, PasswordField, BooleanField, DateTimeLocalField
 from wtforms.validators import DataRequired, Optional, EqualTo, Length
 from wtforms_sqlalchemy.fields import QuerySelectField, QuerySelectMultipleField
 from app.models import Rombongan, Santri, Role
@@ -202,6 +202,12 @@ class EdisiForm(FlaskForm):
     nama = StringField('Nama Edisi', validators=[DataRequired()], description="Contoh: Ramadhan 1448 H")
     tahun = IntegerField('Tahun Hijriah', validators=[DataRequired()], description="Contoh: 1448")
     is_active = BooleanField('Jadikan Edisi Aktif?')
+    
+    # --- TAMBAHKAN DUA FIELD INI ---
+    countdown_title = StringField('Judul Hitung Mundur', validators=[Optional()], description="Contoh: Hitung Mundur Perpulangan")
+    countdown_target_date = DateTimeLocalField('Tanggal Target Hitung Mundur', format='%Y-%m-%dT%H:%M', validators=[Optional()])
+    # -----------------------------
+    
     submit = SubmitField('Simpan Edisi')
 
 class BusForm(FlaskForm):
