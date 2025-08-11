@@ -69,8 +69,16 @@
                 <td>{{ loop.index + (pagination.page - 1) * pagination.per_page }}</td>
                 <td>
                     <strong>{{ pendaftaran.santri.nama }}</strong><br>
-                    <small class="text-muted">NIS: {{ pendaftaran.santri.nis }}</small>
-                </td>
+<small class="text-muted">
+    Jenis Kelamin:
+    {% if pendaftaran.santri.jenis_kelamin == 'Putra' %}
+        <span class="badge bg-success-subtle text-success">Putra</span>
+    {% elif pendaftaran.santri.jenis_kelamin == 'Putri' %}
+        <span class="badge bg-info-subtle text-info">Putri</span>
+    {% else %}
+        {{ pendaftaran.santri.jenis_kelamin }}
+    {% endif %}
+</small>                </td>
                 <td>
                     {# Menampilkan nama rombongan pulang sebagai acuan utama #}
                     {{ pendaftaran.rombongan_pulang.nama_rombongan if pendaftaran.rombongan_pulang else 'N/A' }}

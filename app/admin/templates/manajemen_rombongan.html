@@ -8,6 +8,14 @@
     {% endif %}
 </div>
 
+{% if not semua_rombongan and current_user.role.name == 'Korpus' %}
+<div class="alert alert-info d-flex justify-content-between align-items-center">
+    <span>Edisi ini belum memiliki rombongan. Anda bisa menyalin data dari edisi sebelumnya.</span>
+    <form method="POST" action="{{ url_for('admin.salin_rombongan') }}" onsubmit="return confirm('Anda yakin ingin menyalin semua rombongan dari edisi sebelumnya?');">
+        <button type="submit" class="btn btn-success"><i class="fas fa-copy me-2"></i>Salin Rombongan</button>
+    </form>
+</div>
+{% endif %}
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" class="row g-3 align-items-center">

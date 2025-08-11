@@ -54,10 +54,10 @@ class Izin(db.Model):
 
 class Partisipan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    edisi_id = db.Column(db.Integer, db.ForeignKey('edisi.id'), nullable=False)
     santri_id = db.Column(db.Integer, db.ForeignKey('santri.id'), nullable=False, unique=True)
     kategori = db.Column(db.String(100), nullable=False)
     tanggal_ditetapkan = db.Column(db.DateTime, server_default=db.func.now())
-    edisi_id = db.Column(db.Integer, db.ForeignKey('edisi.id'), nullable=False)
 
 class Santri(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -118,6 +118,7 @@ class Rombongan(db.Model):
     
 class Pendaftaran(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    edisi_id = db.Column(db.Integer, db.ForeignKey('edisi.id'), nullable=False)
     santri_id = db.Column(db.Integer, db.ForeignKey('santri.id'), nullable=False, unique=True)
     
     # --- PERUBAHAN UTAMA DI SINI ---

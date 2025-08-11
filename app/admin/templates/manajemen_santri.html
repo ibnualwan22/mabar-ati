@@ -107,7 +107,16 @@
                         <td>{{ loop.index + (pagination.page - 1) * pagination.per_page }}</td>
                         <td>
                             <strong>{{ santri.nama }}</strong><br>
-                            <small class="text-muted">NIS: {{ santri.nis }}</small>
+<small class="text-muted">
+    Jenis Kelamin:
+    {% if santri.jenis_kelamin == 'PUTRA' %}
+        <span class="badge bg-success-subtle text-success">Putra</span>
+    {% elif santri.jenis_kelamin == 'PUTRI' %}
+        <span class="badge bg-info-subtle text-info">Putri</span>
+    {% else %}
+        {{ santri.jenis_kelamin }}
+    {% endif %}
+</small>
                         </td>
                         <td>
                             {{ santri.asrama or '-' }}<br>
@@ -129,21 +138,23 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if santri.pendaftaran %}
-                                Pulang: <strong>{{ santri.pendaftaran.rombongan_pulang.nama_rombongan if santri.pendaftaran.rombongan_pulang else 'N/A' }}</strong><br>
-                                <small class="text-muted">Kembali: <strong>{{ santri.pendaftaran.rombongan_kembali.nama_rombongan if santri.pendaftaran.rombongan_kembali else 'N/A' }}</strong></small>
-                            {% else %}
-                                <span class="badge bg-light text-dark">Belum Terdaftar</span>
-                            {% endif %}
-                        </td>
+        {# Ambil data pendaftaran yang relevan dari dictionary #}
+        {% set pendaftaran = pendaftaran_terkait.get(santri.id) %}
+        
+        {% if pendaftaran %}
+            Pulang: <strong>{{ pendaftaran.rombongan_pulang.nama_rombongan if pendaftaran.rombongan_pulang else 'N/A' }}</strong><br>
+            <small class="text-muted">Kembali: <strong>{{ pendaftaran.rombongan_kembali.nama_rombongan if pendaftaran.rombongan_kembali else 'N/A' }}</strong></small>
+        {% else %}
+            <span class="badge bg-light text-dark">Belum Terdaftar</span>
+        {% endif %}
+    </td>
                         <td>
-                            {% if current_user.role.name in ['Korpus', 'Korda'] %}
-                                {% if santri.pendaftaran %}
-                                    <a href="{{ url_for('admin.edit_pendaftaran', pendaftaran_id=santri.pendaftaran.id) }}" class="btn btn-secondary btn-sm">Edit Daftar</a>
-                                {% else %}
-                                    <a href="{{ url_for('admin.pendaftaran_rombongan', santri_id=santri.id) }}" class="btn btn-primary btn-sm">+ Daftarkan</a>
-                                {% endif %}
-                            {% endif %}
+        {% set pendaftaran = pendaftaran_terkait.get(santri.id) %}
+        {% if pendaftaran %}
+            <a href="{{ url_for('admin.edit_pendaftaran', pendaftaran_id=pendaftaran.id) }}" class="btn btn-secondary btn-sm">Edit Daftar</a>
+        {% else %}
+             <a href="{{ url_for('admin.pendaftaran_rombongan', santri_id=santri.id) }}" class="btn btn-primary btn-sm">+ Daftarkan</a>
+        {% endif %}
 
                             {% if current_user.role.name == 'Korpus' %}
                             <form method="POST" action="{{ url_for('admin.hapus_santri', id=santri.id) }}" class="mt-1" onsubmit="return confirm('Anda yakin ingin menghapus \'{{ santri.nama }}\' dari sistem lokal?');">

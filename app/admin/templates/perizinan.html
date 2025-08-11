@@ -63,6 +63,7 @@
                     <tr>
                         <th>No.</th>
                         <th>Nama Santri</th>
+                        <th>Jenis Kelamin</th>
                         <th>Asrama</th>
                         <th>Alamat</th>
                         <th>Izin Sampai</th>
@@ -77,6 +78,14 @@
                     <tr>
                         <td>{{ loop.index }}</td>
                         <td>{{ izin.santri.nama }}</td>
+                        <td>
+    {% if izin.santri.jenis_kelamin == 'Putra' %}
+        <span class="badge bg-success-subtle text-success">Putra</span>
+    {% elif izin.santri.jenis_kelamin == 'Putri' %}
+        <span class="badge bg-info-subtle text-info">Putri</span>
+    {% else %}
+        {{ izin.santri.jenis_kelamin }}
+    {% endif %}</td>
                         <td>{{ izin.santri.asrama }}</td>
                         <td>{{ izin.santri.kabupaten }}</td>
                         <td>{{ izin.tanggal_berakhir|date_wib }}</td>

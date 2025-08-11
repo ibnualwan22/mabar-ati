@@ -3,7 +3,7 @@
 {% block title %}Halaman Utama{% endblock %}
 
 {% block content %}
-    <header class="masthead" style="background-image: url('{{ url_for("static", filename="assets/img/header-bg.jpg") }}');">
+<header id="header-masthead" class="masthead" style="background-image: url('{{ url_for("static", filename="assets/img/header-bg.jpg") }}');">
         <div class="container">
             <div class="masthead-subheading">Selamat Datang di Platform Koordinasi Perpulangan</div>
             <div class="masthead-heading text-uppercase">Mabar Ati</div>
@@ -491,6 +491,29 @@
         alert('Gagal menyalin nomor rekening.');
     });
 }
+document.addEventListener('DOMContentLoaded', function () {
+        const header = document.getElementById('header-masthead');
+
+        // Daftar URL gambar (kamu bisa tambahkan sesuai kebutuhan)
+        const images = [
+            "{{ url_for('static', filename='assets/img/header-bg.jpg') }}",
+            "{{ url_for('static', filename='assets/img/header-bg-2.jpg') }}",
+            "{{ url_for('static', filename='assets/img/header-bg-3.jpg') }}"
+        ];
+
+        let index = 0;
+        const changeInterval = 5000; // 5 detik
+        const transitionDuration = 1000; // 1 detik
+
+        // Tambahkan style transition agar transisinya smooth
+        header.style.transition = `background-image ${transitionDuration}ms ease-in-out`;
+
+        setInterval(() => {
+            index = (index + 1) % images.length;
+            // Ganti background image
+            header.style.backgroundImage = `url('${images[index]}')`;
+        }, changeInterval);
+    });
 </script>
 
 {% endblock %}
