@@ -230,7 +230,7 @@
                     <div class="checkpoint-group">
                         {% for cp in checkpoints_pulang %}
                         <div class="checkpoint-item">
-                            <label class="checkpoint-label">{{ cp.split('(')[0][:3] }}</label>
+                            <label class="checkpoint-label">{{ cp }}</label>
                             {% set absen_key = p.id ~ '-' ~ cp %}
                             <input type="checkbox" class="checkbox-custom" name="hadir-{{ cp }}" value="{{ p.id }}"
                                    {% if absen_map.get(absen_key) == 'Hadir' %}checked{% endif %}>

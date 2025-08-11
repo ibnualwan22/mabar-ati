@@ -71,6 +71,9 @@ class Santri(db.Model):
     kelas_formal = db.Column(db.String(50))
     kelas_ngaji = db.Column(db.String(50))
     status_santri = db.Column(db.String(20), default='Aktif')
+    nama_jabatan = db.Column(db.String(100), nullable=True)
+    status_jabatan = db.Column(db.String(100), nullable=True)
+
     pendaftaran = db.relationship('Pendaftaran', back_populates='santri', uselist=False, cascade="all, delete-orphan")
     izin = db.relationship('Izin', backref='santri', uselist=False, cascade="all, delete-orphan")
     partisipan = db.relationship('Partisipan', backref='santri', uselist=False, cascade="all, delete-orphan")

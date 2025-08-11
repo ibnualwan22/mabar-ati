@@ -46,6 +46,15 @@
 </select>
 <datalist id="alamat-list"></datalist>
 </div>
+    <div class="col-md-2">
+        <label for="keterangan" class="form-label">Keterangan</label>
+        <select name="keterangan" id="keterangan" class="form-select">
+            <option value="">-- Semua --</option>
+            <option value="Santri" {% if request.args.get('keterangan') == 'Santri' %}selected{% endif %}>Santri</option>
+            <option value="Pengurus" {% if request.args.get('keterangan') == 'Pengurus' %}selected{% endif %}>Pengurus</option>
+        </select>
+    </div>
+
                 <div class="col-md-3">
                     <select name="status" class="form-select">
                         <option value="">-- Semua Status Santri --</option>
@@ -95,6 +104,7 @@
                         <th>No.</th>
                         <th>Nama Santri</th>
                         <th>Asrama & Alamat</th>
+                        <th>Keterangan</th>
                         <th>Detail Kelas</th>
                         <th>Status Santri</th>
                         <th>Detail Rombongan</th>
@@ -122,6 +132,21 @@
                             {{ santri.asrama or '-' }}<br>
                             <small class="text-muted">{{ santri.kabupaten or '-' }}</small>
                         </td>
+<td>
+    {% if santri.nama_jabatan %}
+        <strong>{{ santri.nama_jabatan }}</strong><br>
+        <small class="text-muted">
+            {% if santri.status_jabatan == 'CHAIRMAN' %}
+                Ketua
+            {% else %}
+                Anggota
+            {% endif %}
+        </small>
+    {% else %}
+        <strong>Santri</strong><br>
+        <small class="text-muted">-</small>
+    {% endif %}
+</td>
                         <td>
                             Formal: {{ santri.kelas_formal or '-' }}<br>
                             <small class="text-muted">Ngaji: {{ santri.kelas_ngaji or '-' }}</small>

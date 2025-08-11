@@ -21,6 +21,7 @@
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('main.index') }}#services">Alur Pendaftaran</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('main.index') }}#portfolio">Rombongan</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('main.informasi_perpulangan') }}">Informasi</a></li>
+                    <li class="nav-item"><a class="nav-link credits-btn" href="javascript:void(0)" onclick="showCredits()">Credits</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('lapangan.login') }}">Login Korlapda</a></li>
                 </ul>
             </div>
@@ -57,6 +58,26 @@ document.addEventListener('DOMContentLoaded', event => {
 
     // Anda bisa menambahkan logika countdown di sini jika ingin ada di semua halaman
     // atau biarkan di index.html jika hanya untuk halaman utama.
+});
+
+// Credits functionality
+function showCredits() {
+    const overlay = document.getElementById('creditsOverlay');
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden'; // Prevent scrolling
+}
+
+function hideCredits() {
+    const overlay = document.getElementById('creditsOverlay');
+    overlay.classList.remove('active');
+    document.body.style.overflow = 'auto'; // Restore scrolling
+}
+
+// Close credits with ESC key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        hideCredits();
+    }
 });
 </script>
 

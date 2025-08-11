@@ -67,8 +67,8 @@
                         <th>Asrama</th>
                         <th>Alamat</th>
                         <th>Izin Sampai</th>
+                        {% if current_user.role.name in ['Korpus', 'Keamanan'] %}
                         <th>Keterangan</th>
-                        {% if view_mode == 'aktif' and current_user.role.name in ['Korpus', 'Keamanan'] %}
                         <th>Aksi</th>
                         {% endif %}
                     </tr>
@@ -89,8 +89,8 @@
                         <td>{{ izin.santri.asrama }}</td>
                         <td>{{ izin.santri.kabupaten }}</td>
                         <td>{{ izin.tanggal_berakhir|date_wib }}</td>
+                        {% if current_user.role.name in ['Korpus', 'Keamanan'] %}
                         <td>{{ izin.keterangan }}</td>
-                        {% if view_mode == 'aktif' and current_user.role.name in ['Korpus', 'Keamanan'] %}
                         <td>
                             <a href="{{ url_for('admin.edit_izin', izin_id=izin.id) }}" class="btn btn-secondary btn-sm">Edit</a>
                             <form method="POST" action="{{ url_for('admin.cabut_izin', izin_id=izin.id) }}" style="display:inline;" onsubmit="return confirm('Anda yakin?');">

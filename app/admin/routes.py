@@ -204,65 +204,70 @@ def dashboard():
 
     # --- MULAI KALKULASI JIKA EDISI AKTIF ---
     
-    # 1. Query dasar untuk semua pendaftaran di edisi aktif, JOIN secara eksplisit
-    base_pendaftaran_query = Pendaftaran.query.join(
+    # 1. Query dasar untuk mengambil semua pendaftaran di edisi aktif
+    pendaftaran_query = Pendaftaran.query.join(
         Rombongan, Pendaftaran.rombongan_pulang_id == Rombongan.id
     ).filter(Rombongan.edisi_id == active_edisi.id)
 
-    # 2. Terapkan filter hak akses untuk Korda/Korwil
+    # 2. Ambil ID rombongan yang dikelola user
+    managed_rombongan_ids = []
     if current_user.role.name in ['Korwil', 'Korda']:
-        managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+        managed_rombongan_ids = {r.id for r in current_user.managed_rombongan} # Gunakan set untuk pencarian cepat
+
+    # 3. Terapkan filter hak akses jika bukan Korpus
+    if current_user.role.name != 'Korpus':
         if not managed_rombongan_ids:
-            base_pendaftaran_query = base_pendaftaran_query.filter(db.false())
+            pendaftaran_query = pendaftaran_query.filter(db.false())
         else:
-            base_pendaftaran_query = base_pendaftaran_query.filter(
+            pendaftaran_query = pendaftaran_query.filter(
                 or_(
                     Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids),
                     Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids)
                 )
             )
     
-    # 3. Eksekusi query pendaftaran sekali saja untuk efisiensi
-    pendaftar_list = base_pendaftaran_query.options(joinedload(Pendaftaran.santri), joinedload(Pendaftaran.rombongan_pulang), joinedload(Pendaftaran.rombongan_kembali)).all()
+    # 4. Eksekusi query pendaftaran sekali untuk efisiensi
+    pendaftar_list = pendaftaran_query.options(
+        joinedload(Pendaftaran.santri), 
+        joinedload(Pendaftaran.rombongan_pulang), 
+        joinedload(Pendaftaran.rombongan_kembali)
+    ).all()
     
-    # 4. Kalkulasi Statistik Peserta
-    stats['total_peserta'] = len(pendaftar_list)
+    # 5. Kalkulasi Statistik Peserta & Keuangan (Akurat untuk Lintas Rombongan)
+    stats['total_peserta'] = len({p.santri_id for p in pendaftar_list})
     stats['total_izin'] = Izin.query.filter_by(edisi=active_edisi, status='Aktif').count()
-    stats['total_partisipan'] = Partisipan.query.filter_by(edisi=active_edisi).count()
+    stats['total_partisipan'] = Partisipan.query.filter_by(edisi_id=active_edisi.id).count()
 
-    # 5. Kalkulasi Keuangan (Akurat)
     total_pemasukan = 0
     total_lunas = 0
     for p in pendaftar_list:
         # Kalkulasi biaya pulang
-        if p.status_pulang != 'Tidak Ikut' and p.rombongan_pulang:
-            tarif_pulang = Tarif.query.filter_by(rombongan_id=p.rombongan_pulang_id, titik_turun=p.titik_turun).first()
-            if tarif_pulang:
-                biaya_pulang = tarif_pulang.harga_bus + tarif_pulang.fee_korda + 10000
-                total_pemasukan += biaya_pulang
-                if p.status_pulang == 'Lunas':
-                    total_lunas += biaya_pulang
+        if p.status_pulang != 'Tidak Ikut' and p.rombongan_pulang_id:
+            if current_user.role.name == 'Korpus' or p.rombongan_pulang_id in managed_rombongan_ids:
+                tarif_pulang = Tarif.query.filter_by(rombongan_id=p.rombongan_pulang_id, titik_turun=p.titik_turun).first()
+                if tarif_pulang:
+                    biaya_pulang = tarif_pulang.harga_bus + tarif_pulang.fee_korda + 10000
+                    total_pemasukan += biaya_pulang
+                    if p.status_pulang == 'Lunas':
+                        total_lunas += biaya_pulang
         
         # Kalkulasi biaya kembali
-        if p.status_kembali != 'Tidak Ikut' and p.rombongan_kembali:
-            tarif_kembali = Tarif.query.filter_by(rombongan_id=p.rombongan_kembali_id, titik_turun=p.titik_jemput_kembali).first()
-            if tarif_kembali:
-                biaya_kembali = tarif_kembali.harga_bus + tarif_kembali.fee_korda + 10000
-                total_pemasukan += biaya_kembali
-                if p.status_kembali == 'Lunas':
-                    total_lunas += biaya_kembali
+        if p.status_kembali != 'Tidak Ikut' and p.rombongan_kembali_id:
+            if current_user.role.name == 'Korpus' or p.rombongan_kembali_id in managed_rombongan_ids:
+                tarif_kembali = Tarif.query.filter_by(rombongan_id=p.rombongan_kembali_id, titik_turun=p.titik_jemput_kembali).first()
+                if tarif_kembali:
+                    biaya_kembali = tarif_kembali.harga_bus + tarif_kembali.fee_korda + 10000
+                    total_pemasukan += biaya_kembali
+                    if p.status_kembali == 'Lunas':
+                        total_lunas += biaya_kembali
 
     stats['total_pemasukan'] = total_pemasukan
     stats['total_lunas'] = total_lunas
     stats['total_belum_lunas'] = total_pemasukan - total_lunas
     
-    # 6. Kalkulasi Santri Belum Terdaftar
+    # 6. Kalkulasi Santri Belum Terdaftar (berdasarkan hak akses)
     all_registered_santri_ids = {p.santri_id for p in Pendaftaran.query.join(Rombongan, Pendaftaran.rombongan_pulang_id == Rombongan.id).filter(Rombongan.edisi_id == active_edisi.id)}
-    
-    query_belum_terdaftar = Santri.query.filter(
-        Santri.status_santri == 'Aktif',
-        ~Santri.id.in_(all_registered_santri_ids)
-    )
+    query_belum_terdaftar = Santri.query.filter(Santri.status_santri == 'Aktif', ~Santri.id.in_(all_registered_santri_ids))
 
     if current_user.role.name in ['Korwil', 'Korda']:
         managed_regions = {w.get('label') for r in current_user.managed_rombongan if r.cakupan_wilayah for w in r.cakupan_wilayah}
@@ -276,26 +281,11 @@ def dashboard():
     # 7. Ambil data rombongan sesuai hak akses (untuk tabel ringkasan)
     rombongan_query = Rombongan.query.filter_by(edisi=active_edisi)
     if current_user.role.name in ['Korwil', 'Korda']:
-        managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
         if not managed_rombongan_ids:
             rombongan_query = rombongan_query.filter(db.false())
         else:
             rombongan_query = rombongan_query.filter(Rombongan.id.in_(managed_rombongan_ids))
     semua_rombongan = rombongan_query.order_by(Rombongan.nama_rombongan).all()
-    
-    # 8. Kalkulasi statistik per rombongan untuk ditampilkan di tabel
-    for r in semua_rombongan:
-        pendaftar_pulang_di_rombongan_ini = [p for p in pendaftar_list if p.rombongan_pulang_id == r.id]
-        pendaftar_kembali_di_rombongan_ini = [p for p in pendaftar_list if p.rombongan_kembali_id == r.id]
-        
-        r.jumlah_peserta_pulang = len(pendaftar_pulang_di_rombongan_ini)
-        r.jumlah_peserta_kembali = len(pendaftar_kembali_di_rombongan_ini)
-        
-        # Contoh kalkulasi sederhana lunas/belum lunas per rombongan
-        r.jumlah_lunas_calc = sum(1 for p in pendaftar_pulang_di_rombongan_ini if p.status_pulang == 'Lunas') + \
-                              sum(1 for p in pendaftar_kembali_di_rombongan_ini if p.status_kembali == 'Lunas')
-        r.jumlah_belum_lunas_calc = (r.jumlah_peserta_pulang + r.jumlah_peserta_kembali) - r.jumlah_lunas_calc
-        r.total_pemasukan_calc = sum(p.total_biaya for p in pendaftar_pulang_di_rombongan_ini) + sum(p.total_biaya for p in pendaftar_kembali_di_rombongan_ini)
 
     return render_template('dashboard.html', stats=stats, semua_rombongan=semua_rombongan)
 
@@ -304,7 +294,8 @@ def dashboard():
 @role_required('Korpus', 'Korwil', 'Korda')
 def manajemen_rombongan():
     active_edisi = get_active_edisi()
-    semua_rombongan = [] # Inisialisasi daftar kosong di awal
+    semua_rombongan = []  # Inisialisasi daftar kosong di awal
+    search_query = None   # <--- Tambahkan inisialisasi awal di sini
 
     if active_edisi:
         # Query hanya dijalankan jika ada edisi yang aktif
@@ -318,11 +309,14 @@ def manajemen_rombongan():
                 query = query.filter(Rombongan.id.in_(managed_rombongan_ids))
         
         search_query = request.args.get('q')
-    if search_query:
-        query = query.filter(Rombongan.nama_rombongan.ilike(f'%{search_query}%'))
+        
+        if search_query:
+            query = query.filter(Rombongan.nama_rombongan.ilike(f'%{search_query}%'))
 
-    semua_rombongan = query.order_by(Rombongan.nama_rombongan).all()
+        semua_rombongan = query.order_by(Rombongan.nama_rombongan).all()
+
     return render_template('manajemen_rombongan.html', semua_rombongan=semua_rombongan)
+
 
 
 # --- KODE BARU DIMULAI DI SINI ---
@@ -477,6 +471,8 @@ def manajemen_santri():
     search_asrama = request.args.get('asrama')
     search_status = request.args.get('status')
     f_rombongan_id = request.args.get('rombongan_id')
+    f_keterangan = request.args.get('keterangan') # <-- Filter baru
+
 
     # Terapkan filter
     if search_nama:
@@ -504,6 +500,13 @@ def manajemen_santri():
                     Pendaftaran.rombongan_kembali_id == f_rombongan_id
                 )
             )
+    if f_keterangan:
+        if f_keterangan == 'Pengurus':
+            # Tampilkan semua yang memiliki jabatan
+            query = query.filter(Santri.nama_jabatan != None, Santri.nama_jabatan != '')
+        elif f_keterangan == 'Santri':
+            # Tampilkan semua yang tidak memiliki jabatan
+            query = query.filter((Santri.nama_jabatan == None) | (Santri.nama_jabatan == ''))
 
     pagination = query.order_by(Santri.nama).paginate(page=page, per_page=50, error_out=False)
     santri_ids_on_page = [s.id for s in pagination.items]
@@ -581,7 +584,7 @@ def impor_santri():
 
 @admin_bp.route('/santri/impor-semua', methods=['POST'])
 @login_required
-@role_required('Korpus') # Hanya Korpus yang bisa buat rombongan baru
+@role_required('Korpus')
 def impor_semua_santri():
     try:
         api_url = "https://dev.amtsilatipusat.com/api/student?limit=2000"
@@ -589,6 +592,7 @@ def impor_semua_santri():
         response.raise_for_status()
         santri_from_api = response.json().get('data', [])
 
+        # Ambil semua ID yang sudah ada untuk perbandingan cepat
         existing_ids = {s.api_student_id for s in Santri.query.with_entities(Santri.api_student_id).all()}
         
         new_count = 0
@@ -600,13 +604,23 @@ def impor_semua_santri():
             if not api_id:
                 continue
 
+            # --- Logika Baru untuk Jabatan ---
+            leadership_data = data.get('leadership')
+            nama_jabatan_val = None
+            status_jabatan_val = None
+            if leadership_data and isinstance(leadership_data, dict):
+                nama_jabatan_val = leadership_data.get('name')
+                status_jabatan_val = leadership_data.get('status')
+            # --------------------------------
+
             if api_id in existing_ids:
-                # --- METODE UPDATE DENGAN RAW SQL ---
+                # --- METODE UPDATE DENGAN RAW SQL (Sudah Termasuk Jabatan) ---
                 sql = text("""
                     UPDATE santri SET
                         nama = :nama, nis = :nis, kabupaten = :kabupaten, asrama = :asrama,
                         no_hp_wali = :no_hp_wali, jenis_kelamin = :jenis_kelamin,
-                        kelas_formal = :kelas_formal, kelas_ngaji = :kelas_ngaji
+                        kelas_formal = :kelas_formal, kelas_ngaji = :kelas_ngaji,
+                        nama_jabatan = :nama_jabatan, status_jabatan = :status_jabatan
                     WHERE api_student_id = :api_id
                 """)
                 
@@ -616,14 +630,16 @@ def impor_semua_santri():
                     'kabupaten': data.get('regency'),
                     'asrama': data.get('activeDormitory'),
                     'no_hp_wali': data.get('parrentPhone'),
-                    'jenis_kelamin': data.get('gender') or 'Putra',
+                    'jenis_kelamin': data.get('gender'),
                     'kelas_formal': data.get('formalClass'),
                     'kelas_ngaji': data.get('activeClass'),
+                    'nama_jabatan': nama_jabatan_val,
+                    'status_jabatan': status_jabatan_val,
                     'api_id': api_id
                 })
                 updated_count += 1
             else:
-                # Logika 'create' tetap menggunakan bulk insert karena efisien dan sudah terbukti bekerja
+                # Logika 'create' (Sudah Termasuk Jabatan)
                 new_santri_data = {
                     'api_student_id': api_id,
                     'nis': data.get('nis', 'N/A'),
@@ -631,9 +647,11 @@ def impor_semua_santri():
                     'kabupaten': data.get('regency'),
                     'asrama': data.get('activeDormitory'),
                     'no_hp_wali': data.get('parrentPhone'),
-                    'jenis_kelamin': data.get('gender') or 'Putra',
+                    'jenis_kelamin': data.get('gender'),
                     'kelas_formal': data.get('formalClass'),
-                    'kelas_ngaji': data.get('activeClass')
+                    'kelas_ngaji': data.get('activeClass'),
+                    'nama_jabatan': nama_jabatan_val,
+                    'status_jabatan': status_jabatan_val
                 }
                 to_create.append(new_santri_data)
         
@@ -1748,10 +1766,10 @@ def manajemen_santri_wilayah():
     
     # --- 3. Hitung Statistik untuk Kartu ---
     stats = {
-        'total_putra': len([s for s in santri_di_wilayah if s.jenis_kelamin == 'Putra']),
-        'total_putri': len([s for s in santri_di_wilayah if s.jenis_kelamin == 'Putri']),
-        'putra_terdaftar': len([s for s in santri_di_wilayah if s.jenis_kelamin == 'Putra' and s.id in pendaftar_ids_di_edisi]),
-        'putri_terdaftar': len([s for s in santri_di_wilayah if s.jenis_kelamin == 'Putri' and s.id in pendaftar_ids_di_edisi])
+        'total_putra': len([s for s in santri_di_wilayah if s.jenis_kelamin == 'PUTRA']),
+        'total_putri': len([s for s in santri_di_wilayah if s.jenis_kelamin == 'PUTRI']),
+        'putra_terdaftar': len([s for s in santri_di_wilayah if s.jenis_kelamin == 'PUTRA' and s.id in pendaftar_ids_di_edisi]),
+        'putri_terdaftar': len([s for s in santri_di_wilayah if s.jenis_kelamin == 'PUTRI' and s.id in pendaftar_ids_di_edisi])
     }
     stats['putra_belum_daftar'] = stats['total_putra'] - stats['putra_terdaftar']
     stats['putri_belum_daftar'] = stats['total_putri'] - stats['putri_terdaftar']
