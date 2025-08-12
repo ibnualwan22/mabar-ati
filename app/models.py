@@ -1,3 +1,4 @@
+from sqlalchemy import UniqueConstraint
 from . import db
 from datetime import datetime
 from flask_login import UserMixin
@@ -45,19 +46,24 @@ class Tarif(db.Model):
 
 class Izin(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    santri_id = db.Column(db.Integer, db.ForeignKey('santri.id'), nullable=False, unique=True)
+    santri_id = db.Column(db.Integer, db.ForeignKey('santri.id'), nullable=False)
     tanggal_berakhir = db.Column(db.Date, nullable=False)
     keterangan = db.Column(db.Text, nullable=False)
     edisi_id = db.Column(db.Integer, db.ForeignKey('edisi.id'), nullable=False)
     status = db.Column(db.String(20), default='Aktif', nullable=False)
-
+    __table_args__ = (
+        UniqueConstraint('santri_id', 'edisi_id', name='uq_izin_santri_edisi'),
+    )
 
 class Partisipan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     edisi_id = db.Column(db.Integer, db.ForeignKey('edisi.id'), nullable=False)
-    santri_id = db.Column(db.Integer, db.ForeignKey('santri.id'), nullable=False, unique=True)
+    santri_id = db.Column(db.Integer, db.ForeignKey('santri.id'), nullable=False)
     kategori = db.Column(db.String(100), nullable=False)
     tanggal_ditetapkan = db.Column(db.DateTime, server_default=db.func.now())
+    __table_args__ = (
+        UniqueConstraint('santri_id', 'edisi_id', name='uq_partisipan_santri_edisi'),
+    )
 
 class Santri(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -74,9 +80,9 @@ class Santri(db.Model):
     nama_jabatan = db.Column(db.String(100), nullable=True)
     status_jabatan = db.Column(db.String(100), nullable=True)
 
-    pendaftaran = db.relationship('Pendaftaran', back_populates='santri', uselist=False, cascade="all, delete-orphan")
-    izin = db.relationship('Izin', backref='santri', uselist=False, cascade="all, delete-orphan")
-    partisipan = db.relationship('Partisipan', backref='santri', uselist=False, cascade="all, delete-orphan")
+    pendaftarans = db.relationship('Pendaftaran', back_populates='santri', lazy='dynamic', cascade="all, delete-orphan")
+    izins = db.relationship('Izin', backref='santri', lazy='dynamic', cascade="all, delete-orphan")
+    partisipans = db.relationship('Partisipan', backref='santri', lazy='dynamic', cascade="all, delete-orphan")
 
 # --- MODEL BARU DAN YANG DIMODIFIKASI ---
 
@@ -122,7 +128,7 @@ class Rombongan(db.Model):
 class Pendaftaran(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     edisi_id = db.Column(db.Integer, db.ForeignKey('edisi.id'), nullable=False)
-    santri_id = db.Column(db.Integer, db.ForeignKey('santri.id'), nullable=False, unique=True)
+    santri_id = db.Column(db.Integer, db.ForeignKey('santri.id'), nullable=False)
     
     # --- PERUBAHAN UTAMA DI SINI ---
     rombongan_pulang_id = db.Column(db.Integer, db.ForeignKey('rombongan.id'), nullable=True)
@@ -147,10 +153,14 @@ class Pendaftaran(db.Model):
     # Relasi
     rombongan_pulang = db.relationship('Rombongan', foreign_keys=[rombongan_pulang_id], back_populates='pendaftar_pulang')
     rombongan_kembali = db.relationship('Rombongan', foreign_keys=[rombongan_kembali_id], back_populates='pendaftar_kembali')
-    santri = db.relationship('Santri', back_populates='pendaftaran')
+    santri = db.relationship('Santri', back_populates='pendaftarans')
     bus_pulang = db.relationship('Bus', foreign_keys=[bus_pulang_id], back_populates='pendaftar_pulang')
     bus_kembali = db.relationship('Bus', foreign_keys=[bus_kembali_id], back_populates='pendaftar_kembali')
     absensi = db.relationship('Absen', backref='pendaftaran', lazy='dynamic', cascade="all, delete-orphan")
+    __table_args__ = (
+        UniqueConstraint('santri_id', 'edisi_id', name='uq_pendaftaran_santri_edisi'),
+    )
+    
 
 
 class Absen(db.Model):
@@ -176,3 +186,5 @@ class ActivityLog(db.Model):
 
     def __repr__(self):
         return f'<Log: {self.user.username} - {self.action_type} - {self.feature}>'
+    
+    

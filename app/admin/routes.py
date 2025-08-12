@@ -199,7 +199,7 @@ def dashboard():
 
     if not active_edisi:
         flash("Tidak ada edisi yang aktif. Silakan aktifkan satu edisi di Manajemen Edisi.", "warning")
-        stats['santri_belum_terdaftar'] = Santri.query.filter(Santri.status_santri == 'Aktif', Santri.pendaftaran == None).count()
+        stats['santri_belum_terdaftar'] = Santri.query.filter(Santri.status_santri == 'Aktif', Santri.pendaftarans == None).count()
         return render_template('dashboard.html', stats=stats, semua_rombongan=semua_rombongan)
 
     # --- MULAI KALKULASI JIKA EDISI AKTIF ---
@@ -727,26 +727,16 @@ def pendaftaran_rombongan():
         rombongan = Rombongan.query.get(rombongan_id)
         santri = Santri.query.get(santri_id)
 
-        existing_pendaftaran = Pendaftaran.query.join(Rombongan, or_(
-            Pendaftaran.rombongan_pulang_id == Rombongan.id,
-            Pendaftaran.rombongan_kembali_id == Rombongan.id
-        )).filter(
-            Pendaftaran.santri_id == santri.id,
-            Rombongan.edisi_id == active_edisi.id
-        ).first()
-
-        if existing_pendaftaran:
-            flash(f"ERROR: {santri.nama} sudah terdaftar di sebuah rombongan pada edisi ini.", "danger")
-            return redirect(url_for('admin.pendaftaran_rombongan'))
-        
         if not santri or not rombongan:
             flash("ERROR: Santri atau Rombongan tidak ditemukan.", "danger")
             return redirect(url_for('admin.pendaftaran_rombongan'))
-        
-        # Validasi lain
-        if santri.pendaftaran:
-            flash(f"ERROR: {santri.nama} sudah terdaftar di sebuah rombongan pada edisi ini.", "danger")
+
+        # Gunakan HANYA pengecekan yang baru dan akurat
+        existing_pendaftaran = santri.pendaftarans.filter(Pendaftaran.edisi_id == active_edisi.id).first()
+        if existing_pendaftaran:
+            flash(f"ERROR: {santri.nama} sudah terdaftar di edisi ini.", "danger")
             return redirect(url_for('admin.pendaftaran_rombongan'))
+        
         if santri.status_santri == 'Izin':
             flash(f"ERROR: {santri.nama} sedang Izin dan tidak bisa didaftarkan.", "danger")
             return redirect(url_for('admin.pendaftaran_rombongan'))

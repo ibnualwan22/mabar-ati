@@ -1,8 +1,8 @@
-"""Re-arch Final: Implementasi Lintas Rombongan & Detail Perjalanan
+"""Initial migration with final models
 
-Revision ID: 014339160986
+Revision ID: 07210615c51d
 Revises: 
-Create Date: 2025-08-08 01:05:43.197091
+Create Date: 2025-08-12 18:50:39.727876
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '014339160986'
+revision = '07210615c51d'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -23,6 +23,8 @@ def upgrade():
     sa.Column('nama', sa.String(length=100), nullable=False),
     sa.Column('tahun', sa.Integer(), nullable=False),
     sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('countdown_title', sa.String(length=200), nullable=True),
+    sa.Column('countdown_target_date', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('nama')
     )
@@ -44,6 +46,8 @@ def upgrade():
     sa.Column('kelas_formal', sa.String(length=50), nullable=True),
     sa.Column('kelas_ngaji', sa.String(length=50), nullable=True),
     sa.Column('status_santri', sa.String(length=20), nullable=True),
+    sa.Column('nama_jabatan', sa.String(length=100), nullable=True),
+    sa.Column('status_jabatan', sa.String(length=100), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('api_student_id'),
     sa.UniqueConstraint('nis')
@@ -54,21 +58,22 @@ def upgrade():
     sa.Column('tanggal_berakhir', sa.Date(), nullable=False),
     sa.Column('keterangan', sa.Text(), nullable=False),
     sa.Column('edisi_id', sa.Integer(), nullable=False),
+    sa.Column('status', sa.String(length=20), nullable=False),
     sa.ForeignKeyConstraint(['edisi_id'], ['edisi.id'], ),
     sa.ForeignKeyConstraint(['santri_id'], ['santri.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('santri_id')
+    sa.UniqueConstraint('santri_id', 'edisi_id', name='uq_izin_santri_edisi')
     )
     op.create_table('partisipan',
     sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('edisi_id', sa.Integer(), nullable=False),
     sa.Column('santri_id', sa.Integer(), nullable=False),
     sa.Column('kategori', sa.String(length=100), nullable=False),
     sa.Column('tanggal_ditetapkan', sa.DateTime(), server_default=sa.text('now()'), nullable=True),
-    sa.Column('edisi_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['edisi_id'], ['edisi.id'], ),
     sa.ForeignKeyConstraint(['santri_id'], ['santri.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('santri_id')
+    sa.UniqueConstraint('santri_id', 'edisi_id', name='uq_partisipan_santri_edisi')
     )
     op.create_table('rombongan',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -88,15 +93,6 @@ def upgrade():
     sa.ForeignKeyConstraint(['edisi_id'], ['edisi.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('user',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('username', sa.String(length=80), nullable=False),
-    sa.Column('password_hash', sa.String(length=128), nullable=True),
-    sa.Column('role_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['role_id'], ['role.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('username')
-    )
     op.create_table('bus',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('rombongan_id', sa.Integer(), nullable=False),
@@ -105,6 +101,7 @@ def upgrade():
     sa.Column('plat_nomor', sa.String(length=20), nullable=True),
     sa.Column('kuota', sa.Integer(), nullable=False),
     sa.Column('keterangan', sa.Text(), nullable=True),
+    sa.Column('gmaps_share_url', sa.Text(), nullable=True),
     sa.ForeignKeyConstraint(['rombongan_id'], ['rombongan.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -117,15 +114,9 @@ def upgrade():
     sa.ForeignKeyConstraint(['rombongan_id'], ['rombongan.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('user_rombongan',
-    sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('rombongan_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['rombongan_id'], ['rombongan.id'], ),
-    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
-    sa.PrimaryKeyConstraint('user_id', 'rombongan_id')
-    )
     op.create_table('pendaftaran',
     sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('edisi_id', sa.Integer(), nullable=False),
     sa.Column('santri_id', sa.Integer(), nullable=False),
     sa.Column('rombongan_pulang_id', sa.Integer(), nullable=True),
     sa.Column('rombongan_kembali_id', sa.Integer(), nullable=True),
@@ -136,26 +127,79 @@ def upgrade():
     sa.Column('status_kembali', sa.String(length=20), nullable=True),
     sa.Column('metode_pembayaran_kembali', sa.String(length=20), nullable=True),
     sa.Column('bus_kembali_id', sa.Integer(), nullable=True),
+    sa.Column('titik_jemput_kembali', sa.String(length=100), nullable=True),
     sa.Column('total_biaya', sa.Integer(), nullable=False),
     sa.Column('tanggal_pendaftaran', sa.DateTime(), server_default=sa.text('now()'), nullable=True),
     sa.ForeignKeyConstraint(['bus_kembali_id'], ['bus.id'], ),
     sa.ForeignKeyConstraint(['bus_pulang_id'], ['bus.id'], ),
+    sa.ForeignKeyConstraint(['edisi_id'], ['edisi.id'], ),
     sa.ForeignKeyConstraint(['rombongan_kembali_id'], ['rombongan.id'], ),
     sa.ForeignKeyConstraint(['rombongan_pulang_id'], ['rombongan.id'], ),
     sa.ForeignKeyConstraint(['santri_id'], ['santri.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('santri_id')
+    sa.UniqueConstraint('santri_id', 'edisi_id', name='uq_pendaftaran_santri_edisi')
+    )
+    op.create_table('user',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('username', sa.String(length=80), nullable=False),
+    sa.Column('password_hash', sa.String(length=128), nullable=True),
+    sa.Column('role_id', sa.Integer(), nullable=False),
+    sa.Column('bus_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['bus_id'], ['bus.id'], ),
+    sa.ForeignKeyConstraint(['role_id'], ['role.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('username')
+    )
+    op.create_table('absen',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('pendaftaran_id', sa.Integer(), nullable=False),
+    sa.Column('nama_absen', sa.String(length=100), nullable=False),
+    sa.Column('status', sa.String(length=20), nullable=False),
+    sa.Column('timestamp', sa.DateTime(), nullable=True),
+    sa.Column('dicatat_oleh_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['dicatat_oleh_id'], ['user.id'], ),
+    sa.ForeignKeyConstraint(['pendaftaran_id'], ['pendaftaran.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('activity_log',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('timestamp', sa.DateTime(), nullable=True),
+    sa.Column('action_type', sa.String(length=20), nullable=True),
+    sa.Column('feature', sa.String(length=50), nullable=True),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    with op.batch_alter_table('activity_log', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_activity_log_action_type'), ['action_type'], unique=False)
+        batch_op.create_index(batch_op.f('ix_activity_log_feature'), ['feature'], unique=False)
+        batch_op.create_index(batch_op.f('ix_activity_log_timestamp'), ['timestamp'], unique=False)
+
+    op.create_table('user_rombongan',
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('rombongan_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['rombongan_id'], ['rombongan.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
+    sa.PrimaryKeyConstraint('user_id', 'rombongan_id')
     )
     # ### end Alembic commands ###
 
 
 def downgrade():
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_table('pendaftaran')
     op.drop_table('user_rombongan')
+    with op.batch_alter_table('activity_log', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_activity_log_timestamp'))
+        batch_op.drop_index(batch_op.f('ix_activity_log_feature'))
+        batch_op.drop_index(batch_op.f('ix_activity_log_action_type'))
+
+    op.drop_table('activity_log')
+    op.drop_table('absen')
+    op.drop_table('user')
+    op.drop_table('pendaftaran')
     op.drop_table('tarif')
     op.drop_table('bus')
-    op.drop_table('user')
     op.drop_table('rombongan')
     op.drop_table('partisipan')
     op.drop_table('izin')
