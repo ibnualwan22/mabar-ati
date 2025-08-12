@@ -1,12 +1,13 @@
-from flask import render_template, redirect, url_for, flash, request, abort, jsonify
+from flask import render_template, redirect, url_for, flash, request, abort, jsonify, current_app
 from flask_login import login_user, logout_user, current_user, login_required
 from collections import defaultdict
 from sqlalchemy.orm import joinedload
 
+import requests
 from . import lapangan_bp
 from app import db
 from app.models import User, Bus, Pendaftaran, Absen, Role, Rombongan
-from app.admin.forms import LoginForm, LokasiBusForm
+from app.admin.forms import LoginForm, LokasiBusForm, HubungkanPerangkatForm
 from app.admin.routes import get_active_edisi, log_activity
 
 
@@ -40,6 +41,13 @@ def dashboard():
         abort(403)
 
     bus = Bus.query.get_or_404(current_user.bus_id)
+    
+    # --- LOGIKA PENGECEKAN BARU ---
+    # Jika bus ini belum punya ID Traccar, alihkan ke halaman untuk menghubungkan
+    if not bus.traccar_device_id:
+        flash("Perangkat Anda belum terhubung. Silakan hubungkan bus Anda dengan perangkat Traccar.", "info")
+        return redirect(url_for('lapangan.hubungkan_perangkat'))
+    
     active_edisi = get_active_edisi()
     
     peserta_pulang = []
@@ -160,3 +168,62 @@ def update_lokasi():
         log_activity('Update', 'Lokasi Bus', f"Korlapda '{current_user.username}' memperbarui lokasi untuk bus '{bus.nama_armada} - {bus.nomor_lambung or bus.plat_nomor}'")
 
     return render_template('update_lokasi.html', form=form, bus=bus)
+
+@lapangan_bp.route('/hubungkan', methods=['GET', 'POST'])
+@login_required
+def hubungkan_perangkat():
+    if current_user.role.name != 'Korlapda' or not current_user.bus_id:
+        abort(403)
+        
+    bus = Bus.query.get_or_404(current_user.bus_id)
+    form = HubungkanPerangkatForm(obj=bus) # Gunakan obj agar field terisi jika sudah ada
+
+    if form.validate_on_submit():
+        device_id_input = form.traccar_device_id.data
+
+        # --- LOGIKA VALIDASI BARU KE SERVER TRACCAR ---
+        try:
+            TRACCAR_URL = current_app.config.get('TRACCAR_URL')
+            TRACCAR_TOKEN = current_app.config.get('TRACCAR_TOKEN')
+
+            if not TRACCAR_URL or not TRACCAR_TOKEN:
+                flash('Konfigurasi server Traccar belum diatur oleh admin.', 'danger')
+                return redirect(url_for('lapangan.hubungkan_perangkat'))
+
+            # 1. Dapatkan session cookie dari Traccar
+            session_res = requests.get(f"{TRACCAR_URL}/api/session?token={TRACCAR_TOKEN}", timeout=10)
+            session_res.raise_for_status()
+            cookies = session_res.cookies
+
+            # 2. Dapatkan daftar semua perangkat dari Traccar
+            devices_res = requests.get(f"{TRACCAR_URL}/api/devices", cookies=cookies, timeout=10)
+            devices_res.raise_for_status()
+            all_devices = devices_res.json()
+
+            # 3. Cek apakah ID yang dimasukkan ada di dalam daftar
+            device_found = any(str(d.get('uniqueId')) == str(device_id_input) for d in all_devices)
+
+            if not device_found:
+                flash(f"Error: ID Perangkat '{device_id_input}' tidak ditemukan di server Traccar. Pastikan ID sudah benar.", 'danger')
+                return redirect(url_for('lapangan.hubungkan_perangkat'))
+
+        except requests.exceptions.RequestException as e:
+            flash(f"Gagal terhubung ke server Traccar untuk validasi. Coba lagi nanti.", "danger")
+            return redirect(url_for('lapangan.hubungkan_perangkat'))
+        # --- AKHIR VALIDASI BARU ---
+        
+        # Cek apakah ID ini sudah digunakan oleh bus lain di sistem kita
+        existing_bus = Bus.query.filter(Bus.id != bus.id, Bus.traccar_device_id == device_id_input).first()
+        if existing_bus:
+            flash(f"Error: ID Perangkat {device_id_input} sudah digunakan oleh bus lain.", "danger")
+            return redirect(url_for('lapangan.hubungkan_perangkat'))
+
+        bus.traccar_device_id = device_id_input
+        db.session.commit()
+        
+        log_activity('Update', 'Traccar', f"Korlapda '{current_user.username}' menghubungkan bus '{bus.nama_armada}' dengan Traccar ID: {device_id_input}")
+        
+        flash("Perangkat berhasil terhubung! Anda sekarang bisa mulai melacak dan melakukan absensi.", "success")
+        return redirect(url_for('lapangan.dashboard'))
+
+    return render_template('hubungkan_perangkat.html', form=form, bus=bus)

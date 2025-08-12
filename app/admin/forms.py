@@ -232,4 +232,11 @@ class LokasiBusForm(FlaskForm):
     gmaps_share_url = StringField('URL Google Maps Share Location', validators=[DataRequired(), URL()])
     submit = SubmitField('Update Lokasi Bus')
 
+class HubungkanPerangkatForm(FlaskForm):
+    traccar_device_id = StringField(
+        'ID Perangkat Traccar',
+        validators=[DataRequired(message="ID Perangkat tidak boleh kosong.")],
+        description="Masukkan ID unik dari aplikasi Traccar Client di HP Anda."
+    )
+    submit = SubmitField('Hubungkan & Mulai Pelacakan')
 

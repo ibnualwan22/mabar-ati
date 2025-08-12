@@ -235,37 +235,42 @@
 
                                     <!-- Daftar Bus & Pelacakan -->
                                     <div class="card border-0 shadow-sm mb-4">
-                                        <div class="card-header bg-light text-dark border-0">
-                                            <h5 class="mb-0"><i class="fas fa-bus-alt me-2"></i>Daftar Bus & Pelacakan</h5>
-                                        </div>
-                                        <div class="card-body p-0">
-                                            {% for bus in rombongan.buses %}
-                                            <div class="d-flex align-items-center justify-content-between p-3 border-bottom">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="bg-light border rounded-circle p-2 me-3">
-                                                        <i class="fas fa-bus text-muted"></i>
-                                                    </div>
-                                                    <div>
-                                                        <strong class="text-dark d-block">{{ bus.nama_armada }}</strong>
-                                                        <small class="text-muted">{{ bus.nomor_lambung or bus.plat_nomor }}</small>
-                                                    </div>
-                                                </div>
-                                                {% if bus.gmaps_share_url %}
-                                                    <a href="{{ bus.gmaps_share_url }}" target="_blank" class="btn btn-outline-dark btn-sm rounded-pill">
-                                                        <i class="fas fa-map-marker-alt me-1"></i> Lacak Lokasi
-                                                    </a>
-                                                {% else %}
-                                                    <span class="badge bg-light text-dark border rounded-pill">Pelacakan Belum Aktif</span>
-                                                {% endif %}
-                                            </div>
-                                            {% else %}
-                                            <div class="p-4 text-center text-muted">
-                                                <i class="fas fa-info-circle fa-2x mb-2 d-block"></i>
-                                                Informasi bus belum tersedia.
-                                            </div>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
+    <div class="card-header bg-light text-dark border-0">
+        <h5 class="mb-0"><i class="fas fa-bus-alt me-2"></i>Daftar Bus & Pelacakan</h5>
+    </div>
+    <div class="card-body p-0">
+        {% for bus in rombongan.buses %}
+        <div class="d-flex align-items-center justify-content-between p-3 border-bottom">
+            <div class="d-flex align-items-center">
+                <div class="bg-light border rounded-circle p-2 me-3">
+                    <i class="fas fa-bus text-muted"></i>
+                </div>
+                <div>
+                    <strong class="text-dark d-block">{{ bus.nama_armada }}</strong>
+                    <small class="text-muted">{{ bus.nomor_lambung or bus.plat_nomor }}</small>
+                </div>
+            </div>
+            
+            {# --- PERUBAHAN LOGIKA DI SINI --- #}
+            {% if bus.traccar_device_id %}
+                {# Tombol ini sekarang mengarah ke halaman peta Traccar kita #}
+                <a href="{{ url_for('main.lacak_bus', bus_id=bus.id) }}" target="_blank" class="btn btn-primary btn-sm rounded-pill">
+                    <i class="fas fa-map-marker-alt me-1"></i> Lacak Lokasi
+                </a>
+            {% else %}
+                <span class="badge bg-light text-dark border rounded-pill">Pelacakan Belum Aktif</span>
+            {% endif %}
+            {# --- AKHIR PERUBAHAN --- #}
+
+        </div>
+        {% else %}
+        <div class="p-4 text-center text-muted">
+            <i class="fas fa-info-circle fa-2x mb-2 d-block"></i>
+            Informasi bus belum tersedia.
+        </div>
+        {% endfor %}
+    </div>
+</div>
 
                                     <!-- Detail Harga -->
                                     <div class="card border-0 shadow-sm">

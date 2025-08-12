@@ -1,0 +1,28 @@
+{% extends "lapangan_layout.html" %}
+{% block title %}Hubungkan Perangkat{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header text-center">
+                <h4 class="mb-0">Hubungkan Perangkat Pelacak</h4>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted">Anda ditugaskan di bus: <strong>{{ bus.nama_armada }} - {{ bus.nomor_lambung or bus.plat_nomor }}</strong>.</p>
+                <p>Silakan buka aplikasi **Traccar Client** di HP Anda, lihat **Device ID**, lalu masukkan di bawah ini untuk memulai.</p>
+                
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ form.traccar_device_id.label(class="form-label") }}
+                        {{ form.traccar_device_id(class="form-control form-control-lg", placeholder="Contoh: 123456") }}
+                        <small class="form-text text-muted">{{ form.traccar_device_id.description }}</small>
+                    </div>
+                    {{ form.submit(class="btn btn-primary w-100 btn-lg") }}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

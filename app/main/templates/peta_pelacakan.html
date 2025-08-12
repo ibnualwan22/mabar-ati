@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <title>Melacak Bus: {{ bus.nama_armada }}</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+
+    <style>
+        * { box-sizing: border-box; }
+        
+        body, html {
+            margin: 0; 
+            padding: 0; 
+            height: 100%; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+        }
+        
+        #map {
+            height: 100vh; 
+            width: 100vw;
+            position: relative;
+        }
+
+        /* Header Info Bus */
+        .bus-info-header {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            max-width: 90vw;
+            text-align: center;
+            font-size: 14px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .bus-info-header strong {
+            font-size: 1em;
+            font-weight: 600;
+        }
+
+        /* Panel Estimasi */
+        #estimasi {
+            position: fixed;
+            top: 70px;
+            left: 10px;
+            right: 10px;
+            background: rgba(255,255,255,0.95);
+            padding: 12px;
+            z-index: 1000;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            font-weight: 600;
+            font-size: 13px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0,0,0,0.1);
+            max-width: calc(100vw - 20px);
+        }
+
+        /* Tombol Kontrol */
+        .control-buttons {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1001;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 12px 16px;
+            font-size: 13px;
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            min-width: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+        }
+
+        /* Status Loading */
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .loading::after {
+            content: '';
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 480px) {
+            .bus-info-header {
+                font-size: 12px;
+                padding: 6px 12px;
+                top: 5px;
+            }
+            
+            #estimasi {
+                top: 50px;
+                font-size: 12px;
+                padding: 10px;
+                left: 5px;
+                right: 5px;
+            }
+            
+            .control-buttons {
+                bottom: 15px;
+                gap: 8px;
+            }
+            
+            .btn {
+                padding: 10px 12px;
+                font-size: 12px;
+                min-width: 85px;
+            }
+        }
+
+        @media (max-height: 600px) {
+            .bus-info-header {
+                top: 5px;
+                font-size: 12px;
+            }
+            
+            #estimasi {
+                top: 45px;
+                padding: 8px;
+            }
+            
+            .control-buttons {
+                bottom: 10px;
+            }
+        }
+
+        /* Custom Leaflet Popup */
+        .leaflet-popup-content-wrapper {
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        .leaflet-popup-content {
+            font-family: inherit;
+            font-size: 13px;
+            margin: 8px 12px;
+        }
+
+        /* Hide routing instructions */
+        .leaflet-routing-container {
+            display: none;
+        }
+
+        /* Status indicator */
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #4CAF50;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: pulse 2s infinite;
+        }
+
+        .status-offline {
+            background: #f44336;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bus-info-header">
+        <span class="status-indicator" id="status-dot"></span>
+        <strong>{{ bus.nama_armada }} - {{ bus.nomor_lambung or bus.plat_nomor }}</strong>
+        <div id="bus-status" style="margin-top: 4px; font-size: 0.9em;">Memuat lokasi...</div>
+    </div>
+
+    <div id="estimasi">Menunggu data lokasi...</div>
+
+    <div class="control-buttons">
+        <button class="btn" id="btn-lokasi">
+            📍 <span>Lokasi Saya</span>
+        </button>
+        <button class="btn btn-secondary" id="btn-center">
+            🎯 <span>Tengah</span>
+        </button>
+        <button class="btn" id="btn-go-to-bus" style="background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%); box-shadow: 0 4px 15px rgba(255,107,107,0.3);">
+            🚌 <span>Ke Bus</span>
+        </button>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Deteksi device performance
+            const isLowEndDevice = () => {
+                return navigator.hardwareConcurrency <= 2 || 
+                       navigator.deviceMemory <= 2 || 
+                       /Android.*[1-4]\.|iPhone.*[1-5]s?/.test(navigator.userAgent);
+            };
+
+            const LOW_END = isLowEndDevice();
+            
+            // Adaptive polling based on device
+            const POLLING_INTERVAL = LOW_END ? 5000 : 3000; // 5 detik untuk device lemah
+            const HIGH_ACCURACY_TIMEOUT = LOW_END ? 20000 : 15000; // Timeout lebih lama
+            const deviceId = "{{ bus.traccar_device_id }}";
+            
+            // DOM Elements
+            const busStatusEl = document.getElementById('bus-status');
+            const estimasiEl = document.getElementById('estimasi');
+            const btnLokasi = document.getElementById('btn-lokasi');
+            const btnCenter = document.getElementById('btn-center');
+            const btnGoToBus = document.getElementById('btn-go-to-bus');
+            const statusDot = document.getElementById('status-dot');
+
+            // Inisialisasi Map dengan tile yang lebih ringan
+            const map = L.map('map', {
+                zoomControl: false,
+                attributionControl: false
+            }).setView([-6.2, 106.8], 13);
+
+            // Tambahkan zoom control di posisi kanan bawah
+            L.control.zoom({
+                position: 'bottomright'
+            }).addTo(map);
+
+            // Tile layer yang lebih ringan untuk device menengah kebawah
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap',
+                maxZoom: 18,
+                // Kurangi resolusi untuk device menengah kebawah
+                detectRetina: window.devicePixelRatio > 1.5
+            }).addTo(map);
+
+            // Custom Bus Icon - OPTIMIZED untuk low-end device
+            const createBusIcon = () => {
+                if (LOW_END) {
+                    // Simple emoji version for low-end devices
+                    return L.divIcon({
+                        html: `
+                            <div style="
+                                background: linear-gradient(135deg, #FFA726, #FF8E53);
+                                width: 45px; height: 45px;
+                                border-radius: 8px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                box-shadow: 0 2px 8px rgba(255,167,38,0.4);
+                                border: 2px solid white;
+                                font-size: 20px;
+                                position: relative;
+                            ">
+                                🚌
+                                <div style="
+                                    position: absolute;
+                                    top: -8px; right: -8px;
+                                    width: 16px; height: 16px;
+                                    background: #E53E3E;
+                                    border-radius: 50%;
+                                    border: 2px solid white;
+                                "></div>
+                            </div>
+                        `,
+                        className: 'simple-bus-marker',
+                        iconSize: [45, 45],
+                        iconAnchor: [22, 22],
+                        popupAnchor: [0, -22]
+                    });
+                } else {
+                    // Full SVG version for better devices
+                    return L.divIcon({
+                        html: `
+                            <div style="position: relative; width: 55px; height: 55px;">
+                                <svg width="55" height="55" viewBox="0 0 55 55" style="position: absolute; top: 0; left: 0;">
+                                    <ellipse cx="27.5" cy="52" rx="25" ry="3" fill="rgba(0,0,0,0.3)"/>
+                                    <rect x="6" y="20" width="44" height="28" rx="6" fill="#FFA726" stroke="#424242" stroke-width="2.5"/>
+                                    <rect x="3" y="28" width="8" height="14" rx="4" fill="#64B5F6" stroke="#424242" stroke-width="2.5"/>
+                                    <rect x="14" y="24" width="5.5" height="5.5" fill="#64B5F6" stroke="#424242" stroke-width="1.2"/>
+                                    <rect x="22" y="24" width="5.5" height="5.5" fill="#64B5F6" stroke="#424242" stroke-width="1.2"/>
+                                    <rect x="30" y="24" width="5.5" height="5.5" fill="#64B5F6" stroke="#424242" stroke-width="1.2"/>
+                                    <rect x="38" y="24" width="5.5" height="5.5" fill="#64B5F6" stroke="#424242" stroke-width="1.2"/>
+                                    <rect x="4" y="35" width="3" height="8" rx="1.5" fill="#424242"/>
+                                    <rect x="41" y="35" width="5.5" height="2" rx="1" fill="#424242"/>
+                                    <rect x="41" y="38" width="5.5" height="2" rx="1" fill="#424242"/>
+                                    <circle cx="17" cy="45" r="5.5" fill="#424242"/>
+                                    <circle cx="17" cy="45" r="3" fill="white"/>
+                                    <circle cx="38" cy="45" r="5.5" fill="#424242"/>
+                                    <circle cx="38" cy="45" r="3" fill="white"/>
+                                </svg>
+                                <svg width="24" height="50" viewBox="0 0 24 24" style="position: absolute; top: -38px; left: 17px;">
+                                    <path d="M12 0C5.37 0 0 5.37 0 12c0 9 12 24 12 24s12-15 12-24c0-6.63-5.37-12-12-12z" fill="#E53E3E"/>
+                                    <circle cx="12" cy="12" r="4" fill="white"/>
+                                </svg>
+                            </div>
+                        `,
+                        className: 'custom-bus-marker',
+                        iconSize: [55, 55],
+                        iconAnchor: [27, 45],
+                        popupAnchor: [0, -45]
+                    });
+                }
+            };
+
+            // Custom User Icon
+            const createUserIcon = () => L.divIcon({
+                html: `
+                    <div style="
+                        background: linear-gradient(135deg, #4CAF50, #45a049);
+                        width: 30px; height: 30px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        box-shadow: 0 4px 12px rgba(76,175,80,0.4);
+                        border: 3px solid white;
+                        font-size: 14px;
+                        animation: pulse 2s infinite;
+                    ">📍</div>
+                `,
+                className: 'custom-user-marker',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15],
+                popupAnchor: [0, -15]
+            });
+
+            let busMarker = null;
+            let userMarker = null;
+            let isTrackingUser = false;
+            let userWatchId = null;
+
+            // Routing control dengan konfigurasi optimal
+            let routingControl = L.Routing.control({
+                waypoints: [],
+                routeWhileDragging: false,
+                showAlternatives: false,
+                addWaypoints: false,
+                lineOptions: {
+                    styles: [{
+                        color: '#2196F3',
+                        opacity: 0.8,
+                        weight: 5,
+                        dashArray: '10,10'
+                    }]
+                },
+                createMarker: () => null,
+                fitSelectedRoutes: false,
+                show: false
+            }).addTo(map);
+
+            // Update route dan estimasi dengan error handling
+            function updateRouting(busLatLng, userLatLng) {
+                if (!busLatLng || !userLatLng) {
+                    estimasiEl.innerHTML = "Menunggu data lokasi...";
+                    return;
+                }
+                
+                routingControl.setWaypoints([busLatLng, userLatLng]);
+            }
+
+            routingControl.on('routesfound', function(e) {
+                try {
+                    const summary = e.routes[0].summary;
+                    const distanceKm = (summary.totalDistance / 1000).toFixed(1);
+                    const timeMin = Math.round(summary.totalTime / 60);
+                    
+                    let timeText = timeMin < 60 ? `${timeMin} menit` : 
+                                  `${Math.floor(timeMin/60)}j ${timeMin%60}m`;
+                    
+                    estimasiEl.innerHTML = `
+                        Estimasi📍 <strong>${distanceKm} km</strong> • 
+                        ⏱️ <strong>${timeText}</strong>
+                    `;
+                } catch (error) {
+                    estimasiEl.innerHTML = "Gagal menghitung rute";
+                }
+            });
+
+            routingControl.on('routingerror', function(e) {
+                estimasiEl.innerHTML = "❌ Rute tidak dapat ditemukan";
+            });
+
+            // Fetch posisi bus dengan error handling yang lebih baik
+            async function fetchPosition() {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000);
+                    
+                    const res = await fetch(`/api/traccar/positions/${deviceId}`, {
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (!res.ok) {
+                        throw new Error(`HTTP ${res.status}`);
+                    }
+                    
+                    const positions = await res.json();
+                    
+                    if (positions && positions.length > 0) {
+                        const latestPos = positions[0];
+                        const latLng = L.latLng(latestPos.latitude, latestPos.longitude);
+                        const speedKmh = (latestPos.speed || 0) * 1.852;
+                        const lastUpdate = new Date(latestPos.deviceTime);
+                        const timeDiff = Date.now() - lastUpdate.getTime();
+                        
+                        // Status real-time indicator
+                        statusDot.className = timeDiff < 60000 ? 'status-indicator' : 'status-indicator status-offline';
+                        
+                        busStatusEl.innerHTML = `
+                            🚀 <strong>${speedKmh.toFixed(1)} km/j</strong> • 
+                            ${lastUpdate.toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit'})}
+                        `;
+
+                        const popupInfo = `
+                            <div style="text-align: center;">
+                                <strong style="color: #FF6B6B;">🚌 {{ bus.nama_armada }}</strong><br>
+                                <div style="margin: 8px 0; color: #666;">
+                                    ⏰ ${lastUpdate.toLocaleString('id-ID')}<br>
+                                    🚀 Kecepatan: <strong>${speedKmh.toFixed(1)} km/j</strong>
+                                </div>
+                            </div>
+                        `;
+
+                        if (!busMarker) {
+                            busMarker = L.marker(latLng, { 
+                                icon: createBusIcon() 
+                            }).addTo(map).bindPopup(popupInfo);
+                            map.setView(latLng, 15);
+                            if (!LOW_END) console.log('Bus marker created at:', latLng);
+                        } else {
+                            // Smooth animation untuk perpindahan marker
+                            busMarker.setLatLng(latLng).setPopupContent(popupInfo);
+                            if (!LOW_END) console.log('Bus marker updated to:', latLng);
+                        }
+
+                        // Update routing jika lokasi user ada
+                        if (userMarker) {
+                            updateRouting(latLng, userMarker.getLatLng());
+                        }
+                        
+                    } else {
+                        busStatusEl.innerHTML = "⚠️ Tidak ada data lokasi";
+                        statusDot.className = 'status-indicator status-offline';
+                    }
+                } catch (error) {
+                    console.error('Error fetching position:', error);
+                    busStatusEl.innerHTML = "❌ Gagal memuat lokasi";
+                    statusDot.className = 'status-indicator status-offline';
+                }
+            }
+
+            // Fungsi lokasi pengguna dengan akurasi tinggi
+            function startUserLocationTracking() {
+                if (!navigator.geolocation) {
+                    alert("Browser Anda tidak mendukung fitur lokasi GPS.");
+                    return;
+                }
+
+                const options = {
+                    enableHighAccuracy: true,
+                    timeout: HIGH_ACCURACY_TIMEOUT,
+                    maximumAge: 5000 // Cache lokasi max 5 detik
+                };
+
+                btnLokasi.classList.add('loading');
+                btnLokasi.innerHTML = '🔄 <span>Mencari...</span>';
+
+                // Get initial position
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        updateUserLocation(position);
+                        btnLokasi.classList.remove('loading');
+                        btnLokasi.innerHTML = '📍 <span>Perbarui Lokasi</span>';
+                        
+                        // Start continuous tracking
+                        if (!isTrackingUser) {
+                            userWatchId = navigator.geolocation.watchPosition(
+                                updateUserLocation,
+                                handleLocationError,
+                                options
+                            );
+                            isTrackingUser = true;
+                        }
+                    },
+                    handleLocationError,
+                    options
+                );
+            }
+
+            function updateUserLocation(position) {
+                const userLatLng = L.latLng(
+                    position.coords.latitude, 
+                    position.coords.longitude
+                );
+                
+                const accuracy = position.coords.accuracy;
+                const popupText = `
+                    <div style="text-align: center;">
+                        <strong style="color: #4CAF50;">📍 Lokasi Anda</strong><br>
+                        <div style="margin: 8px 0; color: #666;">
+                            🎯 Akurasi: ±${accuracy.toFixed(0)}m<br>
+                            ⏰ ${new Date().toLocaleTimeString('id-ID')}
+                        </div>
+                    </div>
+                `;
+
+                if (!userMarker) {
+                    userMarker = L.marker(userLatLng, { 
+                        icon: createUserIcon() 
+                    }).addTo(map).bindPopup(popupText);
+                } else {
+                    userMarker.setLatLng(userLatLng).setPopupContent(popupText);
+                }
+
+                // Update routing dengan lokasi bus
+                if (busMarker) {
+                    updateRouting(busMarker.getLatLng(), userLatLng);
+                    
+                    // Auto fit bounds ke kedua marker
+                    const group = L.featureGroup([busMarker, userMarker]);
+                    map.fitBounds(group.getBounds().pad(0.2));
+                }
+            }
+
+            function handleLocationError(error) {
+                btnLokasi.classList.remove('loading');
+                btnLokasi.innerHTML = '📍 <span>Coba Lagi</span>';
+                
+                let message = "Tidak dapat mengakses lokasi Anda. ";
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        message += "Izinkan akses lokasi untuk fitur ini.";
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        message += "Lokasi tidak tersedia.";
+                        break;
+                    case error.TIMEOUT:
+                        message += "Timeout. Pastikan GPS aktif.";
+                        break;
+                    default:
+                        message += "Error tidak diketahui.";
+                        break;
+                }
+                alert(message);
+            }
+
+            // Center map ke kedua marker
+            function centerMapToMarkers() {
+                if (busMarker && userMarker) {
+                    const group = L.featureGroup([busMarker, userMarker]);
+                    map.fitBounds(group.getBounds().pad(0.2));
+                } else if (busMarker) {
+                    map.setView(busMarker.getLatLng(), 15);
+                } else if (userMarker) {
+                    map.setView(userMarker.getLatLng(), 15);
+                }
+            }
+
+            // Go to bus location - OPTIMIZED
+            function goToBusLocation() {
+                if (!LOW_END) console.log('Button clicked, busMarker:', busMarker); // Debug hanya untuk device bagus
+                if (busMarker) {
+                    const busLatLng = busMarker.getLatLng();
+                    if (!LOW_END) console.log('Bus location:', busLatLng);
+                    
+                    if (LOW_END) {
+                        // Simple setView untuk device lemah
+                        map.setView(busLatLng, 17);
+                        setTimeout(() => busMarker.openPopup(), 100);
+                    } else {
+                        // Smooth animation untuk device bagus
+                        map.flyTo(busLatLng, 17, {
+                            animate: true,
+                            duration: 1.5
+                        });
+                        setTimeout(() => busMarker.openPopup(), 1600);
+                    }
+                } else {
+                    if (!LOW_END) console.log('Bus marker not found');
+                    alert("Lokasi bus belum tersedia. Menunggu data GPS...");
+                }
+            }
+
+            // Event listeners - SIMPLIFIED
+            btnLokasi.addEventListener('click', startUserLocationTracking);
+            btnCenter.addEventListener('click', centerMapToMarkers);
+            btnGoToBus.addEventListener('click', goToBusLocation);
+
+            // Single backup event listener untuk compatibility
+            if (LOW_END) {
+                document.addEventListener('click', function(e) {
+                    if (e.target.closest('#btn-go-to-bus')) {
+                        e.preventDefault();
+                        goToBusLocation();
+                    }
+                });
+            }
+
+            // Cleanup function untuk stop tracking
+            window.addEventListener('beforeunload', () => {
+                if (userWatchId !== null) {
+                    navigator.geolocation.clearWatch(userWatchId);
+                }
+            });
+
+            // Auto start
+            fetchPosition();
+            setInterval(fetchPosition, POLLING_INTERVAL);
+
+            // Auto request location pada load (optional)
+            // setTimeout(startUserLocationTracking, 2000);
+        });
+    </script>
+
+</body>
+</html>
