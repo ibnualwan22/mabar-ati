@@ -31,7 +31,7 @@
 
     <div class="row g-4 mb-4">
         <div class="col-lg-3 col-md-6">
-            <a href="{{ url_for('admin.daftar_peserta_global') }}" class="stat-card-link">
+            <a href="{{ url_for('admin.manajemen_santri_wilayah') }}" class="stat-card-link">
                 <div class="card shadow-sm stat-card">
                     <div class="card-body text-center">
                         <h6 class="card-subtitle mb-2 text-muted">Peserta Rombongan</h6>
@@ -50,9 +50,9 @@
                 {% endfor %}
             {% endif %}
         {% endfor %}
-        <a href="{{ url_for('admin.manajemen_santri', rombongan_id='belum_terdaftar', alamat=managed_regions|list) }}" class="stat-card-link">
+        <a href="{{ url_for('admin.manajemen_santri_wilayah', rombongan_id='belum_terdaftar', alamat=managed_regions|list) }}" class="stat-card-link">
     {% else %}
-        <a href="{{ url_for('admin.manajemen_santri', rombongan_id='belum_terdaftar') }}" class="stat-card-link">
+        <a href="{{ url_for('admin.manajemen_santri_wilayah', rombongan_id='belum_terdaftar') }}" class="stat-card-link">
     {% endif %}
                 <div class="card shadow-sm stat-card">
                     <div class="card-body text-center">
@@ -144,7 +144,8 @@
                             <td>{{ rombongan.jumlah_peserta_kembali }}</td>
                             <td>{{ (rombongan.pendaftar_pulang|selectattr('status_pulang', 'equalto', 'Lunas')|list|length) + (rombongan.pendaftar_kembali|selectattr('status_kembali', 'equalto', 'Lunas')|list|length) }}</td>
                             <td>{{ (rombongan.pendaftar_pulang|selectattr('status_pulang', 'equalto', 'Belum Bayar')|list|length) + (rombongan.pendaftar_kembali|selectattr('status_kembali', 'equalto', 'Belum Bayar')|list|length) }}</td>
-                            <td>{{ rombongan.pendaftar_pulang|length + rombongan.pendaftar_kembali|length }} / {{ (rombongan.buses|sum(attribute='kuota') or 0) * 2 }}</td>                             <td>
+                            <td>{{ rombongan.pendaftar_pulang|length + rombongan.pendaftar_kembali|length }} / {{ (rombongan.buses|sum(attribute='kuota') or 0) * 2 }}</td>
+                             <td>
                             <a href="{{ url_for('admin.daftar_peserta', rombongan_id=rombongan.id) }}" class="btn btn-primary btn-sm">
                             Lihat Peserta ({{ (rombongan.pendaftar_pulang|length) + (rombongan.pendaftar_kembali|length) }})
                             </a>

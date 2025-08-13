@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cetak Kartu Barang Santri</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            background-color: #f0f2f5;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        .print-container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .cards-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 3mm;
+        }
+
+        .card-barang {
+            width: 85mm;
+            min-height: 70mm;
+            height: auto;
+            border: 2px solid #2c3e50;
+            border-radius: 12px;
+            padding: 8mm;
+            box-sizing: border-box;
+            page-break-inside: avoid;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .card-barang::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100px;
+            height: 100px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            z-index: 0;
+        }
+        
+        .card-barang::after {
+            content: '';
+            position: absolute;
+            bottom: -30px;
+            left: -30px;
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 50%;
+            z-index: 0;
+        }
+        
+        .card-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-barang h5 {
+            font-size: 13pt;
+            font-weight: 700;
+            margin-bottom: 12px;
+            text-align: center;
+            background: rgba(255,255,255,0.2);
+            padding: 6px 12px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+            letter-spacing: 0.5px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        
+        .card-item {
+            background: rgba(255,255,255,0.15);
+            padding: 6px 8px;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .card-grid strong {
+            display: block;
+            font-size: 8pt;
+            color: rgba(255,255,255,0.9);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 2px;
+        }
+
+        .card-grid p {
+            font-size: 10pt;
+            margin: 0;
+            font-weight: 500;
+            word-break: break-word;
+            line-height: 1.3;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        
+        /* Variasi warna untuk kartu yang berbeda */
+        .card-barang:nth-child(4n+1) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .card-barang:nth-child(4n+2) {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .card-barang:nth-child(4n+3) {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .card-barang:nth-child(4n+4) {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        .print-button-container {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .color-selector {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+        
+        .color-selector h6 {
+            margin-bottom: 15px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .color-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+            gap: 8px;
+            justify-content: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .color-option {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        
+        .color-option:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        
+        .color-option.active {
+            border-color: #333;
+            transform: scale(1.15);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        
+        .color-option::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .color-option.active::after {
+            opacity: 1;
+        }
+        
+        /* 25 Dark Gradient Options */
+        .gradient-1 { background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); }
+        .gradient-2 { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); }
+        .gradient-3 { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .gradient-4 { background: linear-gradient(135deg, #134e5e 0%, #71b280 100%); }
+        .gradient-5 { background: linear-gradient(135deg, #8b0000 0%, #b22222 100%); }
+        .gradient-6 { background: linear-gradient(135deg, #2d5016 0%, #3e6b24 100%); }
+        .gradient-7 { background: linear-gradient(135deg, #8b4513 0%, #a0522d 100%); }
+        .gradient-8 { background: linear-gradient(135deg, #2c3e50 0%, #4a6741 100%); }
+        .gradient-9 { background: linear-gradient(135deg, #36454f 0%, #2f4f4f 100%); }
+        .gradient-10 { background: linear-gradient(135deg, #800080 0%, #4b0082 100%); }
+        .gradient-11 { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+        .gradient-12 { background: linear-gradient(135deg, #4a148c 0%, #6a1b9a 100%); }
+        .gradient-13 { background: linear-gradient(135deg, #0f3460 0%, #0c2d48 100%); }
+        .gradient-14 { background: linear-gradient(135deg, #2e1065 0%, #200122 100%); }
+        .gradient-15 { background: linear-gradient(135deg, #1b1b2f 0%, #162447 100%); }
+        .gradient-16 { background: linear-gradient(135deg, #3c1361 0%, #52307c 100%); }
+        .gradient-17 { background: linear-gradient(135deg, #000428 0%, #004e92 100%); }
+        .gradient-18 { background: linear-gradient(135deg, #360033 0%, #0b8793 100%); }
+        .gradient-19 { background: linear-gradient(135deg, #0f0c29 0%, #302b63 100%); }
+        .gradient-20 { background: linear-gradient(135deg, #24243e 0%, #141e30 100%); }
+        .gradient-21 { background: linear-gradient(135deg, #1a252f 0%, #2b5876 100%); }
+        .gradient-22 { background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%); }
+        .gradient-23 { background: linear-gradient(135deg, #414345 0%, #232526 100%); }
+        .gradient-24 { background: linear-gradient(135deg, #1e130c 0%, #9a8478 100%); }
+        .gradient-25 { background: linear-gradient(135deg, #2d1b69 0%, #11998e 100%); }
+        
+        .btn-print {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            border: none;
+            padding: 12px 30px;
+            font-weight: 600;
+            border-radius: 25px;
+            color: white;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(44, 62, 80, 0.3);
+        }
+        
+        .btn-print:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(44, 62, 80, 0.4);
+            color: white;
+        }
+        
+        .btn-secondary-custom {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+        }
+        
+        .btn-secondary-custom:hover {
+            box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+        }
+        
+        /* Dynamic color classes - 25 Dark Themes */
+        .cards-wrapper.color-1 .card-barang { background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); }
+        .cards-wrapper.color-2 .card-barang { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); }
+        .cards-wrapper.color-3 .card-barang { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .cards-wrapper.color-4 .card-barang { background: linear-gradient(135deg, #134e5e 0%, #71b280 100%); }
+        .cards-wrapper.color-5 .card-barang { background: linear-gradient(135deg, #8b0000 0%, #b22222 100%); }
+        .cards-wrapper.color-6 .card-barang { background: linear-gradient(135deg, #2d5016 0%, #3e6b24 100%); }
+        .cards-wrapper.color-7 .card-barang { background: linear-gradient(135deg, #8b4513 0%, #a0522d 100%); }
+        .cards-wrapper.color-8 .card-barang { background: linear-gradient(135deg, #2c3e50 0%, #4a6741 100%); }
+        .cards-wrapper.color-9 .card-barang { background: linear-gradient(135deg, #36454f 0%, #2f4f4f 100%); }
+        .cards-wrapper.color-10 .card-barang { background: linear-gradient(135deg, #800080 0%, #4b0082 100%); }
+        .cards-wrapper.color-11 .card-barang { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+        .cards-wrapper.color-12 .card-barang { background: linear-gradient(135deg, #4a148c 0%, #6a1b9a 100%); }
+        .cards-wrapper.color-13 .card-barang { background: linear-gradient(135deg, #0f3460 0%, #0c2d48 100%); }
+        .cards-wrapper.color-14 .card-barang { background: linear-gradient(135deg, #2e1065 0%, #200122 100%); }
+        .cards-wrapper.color-15 .card-barang { background: linear-gradient(135deg, #1b1b2f 0%, #162447 100%); }
+        .cards-wrapper.color-16 .card-barang { background: linear-gradient(135deg, #3c1361 0%, #52307c 100%); }
+        .cards-wrapper.color-17 .card-barang { background: linear-gradient(135deg, #000428 0%, #004e92 100%); }
+        .cards-wrapper.color-18 .card-barang { background: linear-gradient(135deg, #360033 0%, #0b8793 100%); }
+        .cards-wrapper.color-19 .card-barang { background: linear-gradient(135deg, #0f0c29 0%, #302b63 100%); }
+        .cards-wrapper.color-20 .card-barang { background: linear-gradient(135deg, #24243e 0%, #141e30 100%); }
+        .cards-wrapper.color-21 .card-barang { background: linear-gradient(135deg, #1a252f 0%, #2b5876 100%); }
+        .cards-wrapper.color-22 .card-barang { background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%); }
+        .cards-wrapper.color-23 .card-barang { background: linear-gradient(135deg, #414345 0%, #232526 100%); }
+        .cards-wrapper.color-24 .card-barang { background: linear-gradient(135deg, #1e130c 0%, #9a8478 100%); }
+        .cards-wrapper.color-25 .card-barang { background: linear-gradient(135deg, #2d1b69 0%, #11998e 100%); }
+        
+        /* Mix gradient - rotates through different colors */
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+1) { background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+2) { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+3) { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+4) { background: linear-gradient(135deg, #134e5e 0%, #71b280 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+5) { background: linear-gradient(135deg, #8b0000 0%, #b22222 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+6) { background: linear-gradient(135deg, #2d5016 0%, #3e6b24 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+7) { background: linear-gradient(135deg, #8b4513 0%, #a0522d 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+8) { background: linear-gradient(135deg, #2c3e50 0%, #4a6741 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+9) { background: linear-gradient(135deg, #36454f 0%, #2f4f4f 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+10) { background: linear-gradient(135deg, #800080 0%, #4b0082 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+11) { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+12) { background: linear-gradient(135deg, #4a148c 0%, #6a1b9a 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+13) { background: linear-gradient(135deg, #0f3460 0%, #0c2d48 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+14) { background: linear-gradient(135deg, #2e1065 0%, #200122 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+15) { background: linear-gradient(135deg, #1b1b2f 0%, #162447 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+16) { background: linear-gradient(135deg, #3c1361 0%, #52307c 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+17) { background: linear-gradient(135deg, #000428 0%, #004e92 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+18) { background: linear-gradient(135deg, #360033 0%, #0b8793 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+19) { background: linear-gradient(135deg, #0f0c29 0%, #302b63 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+20) { background: linear-gradient(135deg, #24243e 0%, #141e30 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+21) { background: linear-gradient(135deg, #1a252f 0%, #2b5876 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+22) { background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+23) { background: linear-gradient(135deg, #414345 0%, #232526 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+24) { background: linear-gradient(135deg, #1e130c 0%, #9a8478 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+25) { background: linear-gradient(135deg, #2d1b69 0%, #11998e 100%); }
+        .cards-wrapper.color-mix .card-barang:nth-child(25n+0) { background: linear-gradient(135deg, #2d1b69 0%, #11998e 100%); }
+
+        @media print {
+            body {
+                background-color: white;
+            }
+            .print-button-container {
+                display: none;
+            }
+            .print-container {
+                box-shadow: none;
+                margin: 0;
+                padding: 10px;
+            }
+            .cards-wrapper {
+                gap: 2mm;
+            }
+            .card-barang {
+                box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+                border-width: 1.5px;
+            }
+            /* Pastikan gradien tetap tercetak dengan baik */
+            .card-barang {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .color-selector {
+                display: none;
+            }
+        }
+        
+        /* Responsive untuk layar kecil */
+        @media (max-width: 768px) {
+            .cards-wrapper {
+                justify-content: center;
+            }
+            .card-barang {
+                width: 95%;
+                max-width: 85mm;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="print-container">
+        <div class="print-button-container">
+            <div class="color-selector">
+                <h6>🌙 Pilih Tema Warna Gelap (25 Pilihan)</h6>
+                <div class="color-options">
+                    <div class="color-option gradient-1 active" data-color="1" title="Navy Slate"></div>
+                    <div class="color-option gradient-2" data-color="2" title="Ocean Deep"></div>
+                    <div class="color-option gradient-3" data-color="3" title="Purple Dusk"></div>
+                    <div class="color-option gradient-4" data-color="4" title="Forest Teal"></div>
+                    <div class="color-option gradient-5" data-color="5" title="Dark Crimson"></div>
+                    <div class="color-option gradient-6" data-color="6" title="Forest Green"></div>
+                    <div class="color-option gradient-7" data-color="7" title="Chocolate Wood"></div>
+                    <div class="color-option gradient-8" data-color="8" title="Midnight Forest"></div>
+                    <div class="color-option gradient-9" data-color="9" title="Steel Gray"></div>
+                    <div class="color-option gradient-10" data-color="10" title="Royal Purple"></div>
+                    <div class="color-option gradient-11" data-color="11" title="Dark Navy"></div>
+                    <div class="color-option gradient-12" data-color="12" title="Deep Violet"></div>
+                    <div class="color-option gradient-13" data-color="13" title="Ocean Blue"></div>
+                    <div class="color-option gradient-14" data-color="14" title="Mystic Purple"></div>
+                    <div class="color-option gradient-15" data-color="15" title="Space Blue"></div>
+                    <div class="color-option gradient-16" data-color="16" title="Galaxy Purple"></div>
+                    <div class="color-option gradient-17" data-color="17" title="Deep Ocean"></div>
+                    <div class="color-option gradient-18" data-color="18" title="Emerald Night"></div>
+                    <div class="color-option gradient-19" data-color="19" title="Cosmic Purple"></div>
+                    <div class="color-option gradient-20" data-color="20" title="Midnight Blue"></div>
+                    <div class="color-option gradient-21" data-color="21" title="Arctic Blue"></div>
+                    <div class="color-option gradient-22" data-color="22" title="Twilight Blue"></div>
+                    <div class="color-option gradient-23" data-color="23" title="Carbon Gray"></div>
+                    <div class="color-option gradient-24" data-color="24" title="Coffee Brown"></div>
+                    <div class="color-option gradient-25" data-color="25" title="Teal Mystery"></div>
+                    <div class="color-option" style="background: linear-gradient(45deg, #2c3e50 0%, #1e3c72 20%, #667eea 40%, #134e5e 60%, #8b0000 80%, #2d1b69 100%)" data-color="mix" title="Campuran Gelap (Semua Warna)"></div>
+                </div>
+            </div>
+            
+            <div>
+                <button class="btn-print" onclick="window.print()">
+                    🖨️ Cetak Semua Kartu
+                </button>
+                <a href="{{ url_for('admin.dashboard') }}" class="btn-print btn-secondary-custom">
+                    ← Kembali ke Dashboard
+                </a>
+            </div>
+        </div>
+        
+        <div class="cards-wrapper color-1" id="cardsWrapper">
+            {% for pendaftar in semua_pendaftar %}
+                {# Cetak kartu pertama untuk santri #}
+                <div class="card-barang">
+                    <div class="card-content">
+                        <h5>KARTU BARANG {{ 'PUTRA' if pendaftar.santri.jenis_kelamin == 'PUTRA' else 'PUTRI' }}</h5>
+                        <div class="card-grid">
+                            <div class="card-item">
+                                <strong>👤 Nama Santri</strong>
+                                <p>{{ pendaftar.santri.nama }}</p>
+                            </div>
+                            <div class="card-item">
+                                <strong>📍 Alamat</strong>
+                                <p>{{ pendaftar.santri.kabupaten }}</p>
+                            </div>
+                            <div class="card-item">
+                                <strong>👥 Rombongan</strong>
+                                <p>{{ pendaftar.rombongan_pulang.nama_rombongan if pendaftar.rombongan_pulang else 'N/A' }}</p>
+                            </div>
+                            <div class="card-item">
+                                <strong>📌 Titik Turun</strong>
+                                <p>{{ pendaftar.titik_turun or '-' }}</p>
+                            </div>
+                            <div class="card-item" style="grid-column: span 2;">
+                                <strong>🚌 Nama Bus</strong>
+                                <p>{{ pendaftar.bus_pulang.nama_armada if pendaftar.bus_pulang else '-' }} - {{ pendaftar.bus_pulang.nomor_lambung or pendaftar.bus_pulang.plat_nomor or '-' }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {# Cetak kartu kedua (identik) #}
+                <div class="card-barang">
+                    <div class="card-content">
+                        <h5>KARTU BARANG {{ 'PUTRA' if pendaftar.santri.jenis_kelamin == 'PUTRA' else 'PUTRI' }}</h5>
+                        <div class="card-grid">
+                            <div class="card-item">
+                                <strong>👤 Nama Santri</strong>
+                                <p>{{ pendaftar.santri.nama }}</p>
+                            </div>
+                            <div class="card-item">
+                                <strong>📍 Alamat</strong>
+                                <p>{{ pendaftar.santri.kabupaten }}</p>
+                            </div>
+                            <div class="card-item">
+                                <strong>👥 Rombongan</strong>
+                                <p>{{ pendaftar.rombongan_pulang.nama_rombongan if pendaftar.rombongan_pulang else 'N/A' }}</p>
+                            </div>
+                            <div class="card-item">
+                                <strong>📌 Titik Turun</strong>
+                                <p>{{ pendaftar.titik_turun or '-' }}</p>
+                            </div>
+                            <div class="card-item" style="grid-column: span 2;">
+                                <strong>🚌 Nama Bus</strong>
+                                <p>{{ pendaftar.bus_pulang.nama_armada if pendaftar.bus_pulang else '-' }} - {{ pendaftar.bus_pulang.nomor_lambung or pendaftar.bus_pulang.plat_nomor or '-' }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="alert alert-warning">
+                    <h5>⚠️ Tidak Ada Data</h5>
+                    <p>Tidak ada data santri terdaftar di rombongan yang Anda kelola untuk dicetak.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        // Script untuk mengubah warna kartu
+        document.addEventListener('DOMContentLoaded', function() {
+            const colorOptions = document.querySelectorAll('.color-option');
+            const cardsWrapper = document.getElementById('cardsWrapper');
+            
+            colorOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    // Hapus active dari semua opsi
+                    colorOptions.forEach(opt => opt.classList.remove('active'));
+                    
+                    // Tambah active ke opsi yang dipilih
+                    this.classList.add('active');
+                    
+                    // Hapus semua class color sebelumnya
+                    cardsWrapper.className = 'cards-wrapper';
+                    
+                    // Tambah class color baru
+                    const selectedColor = this.getAttribute('data-color');
+                    cardsWrapper.classList.add('color-' + selectedColor);
+                });
+            });
+        });
+        
+        // Preview warna saat hover
+        document.querySelectorAll('.color-option').forEach(option => {
+            option.addEventListener('mouseenter', function() {
+                if (!this.classList.contains('active')) {
+                    const cardsWrapper = document.getElementById('cardsWrapper');
+                    const tempColor = this.getAttribute('data-color');
+                    cardsWrapper.style.transition = 'all 0.3s ease';
+                    
+                    // Simpan class asli
+                    const originalClass = cardsWrapper.className;
+                    
+                    // Terapkan warna preview
+                    cardsWrapper.className = 'cards-wrapper color-' + tempColor;
+                    
+                    // Kembalikan ke warna asli saat mouse leave
+                    this.addEventListener('mouseleave', function() {
+                        setTimeout(() => {
+                            if (!document.querySelector('.color-option:hover')) {
+                                cardsWrapper.className = originalClass;
+                            }
+                        }, 100);
+                    }, { once: true });
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>

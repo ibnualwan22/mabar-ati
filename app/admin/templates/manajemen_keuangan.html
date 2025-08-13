@@ -3,18 +3,10 @@
 {% block title %}Manajemen Keuangan{% endblock %}
 
 {% block content %}
-<style>
-    .card-header h5 {
-        margin-bottom: 0;
-    }
-    .table-sm th, .table-sm td {
-        padding: 0.5rem;
-    }
-</style>
-
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Manajemen Keuangan</h1>
 </div>
+<p>Halaman ini menampilkan ringkasan data finansial berdasarkan rombongan yang Anda kelola untuk edisi yang sedang aktif.</p>
 
 {% if active_edisi %}
     <div class="row g-4">
@@ -23,35 +15,64 @@
                 <div class="card-header"><h4>Ringkasan Keuangan Global</h4></div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-4"><strong>Total Pemasukan:</strong></div>
-                        <div class="col-md-8">Rp {{ "{:,.0f}".format(data.global_total).replace(',', '.') }}</div>
+                        <div class="col-md-4"><strong>Total Pemasukan Seharusnya:</strong></div>
+                        <div class="col-md-8 fw-bold">Rp {{ "{:,.0f}".format(data.global_total).replace(',', '.') }}</div>
                     </div>
+                    <hr>
                     <div class="row text-success">
-                        <div class="col-md-4"><strong>Sudah Lunas:</strong></div>
-                        <div class="col-md-8">Rp {{ "{:,.0f}".format(data.global_lunas).replace(',', '.') }}</div>
+                        <div class="col-md-4"><strong>Total Diterima (Lunas):</strong></div>
+                        <div class="col-md-8 fw-bold">Rp {{ "{:,.0f}".format(data.global_lunas).replace(',', '.') }}</div>
                     </div>
                     <div class="row text-danger">
-                        <div class="col-md-4"><strong>Belum Lunas:</strong></div>
-                        <div class="col-md-8">Rp {{ "{:,.0f}".format(data.global_belum_lunas).replace(',', '.') }}</div>
+                        <div class="col-md-4"><strong>Sisa Tagihan (Belum Lunas):</strong></div>
+                        <div class="col-md-8 fw-bold">Rp {{ "{:,.0f}".format(data.global_belum_lunas).replace(',', '.') }}</div>
                     </div>
                 </div>
             </div>
 
             <div class="card mb-4">
-                <div class="card-header"><h5>Rincian Perjalanan Pulang</h5></div>
+                <div class="card-header"><h5 class="mb-0"><i class="fas fa-arrow-right-from-bracket me-2"></i>Rincian Perjalanan Pulang</h5></div>
                 <div class="card-body">
-                    <p><strong>Total:</strong> Rp {{ "{:,.0f}".format(data.pulang_total).replace(',', '.') }} | 
-                       <strong class="text-success">Lunas:</strong> Rp {{ "{:,.0f}".format(data.pulang_lunas).replace(',', '.') }} |
-                       <strong class="text-danger">Belum Lunas:</strong> Rp {{ "{:,.0f}".format(data.pulang_belum_lunas).replace(',', '.') }}</p>
+                    <div class="row border-bottom pb-3 mb-3">
+                        <div class="col"><strong>Total:</strong><br>Rp {{ "{:,.0f}".format(data.pulang_total).replace(',', '.') }}</div>
+                        <div class="col text-success"><strong>Lunas:</strong><br>Rp {{ "{:,.0f}".format(data.pulang_lunas).replace(',', '.') }}</div>
+                        <div class="col text-danger"><strong>Belum Lunas:</strong><br>Rp {{ "{:,.0f}".format(data.pulang_belum_lunas).replace(',', '.') }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-money-bill-wave me-2"></i>Via Cash</h6>
+                            <p class="text-success mb-1">Lunas: <span class="float-end">Rp {{ "{:,.0f}".format(data.pulang_cash_lunas).replace(',', '.') }}</span></p>
+                            <p class="text-danger">Belum Lunas: <span class="float-end">Rp {{ "{:,.0f}".format(data.pulang_belum_lunas).replace(',', '.') }}</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-exchange-alt me-2"></i>Via Transfer</h6>
+                            <p class="text-success mb-1">Lunas: <span class="float-end">Rp {{ "{:,.0f}".format(data.pulang_transfer_lunas).replace(',', '.') }}</span></p>
+                            <p class="text-danger">Belum Lunas: <span class="float-end">Rp {{ "{:,.0f}".format(data.pulang_transfer_belum).replace(',', '.') }}</span></p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div class="card">
-                <div class="card-header"><h5>Rincian Perjalanan Kembali</h5></div>
+                <div class="card-header"><h5 class="mb-0"><i class="fas fa-arrow-right-to-bracket me-2"></i>Rincian Perjalanan Kembali</h5></div>
                 <div class="card-body">
-                    <p><strong>Total:</strong> Rp {{ "{:,.0f}".format(data.kembali_total).replace(',', '.') }} | 
-                       <strong class="text-success">Lunas:</strong> Rp {{ "{:,.0f}".format(data.kembali_lunas).replace(',', '.') }} |
-                       <strong class="text-danger">Belum Lunas:</strong> Rp {{ "{:,.0f}".format(data.kembali_belum_lunas).replace(',', '.') }}</p>
+                     <div class="row border-bottom pb-3 mb-3">
+                        <div class="col"><strong>Total:</strong><br>Rp {{ "{:,.0f}".format(data.kembali_total).replace(',', '.') }}</div>
+                        <div class="col text-success"><strong>Lunas:</strong><br>Rp {{ "{:,.0f}".format(data.kembali_lunas).replace(',', '.') }}</div>
+                        <div class="col text-danger"><strong>Belum Lunas:</strong><br>Rp {{ "{:,.0f}".format(data.kembali_belum_lunas).replace(',', '.') }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-money-bill-wave me-2"></i>Via Cash</h6>
+                            <p class="text-success mb-1">Lunas: <span class="float-end">Rp {{ "{:,.0f}".format(data.kembali_cash_lunas).replace(',', '.') }}</span></p>
+                            <p class="text-danger">Belum Lunas: <span class="float-end">Rp {{ "{:,.0f}".format(data.kembali_belum_lunas).replace(',', '.') }}</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-exchange-alt me-2"></i>Via Transfer</h6>
+                            <p class="text-success mb-1">Lunas: <span class="float-end">Rp {{ "{:,.0f}".format(data.kembali_transfer_lunas).replace(',', '.') }}</span></p>
+                            <p class="text-danger">Belum Lunas: <span class="float-end">Rp {{ "{:,.0f}".format(data.kembali_transfer_belum).replace(',', '.') }}</span></p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -62,50 +83,23 @@
                 <div class="card-body">
                     <h6 class="card-title"><strong>Total Alokasi</strong></h6>
                     <ul class="list-group list-group-flush mb-3">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Biaya Bus
-                            <span class="badge bg-primary rounded-pill">Rp {{ "{:,.0f}".format(data.alokasi_bus_pulang + data.alokasi_bus_kembali).replace(',', '.') }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Fee Korda
-                            <span class="badge bg-info rounded-pill">Rp {{ "{:,.0f}".format(data.alokasi_korda_pulang + data.alokasi_korda_kembali).replace(',', '.') }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Fee Pondok
-                            <span class="badge bg-secondary rounded-pill">Rp {{ "{:,.0f}".format(data.alokasi_pondok_pulang + data.alokasi_pondok_kembali).replace(',', '.') }}</span>
-                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">Biaya Bus<span class="badge bg-primary rounded-pill">Rp {{ "{:,.0f}".format(data.alokasi_bus_pulang + data.alokasi_bus_kembali).replace(',', '.') }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">Fee Korda<span class="badge bg-info rounded-pill">Rp {{ "{:,.0f}".format(data.alokasi_korda_pulang + data.alokasi_korda_kembali).replace(',', '.') }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">Fee Pondok<span class="badge bg-secondary rounded-pill">Rp {{ "{:,.0f}".format(data.alokasi_pondok_pulang + data.alokasi_pondok_kembali).replace(',', '.') }}</span></li>
                     </ul>
 
                     <h6 class="card-title"><strong>Rincian Pulang</strong></h6>
                     <ul class="list-group list-group-flush mb-3">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Biaya Bus (Pulang)
-                    <span class="badge bg-light text-dark rounded-pill">Rp {{ "{:,.0f}".format(data.alokasi_bus_pulang).replace(',', '.') }}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Fee Korda (Pulang)
-                    <span class="badge bg-light text-dark rounded-pill">Rp {{ "{:,.0f}".format(data.alokasi_korda_pulang).replace(',', '.') }}</span>
-                </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Fee Pondok (Pulang)
-                            <span class="badge bg-light text-dark rounded-pill">Rp {{ "{:,.0f}".format(data.alokasi_pondok_pulang).replace(',', '.') }}</span>
-                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center"><small>Biaya Bus (Pulang)</small><span class="badge bg-light text-dark rounded-pill">Rp {{ "{:,.0f}".format(data.alokasi_bus_pulang).replace(',', '.') }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center"><small>Fee Korda (Pulang)</small><span class="badge bg-light text-dark rounded-pill">Rp {{ "{:,.0f}".format(data.alokasi_korda_pulang).replace(',', '.') }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center"><small>Fee Pondok (Pulang)</small><span class="badge bg-light text-dark rounded-pill">Rp {{ "{:,.0f}".format(data.alokasi_pondok_pulang).replace(',', '.') }}</span></li>
                     </ul>
 
                     <h6 class="card-title"><strong>Rincian Kembali</strong></h6>
                     <ul class="list-group list-group-flush">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Biaya Bus (Kembali)
-                    <span class="badge bg-light text-dark rounded-pill">Rp {{ "{:,.0f}".format(data.alokasi_bus_kembali).replace(',', '.') }}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Fee Korda (Kembali)
-                    <span class="badge bg-light text-dark rounded-pill">Rp {{ "{:,.0f}".format(data.alokasi_korda_kembali).replace(',', '.') }}</span>
-                </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                           Fee Pondok (Kembali)
-                           <span class="badge bg-light text-dark rounded-pill">Rp {{ "{:,.0f}".format(data.alokasi_pondok_kembali).replace(',', '.') }}</span>
-                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center"><small>Biaya Bus (Kembali)</small><span class="badge bg-light text-dark rounded-pill">Rp {{ "{:,.0f}".format(data.alokasi_bus_kembali).replace(',', '.') }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center"><small>Fee Korda (Kembali)</small><span class="badge bg-light text-dark rounded-pill">Rp {{ "{:,.0f}".format(data.alokasi_korda_kembali).replace(',', '.') }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center"><small>Fee Pondok (Kembali)</small><span class="badge bg-light text-dark rounded-pill">Rp {{ "{:,.0f}".format(data.alokasi_pondok_kembali).replace(',', '.') }}</span></li>
                     </ul>
                 </div>
             </div>
@@ -114,5 +108,4 @@
 {% else %}
     <div class="alert alert-warning">Tidak ada edisi yang aktif. Silakan aktifkan satu edisi di Manajemen Edisi.</div>
 {% endif %}
-
 {% endblock %}
