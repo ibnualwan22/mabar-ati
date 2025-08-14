@@ -5,7 +5,7 @@ from app.admin.forms import RombonganForm, SantriEditForm, PendaftaranForm, Pend
 from app import db, login_manager
 import json, requests
 from collections import defaultdict
-from sqlalchemy import update, text, or_
+from sqlalchemy import update, text, or_, and_
 from datetime import date, datetime
 from flask_login import login_user, logout_user, current_user, login_required
 from functools import wraps
@@ -1734,87 +1734,184 @@ def log_aktivitas():
 @login_required
 @role_required('Korpus', 'Korwil', 'Korda')
 def manajemen_santri_wilayah():
-    page = request.args.get('page', 1, type=int)
+    """Menampilkan daftar santri yang relevan dengan wilayah Korda/Korwil dengan statistik dan filter detail."""
     active_edisi = get_active_edisi()
+    if not active_edisi:
+        flash('Tidak ada edisi yang aktif.', 'warning')
+        return render_template('manajemen_santri_wilayah.html', pagination=None, stats={}, pendaftaran_map={})
+
+    # 1. Tentukan santri dan rombongan yang relevan berdasarkan cakupan wilayah user
+    santri_in_wilayah_ids = []
+    managed_rombongan_ids = []
     
-    # --- 1. Tentukan Cakupan Wilayah Berdasarkan Peran ---
-    query = Santri.query
-    managed_regions = set()
     if current_user.role.name in ['Korwil', 'Korda']:
+        managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+        wilayah_kelolaan = set()
         for rombongan in current_user.managed_rombongan:
             if rombongan.cakupan_wilayah:
                 for wilayah in rombongan.cakupan_wilayah:
-                    managed_regions.add(wilayah.get('label'))
+                    wilayah_kelolaan.add(wilayah.get('label'))
         
-        if managed_regions:
-            query = query.filter(Santri.kabupaten.in_(list(managed_regions)))
-        else:
-            query = query.filter(db.false())
+        if wilayah_kelolaan:
+            santri_in_wilayah_ids = [s.id for s in Santri.query.with_entities(Santri.id).filter(Santri.kabupaten.in_(list(wilayah_kelolaan))).all()]
+    else: # Korpus melihat semua santri
+        santri_in_wilayah_ids = [s.id for s in Santri.query.with_entities(Santri.id).all()]
 
-    # --- 2. Ambil Data Santri & ID Pendaftar untuk Kalkulasi ---
-    # Gunakan subquery untuk menghindari join ambigu
-    pendaftar_ids_di_edisi = []
-    if active_edisi:
-        # --- PERBAIKI QUERY DI SINI ---
-        subquery = db.session.query(Pendaftaran.santri_id).join(
-            Rombongan, or_(
-                Pendaftaran.rombongan_pulang_id == Rombongan.id,
-                Pendaftaran.rombongan_kembali_id == Rombongan.id
-            )   
-        ).filter(Rombongan.edisi_id == active_edisi.id)
-        pendaftar_ids_di_edisi = {item[0] for item in subquery.all()}
+    # 2. Hitung semua statistik yang dibutuhkan
+    stats = {}
+    if santri_in_wilayah_ids:
+        # Statistik Total Santri di Wilayah
+        stats['total_putra'] = Santri.query.filter(Santri.id.in_(santri_in_wilayah_ids), Santri.jenis_kelamin == 'PUTRA').count()
+        stats['total_putri'] = Santri.query.filter(Santri.id.in_(santri_in_wilayah_ids), Santri.jenis_kelamin == 'PUTRI').count()
+        
+        # Logika perhitungan statistik pendaftaran yang presisi
+        base_pendaftaran_query = Pendaftaran.query.filter(
+            Pendaftaran.edisi_id == active_edisi.id,
+            Pendaftaran.santri_id.in_(santri_in_wilayah_ids)
+        )
+
+        if current_user.role.name in ['Korwil', 'Korda'] and managed_rombongan_ids:
+            # Untuk Korda/Korwil, hitung hanya yang terkait rombongan mereka
+            pendaftar_ids_managed = db.session.query(Pendaftaran.santri_id).filter(
+                Pendaftaran.edisi_id == active_edisi.id,
+                Pendaftaran.santri_id.in_(santri_in_wilayah_ids),
+                or_(
+                    Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids),
+                    Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids)
+                )
+            ).distinct().all()
+            pendaftar_ids = [p[0] for p in pendaftar_ids_managed]
+
+            # Detail Perjalanan (hanya dari rombongan yang dikelola)
+            stats['total_pulang_putra'] = base_pendaftaran_query.join(Pendaftaran.santri).filter(Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids), Pendaftaran.status_pulang != 'Tidak Ikut', Santri.jenis_kelamin == 'PUTRA').count()
+            stats['total_pulang_putri'] = base_pendaftaran_query.join(Pendaftaran.santri).filter(Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids), Pendaftaran.status_pulang != 'Tidak Ikut', Santri.jenis_kelamin == 'PUTRI').count()
+            stats['total_kembali_putra'] = base_pendaftaran_query.join(Pendaftaran.santri).filter(Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids), Pendaftaran.status_kembali != 'Tidak Ikut', Santri.jenis_kelamin == 'PUTRA').count()
+            stats['total_kembali_putri'] = base_pendaftaran_query.join(Pendaftaran.santri).filter(Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids), Pendaftaran.status_kembali != 'Tidak Ikut', Santri.jenis_kelamin == 'PUTRI').count()
+        else: # Untuk Korpus, hitung semua pendaftaran di wilayah tersebut
+            pendaftar_ids_all = db.session.query(Pendaftaran.santri_id).filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.santri_id.in_(santri_in_wilayah_ids)).distinct().all()
+            pendaftar_ids = [p[0] for p in pendaftar_ids_all]
+            stats['total_pulang_putra'] = base_pendaftaran_query.join(Pendaftaran.santri).filter(Pendaftaran.status_pulang != 'Tidak Ikut', Santri.jenis_kelamin == 'PUTRA').count()
+            stats['total_pulang_putri'] = base_pendaftaran_query.join(Pendaftaran.santri).filter(Pendaftaran.status_pulang != 'Tidak Ikut', Santri.jenis_kelamin == 'PUTRI').count()
+            stats['total_kembali_putra'] = base_pendaftaran_query.join(Pendaftaran.santri).filter(Pendaftaran.status_kembali != 'Tidak Ikut', Santri.jenis_kelamin == 'PUTRA').count()
+            stats['total_kembali_putri'] = base_pendaftaran_query.join(Pendaftaran.santri).filter(Pendaftaran.status_kembali != 'Tidak Ikut', Santri.jenis_kelamin == 'PUTRI').count()
+        if current_user.role.name in ['Korwil', 'Korda'] and managed_rombongan_ids:
+    # Hitung yang sudah daftar pulang per jenis kelamin (dari rombongan yang dikelola)
+            stats['putra_daftar_pulang'] = base_pendaftaran_query.join(Pendaftaran.santri).filter(
+                Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids), 
+                Pendaftaran.status_pulang != 'Tidak Ikut', 
+                Santri.jenis_kelamin == 'PUTRA'
+            ).distinct(Pendaftaran.santri_id).count()
     
-    santri_di_wilayah = query.all()
+            stats['putri_daftar_pulang'] = base_pendaftaran_query.join(Pendaftaran.santri).filter(
+                Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids), 
+                Pendaftaran.status_pulang != 'Tidak Ikut', 
+                Santri.jenis_kelamin == 'PUTRI'
+            ).distinct(Pendaftaran.santri_id).count()
     
-    # --- 3. Hitung Statistik untuk Kartu ---
-    stats = {
-        'total_putra': len([s for s in santri_di_wilayah if s.jenis_kelamin == 'PUTRA']),
-        'total_putri': len([s for s in santri_di_wilayah if s.jenis_kelamin == 'PUTRI']),
-        'putra_terdaftar': len([s for s in santri_di_wilayah if s.jenis_kelamin == 'PUTRA' and s.id in pendaftar_ids_di_edisi]),
-        'putri_terdaftar': len([s for s in santri_di_wilayah if s.jenis_kelamin == 'PUTRI' and s.id in pendaftar_ids_di_edisi])
-    }
-    stats['putra_belum_daftar'] = stats['total_putra'] - stats['putra_terdaftar']
-    stats['putri_belum_daftar'] = stats['total_putri'] - stats['putri_terdaftar']
+    # Hitung yang sudah daftar kembali per jenis kelamin (dari rombongan yang dikelola)
+            stats['putra_daftar_kembali'] = base_pendaftaran_query.join(Pendaftaran.santri).filter(
+                Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids), 
+                Pendaftaran.status_kembali != 'Tidak Ikut', 
+                Santri.jenis_kelamin == 'PUTRA'
+            ).distinct(Pendaftaran.santri_id).count()
+    
+            stats['putri_daftar_kembali'] = base_pendaftaran_query.join(Pendaftaran.santri).filter(
+                Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids), 
+                Pendaftaran.status_kembali != 'Tidak Ikut', 
+                Santri.jenis_kelamin == 'PUTRI'
+            ).distinct(Pendaftaran.santri_id).count()
+    
+        else:  # Untuk Korpus
+            stats['putra_daftar_pulang'] = base_pendaftaran_query.join(Pendaftaran.santri).filter(
+                Pendaftaran.status_pulang != 'Tidak Ikut', 
+                Santri.jenis_kelamin == 'PUTRA'
+            ).distinct(Pendaftaran.santri_id).count()
+    
+            stats['putri_daftar_pulang'] = base_pendaftaran_query.join(Pendaftaran.santri).filter(
+                Pendaftaran.status_pulang != 'Tidak Ikut', 
+                Santri.jenis_kelamin == 'PUTRI'
+            ).distinct(Pendaftaran.santri_id).count()
+    
+            stats['putra_daftar_kembali'] = base_pendaftaran_query.join(Pendaftaran.santri).filter(
+                Pendaftaran.status_kembali != 'Tidak Ikut', 
+                Santri.jenis_kelamin == 'PUTRA'
+            ).distinct(Pendaftaran.santri_id).count()
+    
+            stats['putri_daftar_kembali'] = base_pendaftaran_query.join(Pendaftaran.santri).filter(
+                Pendaftaran.status_kembali != 'Tidak Ikut', 
+                Santri.jenis_kelamin == 'PUTRI'
+            ).distinct(Pendaftaran.santri_id).count()
+        # Update stats turunan berdasarkan pendaftar yang relevan
+        stats['putra_terdaftar'] = Santri.query.filter(Santri.id.in_(pendaftar_ids), Santri.jenis_kelamin == 'PUTRA').count()
+        stats['putri_terdaftar'] = Santri.query.filter(Santri.id.in_(pendaftar_ids), Santri.jenis_kelamin == 'PUTRI').count()
+        stats['putra_belum_daftar'] = stats['total_putra'] - stats['putra_terdaftar']
+        stats['putri_belum_daftar'] = stats['total_putri'] - stats['putri_terdaftar']
+        stats['total_pendaftaran'] = len(pendaftar_ids)
 
-    # --- 4. Terapkan Filter dari Pengguna untuk Tabel ---
-    f_nama = request.args.get('nama')
-    f_jenis_kelamin = request.args.get('jenis_kelamin')
-    f_status_santri = request.args.get('status_santri')
-    f_status_daftar = request.args.get('status_daftar')
+    # 3. Siapkan query dasar untuk daftar santri di tabel
+    query = Santri.query.filter(Santri.id.in_(santri_in_wilayah_ids))
 
-    if f_nama: query = query.filter(Santri.nama.ilike(f'%{f_nama}%'))
-    if f_jenis_kelamin: query = query.filter(Santri.jenis_kelamin == f_jenis_kelamin)
-    if f_status_santri: query = query.filter(Santri.status_santri == f_status_santri)
-    if f_status_daftar:
-        if f_status_daftar == 'sudah':
-            query = query.filter(Santri.id.in_(pendaftar_ids_di_edisi))
-        elif f_status_daftar == 'belum':
-            query = query.filter(~Santri.id.in_(pendaftar_ids_di_edisi))
+    # 4. Terapkan filter dari form
+    nama_filter = request.args.get('nama')
+    gender_filter = request.args.get('jenis_kelamin')
+    status_santri_filter = request.args.get('status_santri')
+    status_daftar_filter = request.args.get('status_daftar')
 
-    pagination = query.order_by(Santri.nama).paginate(page=page, per_page=200, error_out=False)
+    if nama_filter:
+        query = query.filter(Santri.nama.ilike(f'%{nama_filter}%'))
+    if gender_filter:
+        query = query.filter(Santri.jenis_kelamin == gender_filter)
+    if status_santri_filter:
+        query = query.filter(Santri.status_santri == status_santri_filter)
+    
+    # Blok logika filter pendaftaran baru yang andal
+    if status_daftar_filter and santri_in_wilayah_ids:
+        rombongan_filter_pulang = db.true()
+        rombongan_filter_kembali = db.true()
+        if current_user.role.name in ['Korwil', 'Korda'] and managed_rombongan_ids:
+            rombongan_filter_pulang = Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids)
+            rombongan_filter_kembali = or_(
+                Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids),
+                and_(Pendaftaran.rombongan_kembali_id.is_(None), Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids))
+            )
 
-    santri_list = pagination.items
+        if status_daftar_filter == 'sudah_pulang':
+            santri_ids = [s_id for s_id, in db.session.query(Pendaftaran.santri_id).filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.santri_id.in_(santri_in_wilayah_ids), Pendaftaran.status_pulang != 'Tidak Ikut', rombongan_filter_pulang).distinct()]
+            query = query.filter(Santri.id.in_(santri_ids))
+        elif status_daftar_filter == 'belum_pulang':
+            santri_ids_sudah = [s_id for s_id, in db.session.query(Pendaftaran.santri_id).filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.santri_id.in_(santri_in_wilayah_ids), Pendaftaran.status_pulang != 'Tidak Ikut', rombongan_filter_pulang).distinct()]
+            query = query.filter(Santri.id.notin_(santri_ids_sudah))
+        elif status_daftar_filter == 'sudah_kembali':
+            santri_ids = [s_id for s_id, in db.session.query(Pendaftaran.santri_id).filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.santri_id.in_(santri_in_wilayah_ids), Pendaftaran.status_kembali != 'Tidak Ikut', rombongan_filter_kembali).distinct()]
+            query = query.filter(Santri.id.in_(santri_ids))
+        elif status_daftar_filter == 'belum_kembali':
+            santri_ids_sudah = [s_id for s_id, in db.session.query(Pendaftaran.santri_id).filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.santri_id.in_(santri_in_wilayah_ids), Pendaftaran.status_kembali != 'Tidak Ikut', rombongan_filter_kembali).distinct()]
+            query = query.filter(Santri.id.notin_(santri_ids_sudah))
+    
+    # 5. Lakukan paginasi
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    pagination = query.order_by(Santri.nama).paginate(page=page, per_page=per_page, error_out=False)
+    
+    # 6. Ambil data pendaftaran yang relevan untuk santri di halaman saat ini
+    santri_ids_on_page = [s.id for s in pagination.items]
+    pendaftaran_map = {}
+    if santri_ids_on_page:
+        pendaftarans_on_page = Pendaftaran.query.options(
+            selectinload(Pendaftaran.bus_pulang),
+            selectinload(Pendaftaran.bus_kembali)
+        ).filter(
+            Pendaftaran.edisi_id == active_edisi.id,
+            Pendaftaran.santri_id.in_(santri_ids_on_page)
+        ).all()
+        pendaftaran_map = {p.santri_id: p for p in pendaftarans_on_page}
 
-# --- TAMBAHKAN KODE DI BAWAH INI ---
-# Ambil ID santri hanya dari halaman saat ini untuk efisiensi
-    santri_ids_on_page = [s.id for s in santri_list]
-
-# Cari pendaftaran yang relevan untuk santri di halaman ini & edisi aktif
-    pendaftarans = Pendaftaran.query.options(
-    joinedload(Pendaftaran.bus_pulang),    # Ambil data bus pulang
-    joinedload(Pendaftaran.bus_kembali)  # Ambil data bus kembali
-    ).filter(
-    Pendaftaran.edisi_id == active_edisi.id,
-    Pendaftaran.santri_id.in_(santri_ids_on_page)
-    ).all()
-# Buat kamus/map untuk pencarian cepat di template: {santri_id: objek_pendaftaran}
-    pendaftaran_map = {p.santri_id: p for p in pendaftarans}
-# ------------------------------------
-
+    # 7. Render template dengan semua data
     return render_template('manajemen_santri_wilayah.html',
-                       pagination=pagination,
-                       stats=stats,
-                       pendaftaran_map=pendaftaran_map)
+                           pagination=pagination,
+                           stats=stats,
+                           pendaftaran_map=pendaftaran_map,
+                           active_edisi=active_edisi)
 
 @admin_bp.route('/rombongan/salin-dari-sebelumnya', methods=['POST'])
 @login_required

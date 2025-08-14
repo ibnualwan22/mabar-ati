@@ -4,98 +4,600 @@
 
 {% block content %}
 <style>
-    .status-badge {
-        font-size: 0.85em;
-        font-weight: 600;
-        padding: 0.4em 0.7em;
-        border-radius: .375rem;
+    .page-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+        border-radius: var(--border-radius);
+        color: white;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
     }
-    .status-lunas { background-color: #d4edda; color: #155724; }
-    .status-belum { background-color: #f8d7da; color: #721c24; }
-    .status-pulang { background-color: #cff4fc; color: #055160; }
-    .status-kembali { background-color: #e2e3e5; color: #41464b; }
+    
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 150px;
+        height: 150px;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" opacity="0.1"><path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2M4 18v-6h3v7c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-7h3v6l2.05-7.38c.34-1.22-.71-2.41-1.95-2.41H9.7c-.55 0-1.09.26-1.42.71L6.72 12 4 18z"/></svg>') no-repeat center;
+        background-size: contain;
+        opacity: 0.1;
+    }
+    
+    .page-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .page-subtitle {
+        font-size: 1.125rem;
+        opacity: 0.9;
+        margin-bottom: 1.5rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 1rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .stat-card {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: var(--border-radius);
+        padding: 1.25rem;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        text-align: center;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stat-label {
+        font-size: 0.875rem;
+        opacity: 0.9;
+    }
+    
+    .main-card {
+        border: none;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        border-radius: 12px;
+        overflow: hidden;
+        background: white;
+    }
+    
+    .card-header {
+        background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+        border-bottom: 1px solid #e2e8f0;
+        padding: 1.5rem;
+    }
+    
+    .card-header h5 {
+        margin: 0;
+        color: var(--text-primary);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .header-icon {
+        width: 36px;
+        height: 36px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1rem;
+    }
+    
+    .enhanced-table {
+        margin: 0;
+    }
+    
+    .enhanced-table th {
+        background: #fafbfc;
+        color: var(--text-primary);
+        font-weight: 600;
+        border: none;
+        padding: 1rem 0.875rem;
+        font-size: 0.875rem;
+        border-bottom: 2px solid #e2e8f0;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    
+    .enhanced-table td {
+        border: none;
+        padding: 1rem 0.875rem;
+        font-size: 0.875rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .enhanced-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+    
+    .enhanced-table tbody tr {
+        transition: all 0.2s ease;
+    }
+    
+    .enhanced-table tbody tr:hover {
+        background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+    
+    .student-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .student-name {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+    
+    .student-details {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        background: #f8fafc;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        display: inline-block;
+    }
+    
+    .location-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .asrama-badge {
+        background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+        color: #3730a3;
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        display: inline-block;
+        max-width: fit-content;
+    }
+    
+    .alamat-text {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        margin-top: 0.25rem;
+    }
+    
+    .route-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        font-size: 0.75rem;
+    }
+    
+    .route-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.375rem 0.5rem;
+        border-radius: 6px;
+    }
+    
+    .route-turun {
+        background: linear-gradient(135deg, #fff7ed, #fed7aa);
+        color: #9a3412;
+        border: 1px solid #fdba74;
+    }
+    
+    .route-jemput {
+        background: linear-gradient(135deg, #f0fdf4, #bbf7d0);
+        color: #166534;
+        border: 1px solid #86efac;
+    }
+    
+    .route-icon {
+        width: 16px;
+        height: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.625rem;
+    }
+    
+    .bus-badge {
+        background: linear-gradient(135deg, #cffafe, #a5f3fc);
+        color: #0c4a6e;
+        border: 1px solid #67e8f9;
+        font-weight: 600;
+        padding: 0.375rem 0.625rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        display: inline-block;
+        max-width: 120px;
+        text-align: center;
+        line-height: 1.2;
+    }
+    
+    .status-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .status-badge {
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.375rem 0.625rem;
+        border-radius: 8px;
+        text-align: center;
+        border: 1px solid transparent;
+    }
+    
+    .status-lunas { 
+        background: linear-gradient(135deg, #dcfce7, #bbf7d0); 
+        color: #166534; 
+        border-color: #86efac;
+    }
+    
+    .status-belum { 
+        background: linear-gradient(135deg, #fef2f2, #fecaca); 
+        color: #991b1b; 
+        border-color: #fca5a5;
+    }
+    
+    .status-pulang { 
+        background: linear-gradient(135deg, #e0f2fe, #bae6fd); 
+        color: #0c4a6e; 
+        border-color: #7dd3fc;
+    }
+    
+    .status-kembali { 
+        background: linear-gradient(135deg, #f3f4f6, #e5e7eb); 
+        color: #374151; 
+        border-color: #d1d5db;
+    }
+    
+    .action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        min-width: 80px;
+    }
+    
+    .btn-edit {
+        background: linear-gradient(135deg, #f59e0b, #f97316);
+        border: none;
+        color: white;
+        font-size: 0.75rem;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-edit:hover {
+        background: linear-gradient(135deg, #f97316, #ea580c);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(251, 146, 60, 0.3);
+        color: white;
+    }
+    
+    .btn-delete {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        border: none;
+        color: white;
+        font-size: 0.75rem;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-delete:hover {
+        background: linear-gradient(135deg, #dc2626, #b91c1c);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+    }
+    
+    .back-btn {
+        background: linear-gradient(135deg, #64748b, #475569);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--border-radius);
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(100, 116, 139, 0.3);
+    }
+    
+    .back-btn:hover {
+        background: linear-gradient(135deg, #475569, #334155);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(100, 116, 139, 0.4);
+        color: white;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--text-secondary);
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1.5rem;
+        opacity: 0.3;
+    }
+    
+    .empty-state h4 {
+        color: var(--text-primary);
+        margin-bottom: 1rem;
+    }
+    
+    @media (max-width: 768px) {
+        .page-header {
+            padding: 1.5rem;
+        }
+        
+        .page-title {
+            font-size: 1.5rem;
+        }
+        
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .enhanced-table th,
+        .enhanced-table td {
+            padding: 0.75rem 0.5rem;
+            font-size: 0.8rem;
+        }
+        
+        .action-buttons {
+            flex-direction: row;
+            gap: 0.25rem;
+        }
+        
+        .btn-edit,
+        .btn-delete {
+            font-size: 0.65rem;
+            padding: 0.375rem 0.5rem;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .enhanced-table {
+            font-size: 0.75rem;
+        }
+        
+        .enhanced-table th,
+        .enhanced-table td {
+            padding: 0.5rem 0.25rem;
+        }
+        
+        .bus-badge,
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 0.25rem 0.375rem;
+        }
+    }
 </style>
 
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h2">Daftar Peserta</h1>
-        <h2 class="h4 text-muted">Rombongan: <strong>{{ rombongan.nama_rombongan }}</strong></h2>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('admin.manajemen_rombongan') }}">Manajemen Rombongan</a></li>
+                <li class="breadcrumb-item active">Daftar Peserta</li>
+            </ol>
+        </nav>
     </div>
-    <a href="{{ url_for('admin.manajemen_rombongan') }}" class="btn btn-secondary">&larr; Kembali ke Manajemen Rombongan</a>
+    <a href="{{ url_for('admin.manajemen_rombongan') }}" class="back-btn">
+        <i class="fas fa-arrow-left"></i> Kembali
+    </a>
 </div>
-<p>Total Peserta di Rombongan Ini: <strong>{{ pendaftar|length }}</strong></p>
 
-<div class="card">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-striped table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th>No.</th>
-                        <th>Nama Santri</th>
-                        <th>Asrama & Alamat</th>
-                        <th>Titik Turun & Jemput</th>
-                        <th>Bus Pulang</th>
-                        <th>Bus Kembali</th>
-                        <th>Status Pembayaran</th>
-                        <th>Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for pendaftaran in pendaftar|sort(attribute='santri.nama') %}
-                    <tr>
-                        <td>{{ loop.index }}</td>
-                        <td>
-                            <strong>{{ pendaftaran.santri.nama }}</strong><br>
-                            <small class="text-muted">NIS: {{ pendaftaran.santri.nis }}</small>
-                        </td>
-                        <td>
-                            {{ pendaftaran.santri.asrama or '-' }}<br>
-                            <small class="text-muted">{{ pendaftaran.santri.kabupaten or '-' }}</small>
-                        </td>
-                        <td>
-                            Turun: {{ pendaftaran.titik_turun or '-' }}<br>
-                            <small class="text-muted">Jemput: {{ pendaftaran.titik_jemput_kembali or pendaftaran.titik_turun or '-' }}</small>
-                        </td>
-                        <td>
-                            {% if pendaftaran.bus_pulang %}
-                                <span class="badge bg-info text-dark">
-                                    {{ pendaftaran.bus_pulang.nama_armada }} ({{ pendaftaran.bus_pulang.nomor_lambung or pendaftaran.bus_pulang.plat_nomor }})
-                                </span>
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if pendaftaran.bus_kembali %}
-                                <span class="badge bg-info text-dark">
-                                    {{ pendaftaran.bus_kembali.nama_armada }} ({{ pendaftaran.bus_kembali.nomor_lambung or pendaftaran.bus_kembali.plat_nomor }})
-                                </span>
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="status-badge status-pulang">Pulang: {{ pendaftaran.status_pulang }}</span><br>
-                            <span class="status-badge status-kembali mt-1">Kembali: {{ pendaftaran.status_kembali }}</span>
-                        </td>
-                        <td>
-                            {% if current_user.role.name == 'Korpus' or (current_user.role.name == 'Korda' and rombongan in current_user.managed_rombongan) %}
-                                <a href="{{ url_for('admin.edit_pendaftaran', pendaftaran_id=pendaftaran.id) }}" class="btn btn-secondary btn-sm">Edit</a>
-                                <form method="POST" action="{{ url_for('admin.hapus_pendaftaran', pendaftaran_id=pendaftaran.id) }}" class="mt-1" onsubmit="return confirm('Anda yakin ingin menghapus pendaftaran untuk \'{{ pendaftaran.santri.nama }}\'?');">
-                                    <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
-                                </form>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="8" class="text-center">Belum ada peserta di rombongan ini.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+<div class="page-header">
+    <div class="page-title">Daftar Peserta</div>
+    <div class="page-subtitle">{{ rombongan.nama_rombongan }}</div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <span class="stat-number">{{ pendaftar|length }}</span>
+            <div class="stat-label">Total Peserta</div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number">{{ pendaftar|selectattr('bus_pulang')|list|length }}</span>
+            <div class="stat-label">Sudah Ada Bus Pulang</div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number">{{ pendaftar|selectattr('bus_kembali')|list|length }}</span>
+            <div class="stat-label">Sudah Ada Bus Kembali</div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number">{{ pendaftar|selectattr('status_pulang', 'equalto', 'Lunas')|list|length }}</span>
+            <div class="stat-label">Lunas Pulang</div>
         </div>
     </div>
 </div>
+
+<div class="main-card">
+    <div class="card-header">
+        <h5>
+            <div class="header-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            Data Peserta Rombongan
+        </h5>
+    </div>
+    
+    <div class="card-body p-0">
+        {% if pendaftar %}
+            <div class="table-responsive">
+                <table class="enhanced-table table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">No.</th>
+                            <th>Data Santri</th>
+                            <th>Asrama & Alamat</th>
+                            <th>Rute Perjalanan</th>
+                            <th>Bus Pulang</th>
+                            <th>Bus Kembali</th>
+                            <th>Status Pembayaran</th>
+                            {% if current_user.role.name == 'Korpus' or (current_user.role.name == 'Korda' and rombongan in current_user.managed_rombongan) %}
+                            <th style="width: 100px;">Aksi</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pendaftaran in pendaftar|sort(attribute='santri.nama') %}
+                        <tr>
+                            <td><strong>{{ loop.index }}</strong></td>
+                            <td>
+                                <div class="student-info">
+                                    <div class="student-name">{{ pendaftaran.santri.nama }}</div>
+                                    <div class="student-details">NIS: {{ pendaftaran.santri.nis }}</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="location-info">
+                                    {% if pendaftaran.santri.asrama %}
+                                        <div class="asrama-badge">{{ pendaftaran.santri.asrama }}</div>
+                                    {% endif %}
+                                    <div class="alamat-text">
+                                        <i class="fas fa-map-marker-alt"></i> {{ pendaftaran.santri.kabupaten or '-' }}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="route-info">
+                                    <div class="route-item route-turun">
+                                        <div class="route-icon"><i class="fas fa-sign-out-alt"></i></div>
+                                        {{ pendaftaran.titik_turun or '-' }}
+                                    </div>
+                                    <div class="route-item route-jemput">
+                                        <div class="route-icon"><i class="fas fa-sign-in-alt"></i></div>
+                                        {{ pendaftaran.titik_jemput_kembali or pendaftaran.titik_turun or '-' }}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if pendaftaran.bus_pulang %}
+                                    <div class="bus-badge">
+                                        {{ pendaftaran.bus_pulang.nama_armada }}<br>
+                                        <small>{{ pendaftaran.bus_pulang.nomor_lambung or pendaftaran.bus_pulang.plat_nomor }}</small>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">Belum ditentukan</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if pendaftaran.bus_kembali %}
+                                    <div class="bus-badge">
+                                        {{ pendaftaran.bus_kembali.nama_armada }}<br>
+                                        <small>{{ pendaftaran.bus_kembali.nomor_lambung or pendaftaran.bus_kembali.plat_nomor }}</small>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">Belum ditentukan</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="status-container">
+                                    <div class="status-badge {{ 'status-lunas' if pendaftaran.status_pulang == 'Lunas' else 'status-belum' }}">
+                                        <i class="fas fa-plane-departure"></i> {{ pendaftaran.status_pulang }}
+                                    </div>
+                                    <div class="status-badge {{ 'status-lunas' if pendaftaran.status_kembali == 'Lunas' else 'status-belum' }}">
+                                        <i class="fas fa-plane-arrival"></i> {{ pendaftaran.status_kembali }}
+                                    </div>
+                                </div>
+                            </td>
+                            {% if current_user.role.name == 'Korpus' or (current_user.role.name == 'Korda' and rombongan in current_user.managed_rombongan) %}
+                            <td>
+                                <div class="action-buttons">
+                                    <a href="{{ url_for('admin.edit_pendaftaran', pendaftaran_id=pendaftaran.id) }}" class="btn btn-edit">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </a>
+                                    <form method="POST" action="{{ url_for('admin.hapus_pendaftaran', pendaftaran_id=pendaftaran.id) }}" onsubmit="return confirm('Anda yakin ingin menghapus pendaftaran untuk \'{{ pendaftaran.santri.nama }}\'?');">
+                                        <button type="submit" class="btn btn-delete">
+                                            <i class="fas fa-trash"></i> Hapus
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-users-slash"></i>
+                <h4>Belum Ada Peserta</h4>
+                <p>Belum ada peserta yang terdaftar di rombongan ini.</p>
+                <p class="text-muted">Silakan tambahkan peserta melalui form pendaftaran.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add smooth hover effects
+    const tableRows = document.querySelectorAll('.enhanced-table tbody tr');
+    tableRows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+        });
+        
+        row.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+    
+    // Animate statistics on page load
+    const statNumbers = document.querySelectorAll('.stat-number');
+    statNumbers.forEach(stat => {
+        const finalNumber = stat.textContent;
+        stat.textContent = '0';
+        
+        let current = 0;
+        const increment = Math.ceil(parseInt(finalNumber) / 20);
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= parseInt(finalNumber)) {
+                current = parseInt(finalNumber);
+                clearInterval(timer);
+            }
+            stat.textContent = current;
+        }, 50);
+    });
+});
+</script>
 {% endblock %}

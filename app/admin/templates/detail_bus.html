@@ -3,88 +3,393 @@
 {% block title %}Detail Bus: {{ bus.nama_armada }} {{ bus.nomor_lambung }}{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h2">Detail Bus & Manifest</h1>
-    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">&larr; Kembali ke Dashboard</a>
+<style>
+    .bus-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+        border-radius: var(--border-radius);
+        color: white;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .bus-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 200px;
+        height: 200px;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" opacity="0.1"><path d="M4 16c0 .88.39 1.67 1 2.22V20a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1h8v1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10M6.5 10a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3m11 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3M7.5 4h9v3h-9V4Z"/></svg>') no-repeat center;
+        background-size: contain;
+        opacity: 0.1;
+    }
+    
+    .bus-title {
+        font-size: 2.25rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .bus-subtitle {
+        font-size: 1.125rem;
+        opacity: 0.9;
+        margin-bottom: 1.5rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .bus-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 1rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .stat-item {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .stat-number {
+        font-size: 1.75rem;
+        font-weight: 700;
+        display: block;
+    }
+    
+    .stat-label {
+        font-size: 0.875rem;
+        opacity: 0.9;
+        margin-top: 0.25rem;
+    }
+    
+    .capacity-bar {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        height: 8px;
+        margin-top: 0.5rem;
+        overflow: hidden;
+    }
+    
+    .capacity-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981, #34d399);
+        border-radius: 10px;
+        transition: width 0.3s ease;
+    }
+    
+    .manifest-card {
+        border: none;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .manifest-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+    }
+    
+    .manifest-header {
+        background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+        border-bottom: none;
+        padding: 1.5rem;
+        position: relative;
+    }
+    
+    .manifest-header h5 {
+        margin: 0;
+        color: var(--text-primary);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .manifest-header .icon {
+        width: 40px;
+        height: 40px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.125rem;
+    }
+    
+    .schedule-info {
+        background: #f0f9ff;
+        border: 1px solid #bae6fd;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin: 1rem 0;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .schedule-info .icon {
+        width: 36px;
+        height: 36px;
+        background: #0284c7;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.875rem;
+        flex-shrink: 0;
+    }
+    
+    .drop-point {
+        background: linear-gradient(135deg, #fff7ed, #fed7aa);
+        border: 1px solid #fdba74;
+        border-radius: var(--border-radius);
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .drop-point h6 {
+        color: #9a3412;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .drop-point .point-icon {
+        width: 24px;
+        height: 24px;
+        background: #ea580c;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.75rem;
+    }
+    
+    .pickup-point {
+        background: linear-gradient(135deg, #f0fdf4, #bbf7d0);
+        border: 1px solid #86efac;
+        border-radius: var(--border-radius);
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .pickup-point h6 {
+        color: #166534;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .pickup-point .point-icon {
+        width: 24px;
+        height: 24px;
+        background: #16a34a;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.75rem;
+    }
+    
+    .passenger-table {
+        background: white;
+        border-radius: var(--border-radius);
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    
+    .passenger-table th {
+        background: #f8fafc;
+        color: var(--text-primary);
+        font-weight: 600;
+        border: none;
+        padding: 1rem 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    .passenger-table td {
+        border: none;
+        padding: 0.875rem 0.75rem;
+        font-size: 0.875rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .passenger-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+    
+    .passenger-table tbody tr:hover {
+        background: #fafbfc;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: var(--text-secondary);
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    .back-btn {
+        background: linear-gradient(135deg, #64748b, #475569);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--border-radius);
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(100, 116, 139, 0.3);
+    }
+    
+    .back-btn:hover {
+        background: linear-gradient(135deg, #475569, #334155);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(100, 116, 139, 0.4);
+        color: white;
+    }
+    
+    .badge-count {
+        background: rgba(255, 255, 255, 0.9);
+        color: var(--primary-color);
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        margin-left: 0.5rem;
+    }
+    
+    @media (max-width: 768px) {
+        .bus-header {
+            padding: 1.5rem;
+        }
+        
+        .bus-title {
+            font-size: 1.75rem;
+        }
+        
+        .bus-stats {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .manifest-header {
+            padding: 1rem;
+        }
+        
+        .drop-point, .pickup-point {
+            padding: 1rem;
+        }
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item active">Detail Bus</li>
+            </ol>
+        </nav>
+    </div>
+    <a href="{{ url_for('admin.dashboard') }}" class="back-btn">
+        <i class="fas fa-arrow-left"></i> Kembali
+    </a>
 </div>
 
-<div class="card mb-4">
-    <div class="card-header">
-        <h4>{{ bus.nama_armada }} - {{ bus.nomor_lambung or bus.plat_nomor }}</h4>
-    </div>
-    <div class="card-body">
-        <p><strong>Rombongan:</strong> {{ bus.rombongan.nama_rombongan }}</p>
-        <p><strong>Plat Nomor:</strong> {{ bus.plat_nomor or '-' }}</p>
-        <p><strong>Keterangan:</strong> {{ bus.keterangan or '-' }}</p>
-        <hr>
-<p class="h5">Kapasitas Pulang: <span class="fw-bold">{{ jumlah_peserta_pulang }} / {{ bus.kuota }}</span> Terisi</p>
-    </div>
-</div>
-
-<div class="card mb-4">
-    <div class="card-header">
-        <h5>Manifest Perjalanan Pulang (Meninggalkan Pondok)</h5>
-    </div>
-    <div class="card-body">
-        {% if grouped_peserta_pulang %}
-            {% for titik_turun, pendaftar_list in grouped_peserta_pulang.items()|sort %}
-            <div class="mb-4">
-                <h6><strong>Titik Turun: {{ titik_turun }}</strong> (Jumlah: {{ pendaftar_list|length }})</h6>
-                <div class="table-responsive">
-                    <table class="table table-sm table-striped">
-                        <thead><tr><th>No.</th><th>Nama Santri</th><th>Asrama</th></tr></thead>
-                        <tbody>
-                            {% for p in pendaftar_list|sort(attribute='santri.nama') %}
-                            <tr>
-                                <td>{{ loop.index }}</td>
-                                <td>{{ p.santri.nama }}</td>
-                                <td>{{ p.santri.asrama }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+<div class="bus-header">
+    <div class="bus-title">{{ bus.nama_armada }}</div>
+    <div class="bus-subtitle">{{ bus.nomor_lambung or bus.plat_nomor }} • {{ bus.rombongan.nama_rombongan }}</div>
+    
+    <div class="bus-stats">
+        <div class="stat-item">
+            <span class="stat-number">{{ bus.kuota }}</span>
+            <div class="stat-label">Total Kapasitas</div>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number">{{ jumlah_peserta_pulang }}</span>
+            <div class="stat-label">Peserta Pulang</div>
+            <div class="capacity-bar">
+                <div class="capacity-fill" style="width: {{ (jumlah_peserta_pulang / bus.kuota * 100) if bus.kuota > 0 else 0 }}%"></div>
             </div>
-            {% endfor %}
-        {% else %}
-            <p class="text-center">Tidak ada peserta untuk perjalanan pulang di bus ini.</p>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number">{{ jumlah_peserta_kembali }}</span>
+            <div class="stat-label">Peserta Kembali</div>
+            <div class="capacity-bar">
+                <div class="capacity-fill" style="width: {{ (jumlah_peserta_kembali / bus.kuota * 100) if bus.kuota > 0 else 0 }}%"></div>
+            </div>
+        </div>
+        {% if bus.plat_nomor %}
+        <div class="stat-item">
+            <span class="stat-number" style="font-size: 1.25rem;">{{ bus.plat_nomor }}</span>
+            <div class="stat-label">Plat Nomor</div>
+        </div>
         {% endif %}
     </div>
 </div>
 
-<div class="card">
-    <div class="card-header">
-        <h5>Manifest Perjalanan Kembali (Menuju Pondok)</h5>
+<div class="manifest-card">
+    <div class="manifest-header">
+        <h5>
+            <div class="icon">
+                <i class="fas fa-route"></i>
+            </div>
+            Manifest Perjalanan Pulang
+            <small class="text-muted">(Meninggalkan Pondok)</small>
+        </h5>
     </div>
     <div class="card-body">
-        <p>
-            <strong>Jadwal Kembali:</strong> {{ bus.rombongan.jadwal_kembali|datetime_wib if bus.rombongan.jadwal_kembali else 'Belum diatur' }}<br>
-            <strong>Titik Kumpul Kembali:</strong> {{ bus.rombongan.titik_kumpul_kembali or 'Belum diatur' }}
-        </p>
-        <p class="h5">Kapasitas Kembali: <span class="fw-bold">{{ jumlah_peserta_kembali }} / {{ bus.kuota }}</span> Terisi</p>
-        <hr>
-
-        {% if grouped_peserta_kembali %}
-            {% for titik_jemput, pendaftar_list in grouped_peserta_kembali.items()|sort %}
-            <div class="mb-4">
-                <h6><strong>Titik Jemput (Referensi): {{ titik_jemput or 'Tidak Diketahui' }}</strong> (Jumlah: {{ pendaftar_list|length }})</h6>
-                <div class="table-responsive">
-                    <table class="table table-sm table-striped">
+        {% if grouped_peserta_pulang %}
+            {% for titik_turun, pendaftar_list in grouped_peserta_pulang.items()|sort %}
+            <div class="drop-point">
+                <h6>
+                    <div class="point-icon">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                    {{ titik_turun }}
+                    <span class="badge-count">{{ pendaftar_list|length }} orang</span>
+                </h6>
+                <div class="passenger-table">
+                    <table class="table table-sm mb-0">
                         <thead>
                             <tr>
-                                <th>No.</th>
+                                <th style="width: 50px;">No.</th>
                                 <th>Nama Santri</th>
-                                <th>Alamat</th>
                                 <th>Asrama</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for p in pendaftar_list|sort(attribute='santri.nama') %}
                             <tr>
-                                <td>{{ loop.index }}</td>
+                                <td><strong>{{ loop.index }}</strong></td>
                                 <td>{{ p.santri.nama }}</td>
-                                <td>{{ p.santri.kabupaten }}</td>
-                                <td>{{ p.santri.asrama }}</td>
+                                <td><span class="badge bg-light text-dark">{{ p.santri.asrama }}</span></td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -93,8 +398,103 @@
             </div>
             {% endfor %}
         {% else %}
-            <p class="text-center">Tidak ada peserta untuk perjalanan kembali di bus ini.</p>
+            <div class="empty-state">
+                <i class="fas fa-bus-alt"></i>
+                <h6>Tidak Ada Peserta</h6>
+                <p>Belum ada peserta yang terdaftar untuk perjalanan pulang di bus ini.</p>
+            </div>
         {% endif %}
     </div>
 </div>
+
+<div class="manifest-card">
+    <div class="manifest-header">
+        <h5>
+            <div class="icon">
+                <i class="fas fa-home"></i>
+            </div>
+            Manifest Perjalanan Kembali
+            <small class="text-muted">(Menuju Pondok)</small>
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="schedule-info">
+            <div class="icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div>
+                <strong>Jadwal Kembali:</strong> {{ bus.rombongan.jadwal_kembali|datetime_wib if bus.rombongan.jadwal_kembali else 'Belum diatur' }}<br>
+                <strong>Titik Kumpul:</strong> {{ bus.rombongan.titik_kumpul_kembali or 'Belum diatur' }}
+            </div>
+        </div>
+
+        {% if grouped_peserta_kembali %}
+            {% for titik_jemput, pendaftar_list in grouped_peserta_kembali.items()|sort %}
+            <div class="pickup-point">
+                <h6>
+                    <div class="point-icon">
+                        <i class="fas fa-map-pin"></i>
+                    </div>
+                    {{ titik_jemput or 'Titik Jemput Tidak Diketahui' }}
+                    <span class="badge-count">{{ pendaftar_list|length }} orang</span>
+                </h6>
+                <div class="passenger-table">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">No.</th>
+                                <th>Nama Santri</th>
+                                <th>Titik Jemput</th>
+                                <th>Asrama</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in pendaftar_list|sort(attribute='santri.nama') %}
+                            <tr>
+                                <td><strong>{{ loop.index }}</strong></td>
+                                <td>{{ p.santri.nama }}</td>
+                                <td>{{ p.santri.titik_jemput or '-' }}</td>
+                                <td><span class="badge bg-light text-dark">{{ p.santri.asrama }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-users-slash"></i>
+                <h6>Tidak Ada Peserta</h6>
+                <p>Belum ada peserta yang terdaftar untuk perjalanan kembali di bus ini.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add smooth animations for capacity bars
+    const capacityBars = document.querySelectorAll('.capacity-fill');
+    capacityBars.forEach(bar => {
+        const width = bar.style.width;
+        bar.style.width = '0%';
+        setTimeout(() => {
+            bar.style.width = width;
+        }, 500);
+    });
+    
+    // Add hover effects for manifest cards
+    const manifestCards = document.querySelectorAll('.manifest-card');
+    manifestCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+});
+</script>
 {% endblock %}
