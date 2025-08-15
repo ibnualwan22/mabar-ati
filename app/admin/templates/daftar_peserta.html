@@ -482,7 +482,18 @@
                             <td>
                                 <div class="student-info">
                                     <div class="student-name">{{ pendaftaran.santri.nama }}</div>
-                                    <div class="student-details">NIS: {{ pendaftaran.santri.nis }}</div>
+                                    <div class="badge-container">
+                                        {% if pendaftaran.santri.nama_jabatan %}
+                                            <span class="role-badge badge-jabatan">{{ pendaftaran.santri.nama_jabatan }}</span>
+                                        {% else %}
+                                            <span class="role-badge badge-santri">Santri</span>
+                                        {% endif %}
+                                        {% if pendaftaran.santri.jenis_kelamin == 'PUTRA' %}
+                                            <span class="role-badge badge-putra">Putra</span>
+                                        {% elif pendaftaran.santri.jenis_kelamin == 'PUTRI' %}
+                                            <span class="role-badge badge-putri">Putri</span>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </td>
                             <td>

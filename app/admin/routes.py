@@ -1,5 +1,5 @@
 from . import admin_bp
-from flask import render_template, redirect, url_for, flash, request, jsonify, abort
+from flask import render_template, redirect, url_for, flash, request, jsonify, abort, Response, send_file
 from app.models import ActivityLog, Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, User, Edisi, Bus, Role
 from app.admin.forms import RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, UserForm, UserEditForm, EdisiForm, BusForm, KorlapdaForm
 from app import db, login_manager
@@ -11,6 +11,17 @@ from flask_login import login_user, logout_user, current_user, login_required
 from functools import wraps
 from sqlalchemy.orm import joinedload, selectinload # <-- Tambahkan import ini di atas
 from datetime import date, datetime # Pastikan datetime diimpor
+from io import BytesIO
+
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch, cm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.pdfgen import canvas
+import locale
+
+
 
 
 def check_and_update_expired_izin():
@@ -876,7 +887,7 @@ def edit_pendaftaran(pendaftaran_id):
 
 @admin_bp.route('/pendaftaran/hapus/<int:pendaftaran_id>', methods=['POST'])
 @login_required
-@role_required('Korpus', 'Korda')
+@role_required('Korpus')
 def hapus_pendaftaran(pendaftaran_id):
     pendaftaran = Pendaftaran.query.get_or_404(pendaftaran_id)
     # Verifikasi Kepemilikan (menggunakan rombongan pulang sebagai acuan)
@@ -1559,6 +1570,396 @@ def manajemen_keuangan():
 
     return render_template('manajemen_keuangan.html', data=financial_data)
 
+@admin_bp.route('/keuangan/export-pdf')
+@login_required
+@role_required('Korpus', 'Korwil', 'Korda')
+def export_keuangan_pdf():
+    active_edisi = get_active_edisi()
+    
+    # 1. Inisialisasi dictionary data yang lengkap
+    data = {
+        'global_total': 0, 'global_lunas': 0, 'global_belum_lunas': 0,
+        'pulang_total': 0, 'pulang_lunas': 0, 'pulang_belum_lunas': 0,
+        'kembali_total': 0, 'kembali_lunas': 0, 'kembali_belum_lunas': 0,
+        'alokasi_bus_pulang': 0, 'alokasi_korda_pulang': 0, 'alokasi_pondok_pulang': 0,
+        'alokasi_bus_kembali': 0, 'alokasi_korda_kembali': 0, 'alokasi_pondok_kembali': 0,
+        'pulang_cash_lunas_rp': 0, 'pulang_cash_belum_lunas_rp': 0,
+        'pulang_transfer_lunas_rp': 0, 'pulang_transfer_belum_lunas_rp': 0,
+        'kembali_cash_lunas_rp': 0, 'kembali_cash_belum_lunas_rp': 0,
+        'kembali_transfer_lunas_rp': 0, 'kembali_transfer_belum_lunas_rp': 0,
+    }
+
+    if active_edisi:
+        # 2. Query data pendaftaran secara efisien dengan filter Korda/Korwil
+        pendaftaran_query = Pendaftaran.query.options(
+            selectinload(Pendaftaran.rombongan_pulang).selectinload(Rombongan.tarifs),
+            selectinload(Pendaftaran.rombongan_kembali).selectinload(Rombongan.tarifs)
+        ).filter(Pendaftaran.edisi_id == active_edisi.id)
+
+        managed_rombongan_ids = []
+        if current_user.role.name in ['Korwil', 'Korda']:
+            managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+            if not managed_rombongan_ids:
+                pendaftaran_query = pendaftaran_query.filter(db.false())
+            else:
+                pendaftaran_query = pendaftaran_query.filter(
+                    or_(
+                        Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids),
+                        Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids)
+                    )
+                )
+        
+        all_pendaftaran = pendaftaran_query.all()
+
+        # 3. Loop dan lakukan semua kalkulasi secara lengkap dan andal
+        for p in all_pendaftaran:
+            # Kalkulasi untuk perjalanan pulang
+            if p.status_pulang != 'Tidak Ikut' and p.rombongan_pulang:
+                if current_user.role.name == 'Korpus' or p.rombongan_pulang_id in managed_rombongan_ids:
+                    tarif_pulang = next((t for t in p.rombongan_pulang.tarifs if t.titik_turun == p.titik_turun), None)
+                    if tarif_pulang:
+                        biaya_pulang = tarif_pulang.harga_bus + tarif_pulang.fee_korda + 10000
+                        data['pulang_total'] += biaya_pulang
+                        if p.status_pulang == 'Lunas':
+                            data['pulang_lunas'] += biaya_pulang
+                            data['alokasi_bus_pulang'] += tarif_pulang.harga_bus
+                            data['alokasi_korda_pulang'] += tarif_pulang.fee_korda
+                            data['alokasi_pondok_pulang'] += 10000
+                            if p.metode_pembayaran_pulang == 'Cash': 
+                                data['pulang_cash_lunas_rp'] += biaya_pulang
+                            elif p.metode_pembayaran_pulang == 'Transfer': 
+                                data['pulang_transfer_lunas_rp'] += biaya_pulang
+                        else: # Belum Bayar
+                            if p.metode_pembayaran_pulang == 'Cash': 
+                                data['pulang_cash_belum_lunas_rp'] += biaya_pulang
+                            elif p.metode_pembayaran_pulang == 'Transfer': 
+                                data['pulang_transfer_belum_lunas_rp'] += biaya_pulang
+            
+            # Kalkulasi untuk perjalanan kembali
+            rombongan_kembali = p.rombongan_kembali or p.rombongan_pulang
+            titik_jemput = p.titik_jemput_kembali or p.titik_turun
+            if p.status_kembali != 'Tidak Ikut' and rombongan_kembali and titik_jemput:
+                if current_user.role.name == 'Korpus' or rombongan_kembali.id in managed_rombongan_ids:
+                    tarif_kembali = next((t for t in rombongan_kembali.tarifs if t.titik_turun == titik_jemput), None)
+                    if tarif_kembali:
+                        biaya_kembali = tarif_kembali.harga_bus + tarif_kembali.fee_korda + 10000
+                        data['kembali_total'] += biaya_kembali
+                        if p.status_kembali == 'Lunas':
+                            data['kembali_lunas'] += biaya_kembali
+                            data['alokasi_bus_kembali'] += tarif_kembali.harga_bus
+                            data['alokasi_korda_kembali'] += tarif_kembali.fee_korda
+                            data['alokasi_pondok_kembali'] += 10000
+                            if p.metode_pembayaran_kembali == 'Cash': 
+                                data['kembali_cash_lunas_rp'] += biaya_kembali
+                            elif p.metode_pembayaran_kembali == 'Transfer': 
+                                data['kembali_transfer_lunas_rp'] += biaya_kembali
+                        else: # Belum Bayar
+                            if p.metode_pembayaran_kembali == 'Cash': 
+                                data['kembali_cash_belum_lunas_rp'] += biaya_kembali
+                            elif p.metode_pembayaran_kembali == 'Transfer': 
+                                data['kembali_transfer_belum_lunas_rp'] += biaya_kembali
+
+        # Kalkulasi total turunan
+        data['pulang_belum_lunas'] = data['pulang_total'] - data['pulang_lunas']
+        data['kembali_belum_lunas'] = data['kembali_total'] - data['kembali_lunas']
+        data['global_total'] = data['pulang_total'] + data['kembali_total']
+        data['global_lunas'] = data['pulang_lunas'] + data['kembali_lunas']
+        data['global_belum_lunas'] = data['global_total'] - data['global_lunas']
+
+    # 4. Proses Pembuatan PDF dengan tampilan yang enhanced
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, 
+        pagesize=A4, 
+        rightMargin=1.5*cm, 
+        leftMargin=1.5*cm, 
+        topMargin=2*cm, 
+        bottomMargin=2*cm
+    )
+    elements = []
+    styles = getSampleStyleSheet()
+
+    # Custom styles untuk tampilan yang lebih menarik
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=20,
+        spaceAfter=30,
+        textColor=colors.HexColor('#2c3e50'),
+        alignment=1,  # Center alignment
+        fontName='Helvetica-Bold'
+    )
+    
+    heading_style = ParagraphStyle(
+        'CustomHeading',
+        parent=styles['Heading2'],
+        fontSize=14,
+        spaceAfter=15,
+        spaceBefore=20,
+        textColor=colors.HexColor('#34495e'),
+        fontName='Helvetica-Bold'
+    )
+    
+    normal_style = ParagraphStyle(
+        'CustomNormal',
+        parent=styles['Normal'],
+        fontSize=10,
+        spaceAfter=8,
+        alignment=1  # Center for subtitle
+    )
+
+    def format_rupiah(amount):
+        return f"Rp {int(amount):,.0f}".replace(',', '.')
+
+    # Header PDF dengan styling yang menarik
+    title = Paragraph("LAPORAN MANAJEMEN KEUANGAN", title_style)
+    elements.append(title)
+    
+    if active_edisi:
+        subtitle_text = f"<b>Edisi: {active_edisi.nama}</b><br/>"
+        subtitle_text += f"Tanggal Cetak: {datetime.now().strftime('%d %B %Y, %H:%M')} WIB<br/>"
+        subtitle_text += f"Dicetak oleh: {current_user.username} ({current_user.role.name})"
+        subtitle = Paragraph(subtitle_text, normal_style)
+    else:
+        subtitle = Paragraph("<b>Tidak ada edisi aktif</b>", normal_style)
+    
+    elements.append(subtitle)
+    elements.append(Spacer(1, 1*cm))
+
+    # Konten PDF yang lebih lengkap dan menarik
+    if active_edisi and data['global_total'] > 0:
+        
+        # 1. RINGKASAN GLOBAL
+        elements.append(Paragraph("RINGKASAN KEUANGAN GLOBAL", heading_style))
+        
+        global_data = [
+            ['Kategori', 'Jumlah', 'Persentase'],
+            ['Total Pemasukan Seharusnya', format_rupiah(data['global_total']), '100%'],
+            ['Total Diterima (Lunas)', format_rupiah(data['global_lunas']), 
+             f"{(data['global_lunas']/data['global_total']*100):.1f}%" if data['global_total'] > 0 else "0%"],
+            ['Sisa Tagihan (Belum Lunas)', format_rupiah(data['global_belum_lunas']), 
+             f"{(data['global_belum_lunas']/data['global_total']*100):.1f}%" if data['global_total'] > 0 else "0%"],
+        ]
+        
+        global_table = Table(global_data, colWidths=[6*cm, 4*cm, 3*cm])
+        global_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#34495e')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor('#ecf0f1')),
+            ('BACKGROUND', (0, 2), (-1, 2), colors.HexColor('#d5f4e6')),
+            ('BACKGROUND', (0, 3), (-1, 3), colors.HexColor('#fadbd8')),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTSIZE', (0, 1), (-1, -1), 10),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elements.append(global_table)
+        elements.append(Spacer(1, 0.8*cm))
+
+        # 2. RINCIAN PERJALANAN PULANG
+        elements.append(Paragraph("RINCIAN PERJALANAN PULANG", heading_style))
+        
+        pulang_summary_data = [
+            ['Kategori', 'Jumlah'],
+            ['Total Pemasukan', format_rupiah(data['pulang_total'])],
+            ['Jumlah Lunas', format_rupiah(data['pulang_lunas'])],
+            ['Jumlah Belum Lunas', format_rupiah(data['pulang_belum_lunas'])],
+        ]
+        
+        pulang_summary_table = Table(pulang_summary_data, colWidths=[7*cm, 4*cm])
+        pulang_summary_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3498db')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#ebf3fd')),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTSIZE', (0, 1), (-1, -1), 10),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elements.append(pulang_summary_table)
+        elements.append(Spacer(1, 0.5*cm))
+
+        # Detail metode pembayaran pulang
+        pulang_detail_data = [
+            ['Metode Pembayaran', 'Status', 'Jumlah'],
+            ['Cash', 'Lunas', format_rupiah(data['pulang_cash_lunas_rp'])],
+            ['Cash', 'Belum Lunas', format_rupiah(data['pulang_cash_belum_lunas_rp'])],
+            ['Transfer', 'Lunas', format_rupiah(data['pulang_transfer_lunas_rp'])],
+            ['Transfer', 'Belum Lunas', format_rupiah(data['pulang_transfer_belum_lunas_rp'])],
+        ]
+        
+        pulang_detail_table = Table(pulang_detail_data, colWidths=[4*cm, 3*cm, 4*cm])
+        pulang_detail_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2980b9')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 11),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (0, 2), colors.HexColor('#f8f9fa')),  # Cash rows
+            ('BACKGROUND', (0, 3), (0, 4), colors.HexColor('#e3f2fd')),  # Transfer rows
+            ('BACKGROUND', (1, 1), (1, 1), colors.HexColor('#d5f4e6')),  # Lunas
+            ('BACKGROUND', (1, 2), (1, 2), colors.HexColor('#fadbd8')),  # Belum Lunas
+            ('BACKGROUND', (1, 3), (1, 3), colors.HexColor('#d5f4e6')),  # Lunas
+            ('BACKGROUND', (1, 4), (1, 4), colors.HexColor('#fadbd8')),  # Belum Lunas
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elements.append(pulang_detail_table)
+        elements.append(Spacer(1, 0.8*cm))
+
+        # 3. RINCIAN PERJALANAN KEMBALI
+        elements.append(Paragraph("RINCIAN PERJALANAN KEMBALI", heading_style))
+        
+        kembali_summary_data = [
+            ['Kategori', 'Jumlah'],
+            ['Total Pemasukan', format_rupiah(data['kembali_total'])],
+            ['Jumlah Lunas', format_rupiah(data['kembali_lunas'])],
+            ['Jumlah Belum Lunas', format_rupiah(data['kembali_belum_lunas'])],
+        ]
+        
+        kembali_summary_table = Table(kembali_summary_data, colWidths=[7*cm, 4*cm])
+        kembali_summary_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e74c3c')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#fdeaea')),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTSIZE', (0, 1), (-1, -1), 10),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elements.append(kembali_summary_table)
+        elements.append(Spacer(1, 0.5*cm))
+
+        # Detail metode pembayaran kembali
+        kembali_detail_data = [
+            ['Metode Pembayaran', 'Status', 'Jumlah'],
+            ['Cash', 'Lunas', format_rupiah(data['kembali_cash_lunas_rp'])],
+            ['Cash', 'Belum Lunas', format_rupiah(data['kembali_cash_belum_lunas_rp'])],
+            ['Transfer', 'Lunas', format_rupiah(data['kembali_transfer_lunas_rp'])],
+            ['Transfer', 'Belum Lunas', format_rupiah(data['kembali_transfer_belum_lunas_rp'])],
+        ]
+        
+        kembali_detail_table = Table(kembali_detail_data, colWidths=[4*cm, 3*cm, 4*cm])
+        kembali_detail_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#c0392b')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 11),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (0, 2), colors.HexColor('#f8f9fa')),  # Cash rows
+            ('BACKGROUND', (0, 3), (0, 4), colors.HexColor('#ffe8e8')),  # Transfer rows
+            ('BACKGROUND', (1, 1), (1, 1), colors.HexColor('#d5f4e6')),  # Lunas
+            ('BACKGROUND', (1, 2), (1, 2), colors.HexColor('#fadbd8')),  # Belum Lunas
+            ('BACKGROUND', (1, 3), (1, 3), colors.HexColor('#d5f4e6')),  # Lunas
+            ('BACKGROUND', (1, 4), (1, 4), colors.HexColor('#fadbd8')),  # Belum Lunas
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elements.append(kembali_detail_table)
+        elements.append(Spacer(1, 0.8*cm))
+
+        # 4. ALOKASI FEE
+        elements.append(Paragraph("ALOKASI FEE", heading_style))
+        
+        fee_data = [
+            ['Kategori', 'Pulang', 'Kembali', 'Total'],
+            ['Biaya Bus', 
+             format_rupiah(data['alokasi_bus_pulang']), 
+             format_rupiah(data['alokasi_bus_kembali']), 
+             format_rupiah(data['alokasi_bus_pulang'] + data['alokasi_bus_kembali'])],
+            ['Fee Korda', 
+             format_rupiah(data['alokasi_korda_pulang']), 
+             format_rupiah(data['alokasi_korda_kembali']), 
+             format_rupiah(data['alokasi_korda_pulang'] + data['alokasi_korda_kembali'])],
+            ['Fee Pondok', 
+             format_rupiah(data['alokasi_pondok_pulang']), 
+             format_rupiah(data['alokasi_pondok_kembali']), 
+             format_rupiah(data['alokasi_pondok_pulang'] + data['alokasi_pondok_kembali'])],
+            ['TOTAL ALOKASI', 
+             format_rupiah(data['pulang_total']), 
+             format_rupiah(data['kembali_total']), 
+             format_rupiah(data['global_total'])],
+        ]
+        
+        fee_table = Table(fee_data, colWidths=[4*cm, 3*cm, 3*cm, 3*cm])
+        fee_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#9b59b6')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 11),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, 3), colors.HexColor('#f4ecf7')),
+            ('BACKGROUND', (0, 4), (-1, 4), colors.HexColor('#8e44ad')),
+            ('TEXTCOLOR', (0, 4), (-1, 4), colors.whitesmoke),
+            ('FONTNAME', (0, 4), (-1, 4), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elements.append(fee_table)
+
+    else:
+        # No data available
+        no_data_style = ParagraphStyle(
+            'NoData',
+            parent=styles['Normal'],
+            fontSize=12,
+            alignment=1,
+            spaceAfter=20,
+            textColor=colors.HexColor('#e74c3c')
+        )
+        elements.append(Paragraph("Tidak ada data keuangan untuk ditampilkan.", no_data_style))
+        elements.append(Paragraph("Pastikan ada edisi yang aktif dan terdapat data pendaftaran.", styles['Normal']))
+
+    # Footer
+    elements.append(Spacer(1, 1*cm))
+    footer_style = ParagraphStyle(
+        'Footer',
+        parent=styles['Normal'],
+        fontSize=8,
+        textColor=colors.grey,
+        alignment=1,
+        borderWidth=1,
+        borderColor=colors.grey,
+        borderPadding=5
+    )
+    
+    footer_text = f"Laporan ini digenerate secara otomatis oleh sistem pada {datetime.now().strftime('%d %B %Y, %H:%M:%S')} WIB"
+    elements.append(Paragraph(footer_text, footer_style))
+    
+    # Build PDF
+    doc.build(elements)
+    buffer.seek(0)
+    
+    filename = f"laporan_keuangan_{active_edisi.nama if active_edisi else 'no_edition'}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    
+    return send_file(
+        buffer,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=filename
+    )
+
 @admin_bp.route('/api/rombongan-detail/<int:rombongan_id>')
 @login_required
 def api_rombongan_detail(rombongan_id):
@@ -1912,6 +2313,222 @@ def manajemen_santri_wilayah():
                            stats=stats,
                            pendaftaran_map=pendaftaran_map,
                            active_edisi=active_edisi)
+
+
+@admin_bp.route('/export-santri-wilayah')
+@login_required
+@role_required('Korpus', 'Korwil', 'Korda')
+def export_santri_wilayah():
+    """Export data santri wilayah ke Excel dengan filter yang sama"""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    from flask import make_response
+    from io import BytesIO
+    import datetime
+    
+    # Get active edition
+    active_edisi = get_active_edisi()
+    if not active_edisi:
+        flash('Tidak ada edisi yang aktif.', 'warning')
+        return redirect(url_for('admin.manajemen_santri_wilayah'))
+
+    # Get export type (pulang atau kembali)
+    export_type = request.args.get('type', 'pulang')  # default pulang
+    
+    # Get the same santri and rombongan data as the main view
+    santri_in_wilayah_ids = []
+    managed_rombongan_ids = []
+    
+    if current_user.role.name in ['Korwil', 'Korda']:
+        managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+        wilayah_kelolaan = set()
+        for rombongan in current_user.managed_rombongan:
+            if rombongan.cakupan_wilayah:
+                for wilayah in rombongan.cakupan_wilayah:
+                    wilayah_kelolaan.add(wilayah.get('label'))
+        
+        if wilayah_kelolaan:
+            santri_in_wilayah_ids = [s.id for s in Santri.query.with_entities(Santri.id).filter(Santri.kabupaten.in_(list(wilayah_kelolaan))).all()]
+    else:
+        santri_in_wilayah_ids = [s.id for s in Santri.query.with_entities(Santri.id).all()]
+
+    # Apply the same filters as the main view
+    query = Santri.query.filter(Santri.id.in_(santri_in_wilayah_ids))
+    
+    nama_filter = request.args.get('nama')
+    gender_filter = request.args.get('jenis_kelamin')
+    status_santri_filter = request.args.get('status_santri')
+    status_daftar_filter = request.args.get('status_daftar')
+
+    if nama_filter:
+        query = query.filter(Santri.nama.ilike(f'%{nama_filter}%'))
+    if gender_filter:
+        query = query.filter(Santri.jenis_kelamin == gender_filter)
+    if status_santri_filter:
+        query = query.filter(Santri.status_santri == status_santri_filter)
+    
+    # Apply registration status filter
+    if status_daftar_filter and santri_in_wilayah_ids:
+        rombongan_filter_pulang = db.true()
+        rombongan_filter_kembali = db.true()
+        if current_user.role.name in ['Korwil', 'Korda'] and managed_rombongan_ids:
+            rombongan_filter_pulang = Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids)
+            rombongan_filter_kembali = or_(
+                Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids),
+                and_(Pendaftaran.rombongan_kembali_id.is_(None), Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids))
+            )
+
+        if status_daftar_filter == 'sudah_pulang':
+            santri_ids = [s_id for s_id, in db.session.query(Pendaftaran.santri_id).filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.santri_id.in_(santri_in_wilayah_ids), Pendaftaran.status_pulang != 'Tidak Ikut', rombongan_filter_pulang).distinct()]
+            query = query.filter(Santri.id.in_(santri_ids))
+        elif status_daftar_filter == 'belum_pulang':
+            santri_ids_sudah = [s_id for s_id, in db.session.query(Pendaftaran.santri_id).filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.santri_id.in_(santri_in_wilayah_ids), Pendaftaran.status_pulang != 'Tidak Ikut', rombongan_filter_pulang).distinct()]
+            query = query.filter(Santri.id.notin_(santri_ids_sudah))
+        elif status_daftar_filter == 'sudah_kembali':
+            santri_ids = [s_id for s_id, in db.session.query(Pendaftaran.santri_id).filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.santri_id.in_(santri_in_wilayah_ids), Pendaftaran.status_kembali != 'Tidak Ikut', rombongan_filter_kembali).distinct()]
+            query = query.filter(Santri.id.in_(santri_ids))
+        elif status_daftar_filter == 'belum_kembali':
+            santri_ids_sudah = [s_id for s_id, in db.session.query(Pendaftaran.santri_id).filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.santri_id.in_(santri_in_wilayah_ids), Pendaftaran.status_kembali != 'Tidak Ikut', rombongan_filter_kembali).distinct()]
+            query = query.filter(Santri.id.notin_(santri_ids_sudah))
+
+    # Get all santri (no pagination for export)
+    santri_list = query.order_by(Santri.nama).all()
+    
+    # Get pendaftaran data for all santri
+    santri_ids = [s.id for s in santri_list]
+    pendaftaran_map = {}
+    if santri_ids:
+        pendaftarans = Pendaftaran.query.options(
+            selectinload(Pendaftaran.bus_pulang),
+            selectinload(Pendaftaran.bus_kembali),
+            selectinload(Pendaftaran.rombongan_pulang),
+            selectinload(Pendaftaran.rombongan_kembali)
+        ).filter(
+            Pendaftaran.edisi_id == active_edisi.id,
+            Pendaftaran.santri_id.in_(santri_ids)
+        ).all()
+        pendaftaran_map = {p.santri_id: p for p in pendaftarans}
+
+    # Create workbook
+    wb = Workbook()
+    ws = wb.active
+    
+    # Set worksheet title based on export type
+    if export_type == 'pulang':
+        ws.title = "Data Perjalanan Pulang"
+    else:
+        ws.title = "Data Perjalanan Kembali"
+
+    # Define styles
+    header_font = Font(name='Arial', size=12, bold=True, color='FFFFFF')
+    header_fill = PatternFill(start_color='366092', end_color='366092', fill_type='solid')
+    header_alignment = Alignment(horizontal='center', vertical='center')
+    border = Border(left=Side(style='thin'), right=Side(style='thin'), 
+                   top=Side(style='thin'), bottom=Side(style='thin'))
+
+    # Set headers based on export type
+    if export_type == 'pulang':
+        headers = [
+            'No', 'Nama Santri', 'Jenis Kelamin', 'Kabupaten', 'Status Santri', 
+            'Jabatan', 'Status Pulang', 'Metode Pembayaran', 'Rombongan', 
+            'Nama Bus', 'Nomor Lambung', 'Tanggal Export'
+        ]
+    else:  # kembali
+        headers = [
+            'No', 'Nama Santri', 'Jenis Kelamin', 'Kabupaten', 'Status Santri',
+            'Jabatan', 'Status Kembali', 'Metode Pembayaran', 'Rombongan',
+            'Nama Bus', 'Nomor Lambung', 'Tanggal Export'
+        ]
+
+    # Write headers
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+        cell.border = border
+
+    # Write data
+    current_date = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
+    
+    for idx, santri in enumerate(santri_list, 2):
+        pendaftaran = pendaftaran_map.get(santri.id)
+        
+        # Base data
+        row_data = [
+            idx - 1,  # No
+            santri.nama,
+            santri.jenis_kelamin,
+            santri.kabupaten,
+            santri.status_santri,
+            santri.nama_jabatan or 'Santri'
+        ]
+        
+        # Add specific data based on export type
+        if export_type == 'pulang':
+            if pendaftaran:
+                row_data.extend([
+                    pendaftaran.status_pulang,
+                    pendaftaran.metode_pembayaran_pulang or '-',
+                    pendaftaran.rombongan_pulang.nama_rombongan if pendaftaran.rombongan_pulang else '-',
+                    pendaftaran.bus_pulang.nama_armada if pendaftaran.bus_pulang else '-',
+                    pendaftaran.bus_pulang.nomor_lambung if pendaftaran.bus_pulang else '-'
+                ])
+            else:
+                row_data.extend(['Belum Terdaftar', '-', '-', '-', '-'])
+        else:  # kembali
+            if pendaftaran:
+                row_data.extend([
+                    pendaftaran.status_kembali,
+                    pendaftaran.metode_pembayaran_kembali or '-',
+                    pendaftaran.rombongan_kembali.nama_rombongan if pendaftaran.rombongan_kembali else 
+                    (pendaftaran.rombongan_pulang.nama_rombongan if pendaftaran.rombongan_pulang else '-'),
+                    pendaftaran.bus_kembali.nama_armada if pendaftaran.bus_kembali else '-',
+                    pendaftaran.bus_kembali.nomor_lambung if pendaftaran.bus_kembali else '-'
+                ])
+            else:
+                row_data.extend(['Belum Terdaftar', '-', '-', '-', '-'])
+        
+        # Add export date
+        row_data.append(current_date)
+        
+        # Write row data
+        for col, value in enumerate(row_data, 1):
+            cell = ws.cell(row=idx, column=col, value=value)
+            cell.border = border
+            cell.alignment = Alignment(vertical='center')
+
+    # Auto-adjust column widths
+    for column in ws.columns:
+        max_length = 0
+        column_letter = get_column_letter(column[0].column)
+        
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        
+        adjusted_width = min(max_length + 2, 50)
+        ws.column_dimensions[column_letter].width = adjusted_width
+
+    # Save to memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    # Create response
+    response = make_response(output.read())
+    
+    # Generate filename
+    filename = f"Santri_Wilayah_{export_type.title()}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    
+    response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    
+    return response
 
 @admin_bp.route('/rombongan/salin-dari-sebelumnya', methods=['POST'])
 @login_required

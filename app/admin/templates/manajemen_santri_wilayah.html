@@ -1,1014 +1,1276 @@
-    {% extends "_admin_layout.html" %}
-    {% block title %}Manajemen Santri per Wilayah{% endblock %}
+{% extends "_admin_layout.html" %}
+{% block title %}Manajemen Santri per Wilayah{% endblock %}
 
-    {% block content %}
-    <style>
-        .page-header {
-            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
-            border-radius: var(--border-radius);
-            color: white;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .page-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 200px;
-            height: 200px;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" opacity="0.1"><path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/></svg>') no-repeat center;
-            background-size: contain;
-            opacity: 0.1;
-        }
-        
-        .page-title {
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            position: relative;
-            z-index: 1;
-        }
-        
-        .page-description {
-            font-size: 1rem;
-            opacity: 0.9;
-            position: relative;
-            z-index: 1;
-            margin: 0;
-        }
-        
-        .stats-container {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            overflow: hidden;
-            margin-bottom: 2rem;
-        }
-        
-        .stats-header {
-            background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-            border-bottom: 1px solid #e2e8f0;
-            padding: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-        
-        .stats-header-icon {
-            width: 40px;
-            height: 40px;
-            background: var(--primary-color);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.125rem;
-        }
-        
+{% block content %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+        border-radius: var(--border-radius);
+        color: white;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 200px;
+        height: 200px;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" opacity="0.1"><path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/></svg>') no-repeat center;
+        background-size: contain;
+        opacity: 0.1;
+    }
+    
+    .page-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .page-description {
+        font-size: 1rem;
+        opacity: 0.9;
+        position: relative;
+        z-index: 1;
+        margin: 0;
+    }
+    
+    .stats-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+    
+    .stats-header {
+        background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+        border-bottom: 1px solid #e2e8f0;
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .stats-header-icon {
+        width: 40px;
+        height: 40px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.125rem;
+    }
+    
+    .stats-grid {
+        padding: 2rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+    }
+    
+    .stat-section {
+        position: relative;
+    }
+    
+    .stat-section:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        right: -1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 1px;
+        height: 80%;
+        background: linear-gradient(to bottom, transparent, #e2e8f0, transparent);
+    }
+    
+    .stat-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+    
+    .total-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .total-stat-item {
+        background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+        border: 1px solid #bae6fd;
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+    }
+    
+    .total-stat-label {
+        font-size: 0.75rem;
+        color: #0c4a6e;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+    
+    .total-stat-number {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #0284c7;
+    }
+    
+    .journey-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .journey-stat-registered {
+        background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+        border: 1px solid #86efac;
+        border-radius: 8px;
+        padding: 1rem;
+    }
+    
+    .journey-stat-unregistered {
+        background: linear-gradient(135deg, #fef2f2, #fecaca);
+        border: 1px solid #fca5a5;
+        border-radius: 8px;
+        padding: 1rem;
+    }
+    
+    .journey-stat-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        text-align: center;
+    }
+    
+    .journey-stat-registered .journey-stat-title {
+        color: #166534;
+    }
+    
+    .journey-stat-unregistered .journey-stat-title {
+        color: #991b1b;
+    }
+    
+    .gender-stats {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+    
+    .gender-stat {
+        flex: 1;
+        text-align: center;
+    }
+    
+    .gender-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        display: inline-block;
+    }
+    
+    .gender-badge.putra {
+        background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        color: #1e40af;
+    }
+    
+    .gender-badge.putri {
+        background: linear-gradient(135deg, #fdf2f8, #fce7f3);
+        color: #be185d;
+    }
+    
+    .journey-total {
+        text-align: center;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    .journey-total-badge {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+    
+    .main-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        border: none;
+    }
+    
+    .card-header {
+        background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+        border-bottom: 1px solid #e2e8f0;
+        padding: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .card-header h5 {
+        margin: 0;
+        color: var(--text-primary);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .header-icon {
+        width: 36px;
+        height: 36px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1rem;
+    }
+    
+    .export-buttons {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+    
+    .btn-export {
+        background: linear-gradient(135deg, #059669, #10b981);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.25rem;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .btn-export:hover {
+        background: linear-gradient(135deg, #047857, #059669);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+        color: white;
+    }
+    
+    .btn-export-pulang {
+        background: linear-gradient(135deg, #dc2626, #ef4444);
+    }
+    
+    .btn-export-pulang:hover {
+        background: linear-gradient(135deg, #b91c1c, #dc2626);
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+    }
+    
+    .btn-export-kembali {
+        background: linear-gradient(135deg, #2563eb, #3b82f6);
+    }
+    
+    .btn-export-kembali:hover {
+        background: linear-gradient(135deg, #1d4ed8, #2563eb);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+    
+    .filter-section {
+        background: #f8fafc;
+        padding: 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .form-label {
+        font-weight: 500;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control,
+    .form-select {
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        padding: 0.75rem;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.1);
+    }
+    
+    .filter-actions {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+    
+    .btn-secondary {
+        background: linear-gradient(135deg, #64748b, #475569);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-secondary:hover {
+        background: linear-gradient(135deg, #475569, #334155);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
+        color: white;
+    }
+    
+    .enhanced-table {
+        margin: 0;
+    }
+    
+    .enhanced-table thead th {
+        background: var(--text-primary);
+        color: white;
+        font-weight: 600;
+        border: none;
+        padding: 1rem 0.875rem;
+        font-size: 0.875rem;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    
+    .enhanced-table td {
+        border: none;
+        padding: 1rem 0.875rem;
+        font-size: 0.875rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .enhanced-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+    
+    .enhanced-table tbody tr {
+        transition: all 0.2s ease;
+    }
+    
+    .enhanced-table tbody tr:hover {
+        background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+    
+    .student-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .student-name {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .badge-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+    
+    .role-badge {
+        font-size: 0.65rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-weight: 600;
+    }
+    
+    .badge-jabatan {
+        background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+        color: #0c4a6e;
+    }
+    
+    .badge-santri {
+        background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+        color: #374151;
+    }
+    
+    .badge-putra {
+        background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        color: #1e40af;
+    }
+    
+    .badge-putri {
+        background: linear-gradient(135deg, #fdf2f8, #fce7f3);
+        color: #be185d;
+    }
+    
+    .status-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .status-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .status-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border: 1px solid transparent;
+    }
+    
+    .status-lunas {
+        background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+        color: #166534;
+        border-color: #86efac;
+    }
+    
+    .status-belum {
+        background: linear-gradient(135deg, #fef2f2, #fecaca);
+        color: #991b1b;
+        border-color: #fca5a5;
+    }
+    
+    .status-tidak {
+        background: linear-gradient(135deg, #fef3c7, #fde68a);
+        color: #92400e;
+        border-color: #f9a8d4;
+    }
+    
+    .status-belum-daftar {
+        background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+        color: #374151;
+        border-color: #d1d5db;
+    }
+    
+    .payment-method {
+        font-size: 0.65rem;
+        color: var(--text-secondary);
+        font-style: italic;
+    }
+    
+    .bus-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        font-size: 0.75rem;
+    }
+    
+    .bus-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .bus-label {
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+    
+    .bus-name {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .bus-empty {
+        color: #dc2626;
+        font-style: italic;
+    }
+    
+    .rombongan-badge {
+        background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+        color: #0c4a6e;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        margin-top: 0.25rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .action-btn {
+        font-size: 0.75rem;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+        border: none;
+        min-width: 100px;
+        justify-content: center;
+    }
+    
+    .btn-edit {
+        background: linear-gradient(135deg, #f59e0b, #f97316);
+        color: white;
+    }
+    
+    .btn-edit:hover {
+        background: linear-gradient(135deg, #f97316, #ea580c);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(251, 146, 60, 0.3);
+        color: white;
+    }
+    
+    .btn-register {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+        color: white;
+    }
+    
+    .btn-register:hover {
+        background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+        color: white;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--text-secondary);
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1.5rem;
+        opacity: 0.3;
+    }
+    
+    .pagination-container {
+        background: white;
+        border-top: 1px solid #e2e8f0;
+        padding: 1.5rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .pagination {
+        margin: 0;
+    }
+    
+    .pagination .page-link {
+        color: var(--primary-color);
+        border-color: #e2e8f0;
+        padding: 0.75rem 1rem;
+        margin: 0 0.25rem;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .pagination .page-link:hover {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+    }
+    
+    .pagination .page-item.active .page-link {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+        color: white;
+    }
+    
+    .pagination .page-item.disabled .page-link {
+        color: #9ca3af;
+        background: #f9fafb;
+        border-color: #e5e7eb;
+    }
+    
+    @media (max-width: 992px) {
         .stats-grid {
-            padding: 2rem;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
         }
         
-        .stat-section {
-            position: relative;
-        }
-        
-        .stat-section:not(:last-child)::after {
-            content: '';
-            position: absolute;
-            right: -1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 1px;
-            height: 80%;
-            background: linear-gradient(to bottom, transparent, #e2e8f0, transparent);
-        }
-        
-        .stat-title {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 1.5rem;
-            text-align: center;
-        }
-        
-        .total-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-        
-        .total-stat-item {
-            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
-            border: 1px solid #bae6fd;
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
-        }
-        
-        .total-stat-label {
-            font-size: 0.75rem;
-            color: #0c4a6e;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-        }
-        
-        .total-stat-number {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #0284c7;
-        }
-        
-        .journey-stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-        
-        .journey-stat-registered {
-            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
-            border: 1px solid #86efac;
-            border-radius: 8px;
-            padding: 1rem;
-        }
-        
-        .journey-stat-unregistered {
-            background: linear-gradient(135deg, #fef2f2, #fecaca);
-            border: 1px solid #fca5a5;
-            border-radius: 8px;
-            padding: 1rem;
-        }
-        
-        .journey-stat-title {
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-bottom: 0.75rem;
-            text-align: center;
-        }
-        
-        .journey-stat-registered .journey-stat-title {
-            color: #166534;
-        }
-        
-        .journey-stat-unregistered .journey-stat-title {
-            color: #991b1b;
-        }
-        
-        .gender-stats {
-            display: flex;
-            justify-content: space-between;
-            gap: 1rem;
-        }
-        
-        .gender-stat {
-            flex: 1;
-            text-align: center;
-        }
-        
-        .gender-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-            display: inline-block;
-        }
-        
-        .gender-badge.putra {
-            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
-            color: #1e40af;
-        }
-        
-        .gender-badge.putri {
-            background: linear-gradient(135deg, #fdf2f8, #fce7f3);
-            color: #be185d;
-        }
-        
-        .journey-total {
-            text-align: center;
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid #e5e7eb;
-        }
-        
-        .journey-total-badge {
-            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.875rem;
-        }
-        
-        .main-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            overflow: hidden;
-            border: none;
-        }
-        
-        .card-header {
-            background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-            border-bottom: 1px solid #e2e8f0;
-            padding: 1.5rem;
-        }
-        
-        .card-header h5 {
-            margin: 0;
-            color: var(--text-primary);
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-        
-        .header-icon {
-            width: 36px;
-            height: 36px;
-            background: var(--primary-color);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1rem;
-        }
-        
-        .filter-section {
-            background: #f8fafc;
-            padding: 1.5rem;
-            border-bottom: 1px solid #e2e8f0;
+        .stat-section::after {
+            display: none;
         }
         
         .filter-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1rem;
+            grid-template-columns: repeat(2, 1fr);
         }
         
-        .form-label {
-            font-weight: 500;
-            color: var(--text-primary);
-            margin-bottom: 0.5rem;
+        .card-header {
+            flex-direction: column;
+            align-items: stretch;
         }
         
-        .form-control,
-        .form-select {
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            padding: 0.75rem;
-            font-size: 0.875rem;
-            transition: all 0.2s ease;
+        .export-buttons {
+            justify-content: center;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .page-header {
+            padding: 1.5rem;
         }
         
-        .form-control:focus,
-        .form-select:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.1);
+        .page-title {
+            font-size: 1.5rem;
+        }
+        
+        .stats-grid {
+            padding: 1.5rem;
+        }
+        
+        .filter-grid {
+            grid-template-columns: 1fr;
         }
         
         .filter-actions {
-            display: flex;
-            gap: 0.75rem;
-            justify-content: flex-end;
-            flex-wrap: wrap;
+            justify-content: stretch;
         }
         
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 6px;
-            font-weight: 500;
-            transition: all 0.2s ease;
+        .filter-actions .btn {
+            flex: 1;
         }
         
-        .btn-primary:hover {
-            background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-        }
-        
-        .btn-secondary {
-            background: linear-gradient(135deg, #64748b, #475569);
-            border: none;
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 6px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-        }
-        
-        .btn-secondary:hover {
-            background: linear-gradient(135deg, #475569, #334155);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
-            color: white;
-        }
-        
-        .enhanced-table {
-            margin: 0;
-        }
-        
-        .enhanced-table thead th {
-            background: var(--text-primary);
-            color: white;
-            font-weight: 600;
-            border: none;
-            padding: 1rem 0.875rem;
-            font-size: 0.875rem;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-        
+        .enhanced-table th,
         .enhanced-table td {
-            border: none;
-            padding: 1rem 0.875rem;
-            font-size: 0.875rem;
-            vertical-align: middle;
-            border-bottom: 1px solid #f1f5f9;
+            padding: 0.75rem 0.5rem;
+            font-size: 0.8rem;
         }
         
-        .enhanced-table tbody tr:last-child td {
-            border-bottom: none;
-        }
-        
-        .enhanced-table tbody tr {
-            transition: all 0.2s ease;
-        }
-        
-        .enhanced-table tbody tr:hover {
-            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
-        
-        .student-info {
-            display: flex;
+        .export-buttons {
             flex-direction: column;
-            gap: 0.5rem;
         }
         
-        .student-name {
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-        
-        .badge-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.25rem;
-        }
-        
-        .role-badge {
-            font-size: 0.65rem;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-weight: 600;
-        }
-        
-        .badge-jabatan {
-            background: linear-gradient(135deg, #e0f2fe, #bae6fd);
-            color: #0c4a6e;
-        }
-        
-        .badge-santri {
-            background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
-            color: #374151;
-        }
-        
-        .badge-putra {
-            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
-            color: #1e40af;
-        }
-        
-        .badge-putri {
-            background: linear-gradient(135deg, #fdf2f8, #fce7f3);
-            color: #be185d;
-        }
-        
-        .status-container {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-        
-        .status-row {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .status-badge {
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            border: 1px solid transparent;
-        }
-        
-        .status-lunas {
-            background: linear-gradient(135deg, #dcfce7, #bbf7d0);
-            color: #166534;
-            border-color: #86efac;
-        }
-        
-        .status-belum {
-            background: linear-gradient(135deg, #fef2f2, #fecaca);
-            color: #991b1b;
-            border-color: #fca5a5;
-        }
-        
-        .status-tidak {
-            background: linear-gradient(135deg, #fef3c7, #fde68a);
-            color: #92400e;
-            border-color: #f9a8d4;
-        }
-        
-        .status-belum-daftar {
-            background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
-            color: #374151;
-            border-color: #d1d5db;
-        }
-        
-        .payment-method {
-            font-size: 0.65rem;
-            color: var(--text-secondary);
-            font-style: italic;
-        }
-        
-        .bus-info {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            font-size: 0.75rem;
-        }
-        
-        .bus-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-        
-        .bus-label {
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-        
-        .bus-name {
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-        
-        .bus-empty {
-            color: #dc2626;
-            font-style: italic;
-        }
-        
-        .rombongan-badge {
-            background: linear-gradient(135deg, #e0f2fe, #bae6fd);
-            color: #0c4a6e;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.65rem;
-            font-weight: 600;
-            margin-top: 0.25rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-        
-        .action-btn {
-            font-size: 0.75rem;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-weight: 500;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.2s ease;
-            border: none;
-            min-width: 100px;
+        .btn-export {
+            width: 100%;
             justify-content: center;
         }
-        
-        .btn-edit {
-            background: linear-gradient(135deg, #f59e0b, #f97316);
-            color: white;
-        }
-        
-        .btn-edit:hover {
-            background: linear-gradient(135deg, #f97316, #ea580c);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(251, 146, 60, 0.3);
-            color: white;
-        }
-        
-        .btn-register {
-            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
-            color: white;
-        }
-        
-        .btn-register:hover {
-            background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
-            color: white;
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 4rem 2rem;
-            color: var(--text-secondary);
-        }
-        
-        .empty-state i {
-            font-size: 4rem;
-            margin-bottom: 1.5rem;
-            opacity: 0.3;
-        }
-        
-        @media (max-width: 992px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
-                gap: 1.5rem;
-            }
-            
-            .stat-section::after {
-                display: none;
-            }
-            
-            .filter-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .page-header {
-                padding: 1.5rem;
-            }
-            
-            .page-title {
-                font-size: 1.5rem;
-            }
-            
-            .stats-grid {
-                padding: 1.5rem;
-            }
-            
-            .filter-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .filter-actions {
-                justify-content: stretch;
-            }
-            
-            .filter-actions .btn {
-                flex: 1;
-            }
-            
-            .enhanced-table th,
-            .enhanced-table td {
-                padding: 0.75rem 0.5rem;
-                font-size: 0.8rem;
-            }
-        }
-    </style>
+    }
+</style>
 
-    <div class="page-header">
-        <div class="page-title">Manajemen Santri per Wilayah</div>
-        <p class="page-description">
-            Kelola data santri berdasarkan cakupan wilayah rombongan yang Anda tangani dengan statistik lengkap dan filter yang komprehensif.
-        </p>
+<div class="page-header">
+    <div class="page-title">Manajemen Santri per Wilayah</div>
+    <p class="page-description">
+        Kelola data santri berdasarkan cakupan wilayah rombongan yang Anda tangani dengan statistik lengkap dan filter yang komprehensif.
+    </p>
+</div>
+
+<div class="stats-container">
+    <div class="stats-header">
+        <div class="stats-header-icon">
+            <i class="fas fa-chart-bar"></i>
+        </div>
+        <h5 class="mb-0">Statistik Santri Wilayah</h5>
     </div>
-
-    <div class="stats-container">
-        <div class="stats-header">
-            <div class="stats-header-icon">
-                <i class="fas fa-chart-bar"></i>
+    
+    <div class="stats-grid">
+        <!-- Total Santri Section -->
+        <div class="stat-section">
+            <div class="stat-title">Total Santri</div>
+            <div class="total-stats">
+                <div class="total-stat-item">
+                    <div class="total-stat-label">Total</div>
+                    <div class="total-stat-number">{{ stats.total_putra + stats.total_putri }}</div>
+                </div>
+                <div class="total-stat-item">
+                    <div class="total-stat-label">Putra</div>
+                    <div class="total-stat-number">{{ stats.total_putra }}</div>
+                </div>
+                <div class="total-stat-item">
+                    <div class="total-stat-label">Putri</div>
+                    <div class="total-stat-number">{{ stats.total_putri }}</div>
+                </div>
             </div>
-            <h5 class="mb-0">Statistik Santri Wilayah</h5>
         </div>
         
-        <div class="stats-grid">
-            <!-- Total Santri Section -->
-            <div class="stat-section">
-                <div class="stat-title">Total Santri</div>
-                <div class="total-stats">
-                    <div class="total-stat-item">
-                        <div class="total-stat-label">Total</div>
-                        <div class="total-stat-number">{{ stats.total_putra + stats.total_putri }}</div>
+        <!-- Perjalanan Pulang Section -->
+        <div class="stat-section">
+            <div class="stat-title">Perjalanan Pulang</div>
+            <div class="journey-stats">
+                <div class="journey-stat-registered">
+                    <div class="journey-stat-title">Sudah Terdaftar</div>
+                    <div class="gender-stats">
+                        <div class="gender-stat">
+                            <div class="gender-badge putra">Putra</div>
+                            <div>{{ stats.total_pulang_putra }}</div>
+                        </div>
+                        <div class="gender-stat">
+                            <div class="gender-badge putri">Putri</div>
+                            <div>{{ stats.total_pulang_putri }}</div>
+                        </div>
                     </div>
-                    <div class="total-stat-item">
-                        <div class="total-stat-label">Putra</div>
-                        <div class="total-stat-number">{{ stats.total_putra }}</div>
-                    </div>
-                    <div class="total-stat-item">
-                        <div class="total-stat-label">Putri</div>
-                        <div class="total-stat-number">{{ stats.total_putri }}</div>
+                </div>
+                <div class="journey-stat-unregistered">
+                    <div class="journey-stat-title">Belum Terdaftar</div>
+                    <div class="gender-stats">
+                        <div class="gender-stat">
+                            <div class="gender-badge putra">Putra</div>
+                            <div>{{ stats.total_putra - (stats.putra_daftar_pulang|default(0)) }}</div>
+                        </div>
+                        <div class="gender-stat">
+                            <div class="gender-badge putri">Putri</div>
+                            <div>{{ stats.total_putri - (stats.putri_daftar_pulang|default(0)) }}</div>
+                        </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Perjalanan Pulang Section -->
-            <div class="stat-section">
-                <div class="stat-title">Perjalanan Pulang</div>
-                <div class="journey-stats">
-                    <div class="journey-stat-registered">
-                        <div class="journey-stat-title">Sudah Terdaftar</div>
-                        <div class="gender-stats">
-                            <div class="gender-stat">
-                                <div class="gender-badge putra">Putra</div>
-                                <div>{{ stats.total_pulang_putra }}</div>
-                            </div>
-                            <div class="gender-stat">
-                                <div class="gender-badge putri">Putri</div>
-                                <div>{{ stats.total_pulang_putri }}</div>
-                            </div>
+            <div class="journey-total">
+                <div class="journey-total-badge">
+                    Total Terdaftar: {{ stats.total_pulang_putra + stats.total_pulang_putri }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Perjalanan Kembali Section -->
+        <div class="stat-section">
+            <div class="stat-title">Perjalanan Kembali</div>
+            <div class="journey-stats">
+                <div class="journey-stat-registered">
+                    <div class="journey-stat-title">Sudah Terdaftar</div>
+                    <div class="gender-stats">
+                        <div class="gender-stat">
+                            <div class="gender-badge putra">Putra</div>
+                            <div>{{ stats.total_kembali_putra }}</div>
                         </div>
-                    </div>
-                    <div class="journey-stat-unregistered">
-                        <div class="journey-stat-title">Belum Terdaftar</div>
-                        <div class="gender-stats">
-                            <div class="gender-stat">
-                                <div class="gender-badge putra">Putra</div>
-                                <div>{{ stats.total_putra - (stats.putra_daftar_pulang|default(0)) }}</div>
-                            </div>
-                            <div class="gender-stat">
-                                <div class="gender-badge putri">Putri</div>
-                                <div>{{ stats.total_putri - (stats.putri_daftar_pulang|default(0)) }}</div>
-                            </div>
+                        <div class="gender-stat">
+                            <div class="gender-badge putri">Putri</div>
+                            <div>{{ stats.total_kembali_putri }}</div>
                         </div>
                     </div>
                 </div>
-                <div class="journey-total">
-                    <div class="journey-total-badge">
-                        Total Terdaftar: {{ stats.total_pulang_putra + stats.total_pulang_putri }}
+                <div class="journey-stat-unregistered">
+                    <div class="journey-stat-title">Belum Terdaftar</div>
+                    <div class="gender-stats">
+                        <div class="gender-stat">
+                            <div class="gender-badge putra">Putra</div>
+                            <div>{{ stats.total_putra - (stats.putra_daftar_kembali|default(0)) }}</div>
+                        </div>
+                        <div class="gender-stat">
+                            <div class="gender-badge putri">Putri</div>
+                            <div>{{ stats.total_putri - (stats.putri_daftar_kembali|default(0)) }}</div>
+                        </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Perjalanan Kembali Section -->
-            <div class="stat-section">
-                <div class="stat-title">Perjalanan Kembali</div>
-                <div class="journey-stats">
-                    <div class="journey-stat-registered">
-                        <div class="journey-stat-title">Sudah Terdaftar</div>
-                        <div class="gender-stats">
-                            <div class="gender-stat">
-                                <div class="gender-badge putra">Putra</div>
-                                <div>{{ stats.total_kembali_putra }}</div>
-                            </div>
-                            <div class="gender-stat">
-                                <div class="gender-badge putri">Putri</div>
-                                <div>{{ stats.total_kembali_putri }}</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="journey-stat-unregistered">
-                        <div class="journey-stat-title">Belum Terdaftar</div>
-                        <div class="gender-stats">
-                            <div class="gender-stat">
-                                <div class="gender-badge putra">Putra</div>
-                                <div>{{ stats.total_putra - (stats.putra_daftar_kembali|default(0)) }}</div>
-                            </div>
-                            <div class="gender-stat">
-                                <div class="gender-badge putri">Putri</div>
-                                <div>{{ stats.total_putri - (stats.putri_daftar_kembali|default(0)) }}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="journey-total">
-                    <div class="journey-total-badge">
-                        Total Terdaftar: {{ stats.total_kembali_putra + stats.total_kembali_putri }}
-                    </div>
+            <div class="journey-total">
+                <div class="journey-total-badge">
+                    Total Terdaftar: {{ stats.total_kembali_putra + stats.total_kembali_putri }}
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <div class="main-card">
-        <div class="card-header">
-            <h5>
-                <div class="header-icon">
-                    <i class="fas fa-database"></i>
-                </div>
-                Daftar Santri Tersimpan (Total: {{ pagination.total }})
-            </h5>
+<div class="main-card">
+    <div class="card-header">
+        <h5>
+            <div class="header-icon">
+                <i class="fas fa-database"></i>
+            </div>
+            Daftar Santri Tersimpan (Total: {{ pagination.total }})
+        </h5>
+        <div class="export-buttons">
+            <a href="{{ url_for('admin.export_santri_wilayah', type='pulang', **request.args) }}" class="btn-export btn-export-pulang">
+                <i class="fas fa-plane-departure"></i> Export Data Pulang
+            </a>
+            <a href="{{ url_for('admin.export_santri_wilayah', type='kembali', **request.args) }}" class="btn-export btn-export-kembali">
+                <i class="fas fa-plane-arrival"></i> Export Data Kembali
+            </a>
         </div>
-        
-        <div class="filter-section">
-            <form method="GET">
-                <div class="filter-grid">
-                    <div>
-                        <label for="nama" class="form-label">Nama Santri</label>
-                        <input type="text" name="nama" id="nama" class="form-control" placeholder="Cari nama santri..." value="{{ request.args.get('nama', '') }}">
-                    </div>
-                    <div>
-                        <label for="jenis_kelamin" class="form-label">Jenis Kelamin</label>
-                        <select name="jenis_kelamin" id="jenis_kelamin" class="form-select">
-                            <option value="">-- Semua --</option>
-                            <option value="PUTRA" {% if request.args.get('jenis_kelamin') == 'PUTRA' %}selected{% endif %}>Putra</option>
-                            <option value="PUTRI" {% if request.args.get('jenis_kelamin') == 'PUTRI' %}selected{% endif %}>Putri</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="status_santri" class="form-label">Status Santri</label>
-                        <select name="status_santri" id="status_santri" class="form-select">
-                            <option value="">-- Semua Status --</option>
-                            <option value="Aktif" {% if request.args.get('status_santri') == 'Aktif' %}selected{% endif %}>Aktif</option>
-                            <option value="Izin" {% if request.args.get('status_santri') == 'Izin' %}selected{% endif %}>Izin</option>
-                            <option value="Partisipan" {% if request.args.get('status_santri') == 'Partisipan' %}selected{% endif %}>Partisipan</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="status_daftar" class="form-label">Status Pendaftaran</label>
-                        <select name="status_daftar" id="status_daftar" class="form-select">
-                            <option value="">-- Semua --</option>
-                            <option value="sudah_pulang" {% if request.args.get('status_daftar') == 'sudah_pulang' %}selected{% endif %}>Sudah Daftar Pulang</option>
-                            <option value="belum_pulang" {% if request.args.get('status_daftar') == 'belum_pulang' %}selected{% endif %}>Belum Daftar Pulang</option>
-                            <option value="sudah_kembali" {% if request.args.get('status_daftar') == 'sudah_kembali' %}selected{% endif %}>Sudah Daftar Kembali</option>
-                            <option value="belum_kembali" {% if request.args.get('status_daftar') == 'belum_kembali' %}selected{% endif %}>Belum Daftar Kembali</option>
-                        </select>
-                    </div>
+    </div>
+    
+    <div class="filter-section">
+        <form method="GET" id="filterForm">
+            <div class="filter-grid">
+                <div>
+                    <label for="nama" class="form-label">Nama Santri</label>
+                    <input type="text" name="nama" id="nama" class="form-control" placeholder="Cari nama santri..." value="{{ request.args.get('nama', '') }}">
                 </div>
-                <div class="filter-actions">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-search"></i> Terapkan Filter
-                    </button>
-                    <a href="{{ url_for('admin.manajemen_santri_wilayah') }}" class="btn btn-secondary">
-                        <i class="fas fa-undo"></i> Reset Filter
-                    </a>
+                <div>
+                    <label for="jenis_kelamin" class="form-label">Jenis Kelamin</label>
+                    <select name="jenis_kelamin" id="jenis_kelamin" class="form-select">
+                        <option value="">-- Semua --</option>
+                        <option value="PUTRA" {% if request.args.get('jenis_kelamin') == 'PUTRA' %}selected{% endif %}>Putra</option>
+                        <option value="PUTRI" {% if request.args.get('jenis_kelamin') == 'PUTRI' %}selected{% endif %}>Putri</option>
+                    </select>
                 </div>
-            </form>
-        </div>
-        
-        <div class="table-responsive">
-            {% if pagination.items %}
-                <table class="enhanced-table table">
-                    <thead>
-                        <tr>
-                            <th style="width: 5%;">No.</th>
-                            <th style="width: 22%;">Data Santri</th>
-                            <th style="width: 13%;">Alamat</th>
-                            <th style="width: 28%;">Status & Pembayaran</th>
-                            <th style="width: 28%;">Status Santri</th>
-                            <th style="width: 18%;">Alokasi Bus</th>
-                            <th style="width: 15%;">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for santri in pagination.items %}
-                        {% set pendaftaran = pendaftaran_map.get(santri.id) %}
-                        <tr>
-                            <td><strong>{{ loop.index + (pagination.page - 1) * pagination.per_page }}</strong></td>
-                            <td>
-                                <div class="student-info">
-                                    <div class="student-name">{{ santri.nama }}</div>
-                                    <div class="badge-container">
-                                        {% if santri.nama_jabatan %}
-                                            <span class="role-badge badge-jabatan">{{ santri.nama_jabatan }}</span>
+                <div>
+                    <label for="status_santri" class="form-label">Status Santri</label>
+                    <select name="status_santri" id="status_santri" class="form-select">
+                        <option value="">-- Semua Status --</option>
+                        <option value="Aktif" {% if request.args.get('status_santri') == 'Aktif' %}selected{% endif %}>Aktif</option>
+                        <option value="Izin" {% if request.args.get('status_santri') == 'Izin' %}selected{% endif %}>Izin</option>
+                        <option value="Partisipan" {% if request.args.get('status_santri') == 'Partisipan' %}selected{% endif %}>Partisipan</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="status_daftar" class="form-label">Status Pendaftaran</label>
+                    <select name="status_daftar" id="status_daftar" class="form-select">
+                        <option value="">-- Semua --</option>
+                        <option value="sudah_pulang" {% if request.args.get('status_daftar') == 'sudah_pulang' %}selected{% endif %}>Sudah Daftar Pulang</option>
+                        <option value="belum_pulang" {% if request.args.get('status_daftar') == 'belum_pulang' %}selected{% endif %}>Belum Daftar Pulang</option>
+                        <option value="sudah_kembali" {% if request.args.get('status_daftar') == 'sudah_kembali' %}selected{% endif %}>Sudah Daftar Kembali</option>
+                        <option value="belum_kembali" {% if request.args.get('status_daftar') == 'belum_kembali' %}selected{% endif %}>Belum Daftar Kembali</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Terapkan Filter
+                </button>
+                <a href="{{ url_for('admin.manajemen_santri_wilayah') }}" class="btn btn-secondary">
+                    <i class="fas fa-undo"></i> Reset Filter
+                </a>
+            </div>
+        </form>
+    </div>
+    
+    <div class="table-responsive">
+        {% if pagination.items %}
+            <table class="enhanced-table table">
+                <thead>
+                    <tr>
+                        <th style="width: 5%;">No.</th>
+                        <th style="width: 22%;">Data Santri</th>
+                        <th style="width: 13%;">Alamat</th>
+                        <th style="width: 28%;">Status & Pembayaran</th>
+                        <th style="width: 12%;">Status Santri</th>
+                        <th style="width: 18%;">Alokasi Bus</th>
+                        <th style="width: 12%;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for santri in pagination.items %}
+                    {% set pendaftaran = pendaftaran_map.get(santri.id) %}
+                    <tr>
+                        <td><strong>{{ loop.index + (pagination.page - 1) * pagination.per_page }}</strong></td>
+                        <td>
+                            <div class="student-info">
+                                <div class="student-name">{{ santri.nama }}</div>
+                                <div class="badge-container">
+                                    {% if santri.nama_jabatan %}
+                                        <span class="role-badge badge-jabatan">{{ santri.nama_jabatan }}</span>
+                                    {% else %}
+                                        <span class="role-badge badge-santri">Santri</span>
+                                    {% endif %}
+                                    {% if santri.jenis_kelamin == 'PUTRA' %}
+                                        <span class="role-badge badge-putra">Putra</span>
+                                    {% elif santri.jenis_kelamin == 'PUTRI' %}
+                                        <span class="role-badge badge-putri">Putri</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-size: 0.875rem; color: var(--text-secondary);">
+                                <i class="fas fa-map-marker-alt"></i> {{ santri.kabupaten }}
+                            </div>
+                        </td>
+                        <td>
+                            {% if pendaftaran %}
+                                <div class="status-container">
+                                    <div class="status-row">
+                                        {% if pendaftaran.status_pulang == 'Tidak Ikut' %}
+                                            <span class="status-badge status-tidak">
+                                                <i class="fas fa-plane-departure"></i> Pulang: {{ pendaftaran.status_pulang }}
+                                            </span>
+                                        {% elif pendaftaran.status_pulang == 'Lunas' %}
+                                            <span class="status-badge status-lunas">
+                                                <i class="fas fa-plane-departure"></i> Pulang: {{ pendaftaran.status_pulang }}
+                                            </span>
                                         {% else %}
-                                            <span class="role-badge badge-santri">Santri</span>
+                                            <span class="status-badge status-belum">
+                                                <i class="fas fa-plane-departure"></i> Pulang: {{ pendaftaran.status_pulang }}
+                                            </span>
                                         {% endif %}
-                                        {% if santri.jenis_kelamin == 'PUTRA' %}
-                                            <span class="role-badge badge-putra">Putra</span>
-                                        {% elif santri.jenis_kelamin == 'PUTRI' %}
-                                            <span class="role-badge badge-putri">Putri</span>
+                                    </div>
+                                    <div class="payment-method">{{ pendaftaran.metode_pembayaran_pulang or '-' }}</div>
+                                    
+                                    <div class="status-row">
+                                        {% if pendaftaran.status_kembali == 'Tidak Ikut' %}
+                                            <span class="status-badge status-tidak">
+                                                <i class="fas fa-plane-arrival"></i> Balpon: {{ pendaftaran.status_kembali }}
+                                            </span>
+                                        {% elif pendaftaran.status_kembali == 'Lunas' %}
+                                            <span class="status-badge status-lunas">
+                                                <i class="fas fa-plane-arrival"></i> Balpon: {{ pendaftaran.status_kembali }}
+                                            </span>
+                                        {% else %}
+                                            <span class="status-badge status-belum">
+                                                <i class="fas fa-plane-arrival"></i> Balpon: {{ pendaftaran.status_kembali }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="payment-method">{{ pendaftaran.metode_pembayaran_kembali or '-' }}</div>
+                                </div>
+                            {% else %}
+                                <span class="status-badge status-belum-daftar">
+                                    <i class="fas fa-exclamation-triangle"></i> Belum Terdaftar
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if santri.status_santri == 'Aktif' %}
+                                <span class="badge bg-success">Aktif</span>
+                            {% elif santri.status_santri == 'Izin' %}
+                                <span class="badge bg-warning text-dark">Izin</span>
+                            {% elif santri.status_santri == 'Partisipan' %}
+                                <span class="badge bg-info text-dark">Partisipan</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ santri.status_santri }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if pendaftaran %}
+                                <div class="bus-info">
+                                    <div class="bus-item">
+                                        <div class="bus-label">
+                                            <i class="fas fa-arrow-right"></i> Pulang:
+                                        </div>
+                                        {% if pendaftaran.bus_pulang %}
+                                            <div class="bus-name">
+                                                {{ pendaftaran.bus_pulang.nama_armada }} 
+                                                ({{ pendaftaran.bus_pulang.nomor_lambung or 'N/A' }})
+                                            </div>
+                                        {% else %}
+                                            <div class="bus-empty">Belum Ada Bus</div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="bus-item">
+                                        <div class="bus-label">
+                                            <i class="fas fa-arrow-left"></i> Balpon:
+                                        </div>
+                                        {% if pendaftaran.bus_kembali %}
+                                            <div class="bus-name">
+                                                {{ pendaftaran.bus_kembali.nama_armada }} 
+                                                ({{ pendaftaran.bus_kembali.nomor_lambung or 'N/A' }})
+                                            </div>
+                                            {% if pendaftaran.rombongan_kembali and pendaftaran.rombongan_pulang and pendaftaran.rombongan_kembali.id != pendaftaran.rombongan_pulang.id %}
+                                                <div class="rombongan-badge">
+                                                    <i class="fas fa-info-circle"></i>
+                                                    {{ pendaftaran.rombongan_kembali.nama_rombongan }}
+                                                </div>
+                                            {% endif %}
+                                        {% else %}
+                                            <div class="bus-empty">Belum Ada Bus</div>
                                         {% endif %}
                                     </div>
                                 </div>
-                            </td>
-                            <td>
-                                <div style="font-size: 0.875rem; color: var(--text-secondary);">
-                                    <i class="fas fa-map-marker-alt"></i> {{ santri.kabupaten }}
+                            {% else %}
+                                <div style="color: var(--text-secondary); font-style: italic; text-align: center;">
+                                    <i class="fas fa-minus"></i> Belum Terdaftar
                                 </div>
-                            </td>
-                            <td>
-                                {% if pendaftaran %}
-                                    <div class="status-container">
-                                        <div class="status-row">
-                                            {% if pendaftaran.status_pulang == 'Tidak Ikut' %}
-                                                <span class="status-badge status-tidak">
-                                                    <i class="fas fa-plane-departure"></i> Pulang: {{ pendaftaran.status_pulang }}
-                                                </span>
-                                            {% elif pendaftaran.status_pulang == 'Lunas' %}
-                                                <span class="status-badge status-lunas">
-                                                    <i class="fas fa-plane-departure"></i> Pulang: {{ pendaftaran.status_pulang }}
-                                                </span>
-                                            {% else %}
-                                                <span class="status-badge status-belum">
-                                                    <i class="fas fa-plane-departure"></i> Pulang: {{ pendaftaran.status_pulang }}
-                                                </span>
-                                            {% endif %}
-                                        </div>
-                                        <div class="payment-method">{{ pendaftaran.metode_pembayaran_pulang or '-' }}</div>
-                                        
-                                        <div class="status-row">
-                                            {% if pendaftaran.status_kembali == 'Tidak Ikut' %}
-                                                <span class="status-badge status-tidak">
-                                                    <i class="fas fa-plane-arrival"></i> Balpon: {{ pendaftaran.status_kembali }}
-                                                </span>
-                                            {% elif pendaftaran.status_kembali == 'Lunas' %}
-                                                <span class="status-badge status-lunas">
-                                                    <i class="fas fa-plane-arrival"></i> Balpon: {{ pendaftaran.status_kembali }}
-                                                </span>
-                                            {% else %}
-                                                <span class="status-badge status-belum">
-                                                    <i class="fas fa-plane-arrival"></i> Balpon: {{ pendaftaran.status_kembali }}
-                                                </span>
-                                            {% endif %}
-                                        </div>
-                                        <div class="payment-method">{{ pendaftaran.metode_pembayaran_kembali or '-' }}</div>
-                                    </div>
-                                {% else %}
-                                    <span class="status-badge status-belum-daftar">
-                                        <i class="fas fa-exclamation-triangle"></i> Belum Terdaftar
-                                    </span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if santri.status_santri == 'Aktif' %}
-                                    <span class="badge bg-success">Aktif</span>
-                                {% elif santri.status_santri == 'Izin' %}
-                                    <span class="badge bg-warning text-dark">Izin</span>
-                                {% elif santri.status_santri == 'Partisipan' %}
-                                    <span class="badge bg-info text-dark">Partisipan</span>
-                                {% else %}
-                                    <span class="badge bg-secondary">{{ santri.status_santri }}</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if pendaftaran %}
-                                    <div class="bus-info">
-                                        <div class="bus-item">
-                                            <div class="bus-label">
-                                                <i class="fas fa-arrow-right"></i> Pulang:
-                                            </div>
-                                            {% if pendaftaran.bus_pulang %}
-                                                <div class="bus-name">
-                                                    {{ pendaftaran.bus_pulang.nama_armada }} 
-                                                    ({{ pendaftaran.bus_pulang.nomor_lambung or 'N/A' }})
-                                                </div>
-                                            {% else %}
-                                                <div class="bus-empty">Belum Ada Bus</div>
-                                            {% endif %}
-                                        </div>
-                                        
-                                        <div class="bus-item">
-                                            <div class="bus-label">
-                                                <i class="fas fa-arrow-left"></i> Balpon:
-                                            </div>
-                                            {% if pendaftaran.bus_kembali %}
-                                                <div class="bus-name">
-                                                    {{ pendaftaran.bus_kembali.nama_armada }} 
-                                                    ({{ pendaftaran.bus_kembali.nomor_lambung or 'N/A' }})
-                                                </div>
-                                                {% if pendaftaran.rombongan_kembali and pendaftaran.rombongan_pulang and pendaftaran.rombongan_kembali.id != pendaftaran.rombongan_pulang.id %}
-                                                    <div class="rombongan-badge">
-                                                        <i class="fas fa-info-circle"></i>
-                                                        {{ pendaftaran.rombongan_kembali.nama_rombongan }}
-                                                    </div>
-                                                {% endif %}
-                                            {% else %}
-                                                <div class="bus-empty">Belum Ada Bus</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                {% else %}
-                                    <div style="color: var(--text-secondary); font-style: italic; text-align: center;">
-                                        <i class="fas fa-minus"></i> Belum Terdaftar
-                                    </div>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if pendaftaran %}
-                                    <a href="{{ url_for('admin.edit_pendaftaran', pendaftaran_id=pendaftaran.id) }}" class="action-btn btn-edit">
-                                        <i class="fas fa-edit"></i> Edit
-                                    </a>
-                                {% else %}
-                                    <a href="{{ url_for('admin.pendaftaran_rombongan', santri_id=santri.id) }}" class="action-btn btn-register">
-                                        <i class="fas fa-user-plus"></i> Daftar
-                                    </a>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-                <div class="empty-state">
-                    <i class="fas fa-users-slash"></i>
-                    <h4>Tidak Ada Data Santri</h4>
-                    <p>Tidak ada santri yang cocok dengan filter yang Anda pilih.</p>
-                    <p class="text-muted">Silakan ubah kriteria filter atau reset untuk melihat semua data.</p>
-                </div>
-            {% endif %}
-        </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if pendaftaran %}
+                                <a href="{{ url_for('admin.edit_pendaftaran', pendaftaran_id=pendaftaran.id) }}" class="action-btn btn-edit">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('admin.pendaftaran_rombongan', santri_id=santri.id) }}" class="action-btn btn-register">
+                                    <i class="fas fa-user-plus"></i> Daftar
+                                </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-users-slash"></i>
+                <h4>Tidak Ada Data Santri</h4>
+                <p>Tidak ada santri yang cocok dengan filter yang Anda pilih.</p>
+                <p class="text-muted">Silakan ubah kriteria filter atau reset untuk melihat semua data.</p>
+            </div>
+        {% endif %}
     </div>
+    
+    <!-- Pagination Section -->
+    {% if pagination.items %}
+<div class="pagination-container">
+    <nav aria-label="Page navigation">
+        <ul class="pagination">
+            {# Siapkan argumen URL tanpa parameter 'page' yang lama #}
+            {% set args = request.args.to_dict() %}
+            {% do args.pop('page', None) %}
 
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Animate statistics on page load
-        const statNumbers = document.querySelectorAll('.total-stat-number, .gender-stat div:last-child');
-        statNumbers.forEach(stat => {
-            const finalNumber = parseInt(stat.textContent);
-            if (!isNaN(finalNumber)) {
-                stat.textContent = '0';
-                
-                let current = 0;
-                const increment = Math.ceil(finalNumber / 20);
-                const timer = setInterval(() => {
-                    current += increment;
-                    if (current >= finalNumber) {
-                        current = finalNumber;
-                        clearInterval(timer);
-                    }
-                    stat.textContent = current;
-                }, 50);
-            }
-        });
-        
-        // Enhanced table row hover effects
-        const tableRows = document.querySelectorAll('.enhanced-table tbody tr');
-        tableRows.forEach(row => {
-            row.addEventListener('mouseenter', function() {
-                this.style.transform = 'translateY(-2px)';
-            });
+            {# Tombol "Sebelumnya" #}
+            {% if pagination.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('admin.manajemen_santri_wilayah', page=pagination.prev_num, **args) }}">
+                        <i class="fas fa-chevron-left"></i> Sebelumnya
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link"><i class="fas fa-chevron-left"></i> Sebelumnya</span>
+                </li>
+            {% endif %}
             
-            row.addEventListener('mouseleave', function() {
-                this.style.transform = 'translateY(0)';
-            });
-        });
-        
-        // Form validation and user feedback
-        const filterForm = document.querySelector('form');
-        if (filterForm) {
-            filterForm.addEventListener('submit', function(e) {
-                const formData = new FormData(this);
-                let hasFilter = false;
-                
-                for (let [key, value] of formData.entries()) {
-                    if (value.trim() !== '') {
-                        hasFilter = true;
-                        break;
-                    }
-                }
-                
-                if (!hasFilter) {
-                    e.preventDefault();
-                    alert('Silakan pilih minimal satu kriteria filter.');
-                    return false;
-                }
-            });
-        }
-        
-        // Auto-save filter preferences to localStorage (if supported)
-        const filterInputs = document.querySelectorAll('input[name], select[name]');
-        filterInputs.forEach(input => {
-            // Load saved values
-            const savedValue = localStorage.getItem('filter_' + input.name);
-            if (savedValue && !input.value) {
-                input.value = savedValue;
-            }
+            {# Nomor Halaman #}
+            {% for page_num in pagination.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num != pagination.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin.manajemen_santri_wilayah', page=page_num, **args) }}">{{ page_num }}</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                {% endif %}
+            {% endfor %}
             
-            // Save on change
-            input.addEventListener('change', function() {
-                if (this.value) {
-                    localStorage.setItem('filter_' + this.name, this.value);
-                } else {
-                    localStorage.removeItem('filter_' + this.name);
+            {# Tombol "Selanjutnya" #}
+            {% if pagination.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('admin.manajemen_santri_wilayah', page=pagination.next_num, **args) }}">
+                        Selanjutnya <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Selanjutnya <i class="fas fa-chevron-right"></i></span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    
+    <div class="pagination-info">
+        Menampilkan {{ pagination.items|length }} dari {{ pagination.total }} data (Halaman {{ pagination.page }} dari {{ pagination.pages }})
+    </div>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate statistics on page load
+    const statNumbers = document.querySelectorAll('.total-stat-number, .gender-stat div:last-child');
+    statNumbers.forEach(stat => {
+        const finalNumber = parseInt(stat.textContent);
+        if (!isNaN(finalNumber)) {
+            stat.textContent = '0';
+            
+            let current = 0;
+            const increment = Math.ceil(finalNumber / 20);
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= finalNumber) {
+                    current = finalNumber;
+                    clearInterval(timer);
                 }
-            });
-        });
-        
-        // Clear saved filters on reset
-        const resetBtn = document.querySelector('a[href*="manajemen_santri_wilayah"]:not([href*="?"])');
-        if (resetBtn) {
-            resetBtn.addEventListener('click', function() {
-                filterInputs.forEach(input => {
-                    localStorage.removeItem('filter_' + input.name);
-                });
-            });
+                stat.textContent = current;
+            }, 50);
         }
     });
-    </script>
-    {% endblock %}
+    
+    // Enhanced table row hover effects
+    const tableRows = document.querySelectorAll('.enhanced-table tbody tr');
+    tableRows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+        });
+        
+        row.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+    
+    // Form validation and user feedback
+    const filterForm = document.getElementById('filterForm');
+    if (filterForm) {
+        filterForm.addEventListener('submit', function(e) {
+            const formData = new FormData(this);
+            let hasFilter = false;
+            
+            for (let [key, value] of formData.entries()) {
+                if (value.trim() !== '') {
+                    hasFilter = true;
+                    break;
+                }
+            }
+            
+            if (!hasFilter) {
+                e.preventDefault();
+                alert('Silakan pilih minimal satu kriteria filter.');
+                return false;
+            }
+            
+            // Show loading state
+            const submitBtn = this.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mencari...';
+                submitBtn.disabled = true;
+                
+                // Re-enable after form submission
+                setTimeout(() => {
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }, 3000);
+            }
+        });
+    }
+    
+    // Auto-save filter preferences to localStorage
+    const filterInputs = document.querySelectorAll('input[name], select[name]');
+    filterInputs.forEach(input => {
+        // Load saved values
+        const savedValue = localStorage.getItem('filter_' + input.name);
+        if (savedValue && !input.value) {
+            input.value = savedValue;
+        }
+        
+        // Save on change
+        input.addEventListener('change', function() {
+            if (this.value) {
+                localStorage.setItem('filter_' + this.name, this.value);
+            } else {
+                localStorage.removeItem('filter_' + this.name);
+            }
+        });
+    });
+    
+    // Clear saved filters on reset
+    const resetBtn = document.querySelector('a[href*="manajemen_santri_wilayah"]:not([href*="?"])');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            filterInputs.forEach(input => {
+                localStorage.removeItem('filter_' + input.name);
+            });
+        });
+    }
+    
+    // Add smooth scrolling for pagination links
+    const paginationLinks = document.querySelectorAll('.pagination .page-link');
+    paginationLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            if (!this.closest('.page-item').classList.contains('disabled')) {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            }
+        });
+    });
+    
+    // Add loading state for export buttons
+    const exportButtons = document.querySelectorAll('.btn-export');
+    exportButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengekspor...';
+            this.style.pointerEvents = 'none';
+            
+            // Reset after 5 seconds
+            setTimeout(() => {
+                this.innerHTML = originalText;
+                this.style.pointerEvents = 'auto';
+            }, 5000);
+        });
+    });
+    
+    // Add tooltips for action buttons
+    const actionBtns = document.querySelectorAll('.action-btn');
+    actionBtns.forEach(btn => {
+        if (btn.classList.contains('btn-edit')) {
+            btn.title = 'Edit data pendaftaran santri';
+        } else if (btn.classList.contains('btn-register')) {
+            btn.title = 'Daftarkan santri ke rombongan';
+        }
+    });
+    
+    // Add search functionality for quick filter
+    const namaInput = document.getElementById('nama');
+    if (namaInput) {
+        let searchTimeout;
+        namaInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const searchTerm = this.value.toLowerCase();
+            
+            if (searchTerm.length > 2) {
+                searchTimeout = setTimeout(() => {
+                    // Auto-submit form after typing stops for 1 second
+                    filterForm.submit();
+                }, 1000);
+            }
+        });
+    }
+    
+    // Enhanced visual feedback for status badges
+    const statusBadges = document.querySelectorAll('.status-badge, .role-badge');
+    statusBadges.forEach(badge => {
+        badge.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.05)';
+        });
+        
+        badge.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+        });
+    });
+});
+</script>
+{% endblock %}

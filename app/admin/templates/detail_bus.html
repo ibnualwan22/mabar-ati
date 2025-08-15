@@ -323,8 +323,8 @@
 </div>
 
 <div class="bus-header">
-    <div class="bus-title">{{ bus.nama_armada }}</div>
-    <div class="bus-subtitle">{{ bus.nomor_lambung or bus.plat_nomor }} • {{ bus.rombongan.nama_rombongan }}</div>
+    <div class="bus-title">{{ bus.nama_armada }} - {{ bus.nomor_lambung or bus.plat_nomor }}</div>
+    <div class="bus-subtitle"> • {{ bus.rombongan.nama_rombongan }}</div>
     
     <div class="bus-stats">
         <div class="stat-item">
@@ -388,7 +388,20 @@
                             {% for p in pendaftar_list|sort(attribute='santri.nama') %}
                             <tr>
                                 <td><strong>{{ loop.index }}</strong></td>
-                                <td>{{ p.santri.nama }}</td>
+                                <td>{{ p.santri.nama }}
+                                    <small class="text-muted">
+                                    {% if p.nama_jabatan %}
+                                        <span class="role-badge badge-jabatan">{{ p.nama_jabatan }}</span>
+                                    {% else %}
+                                        <span class="role-badge badge-santri">(Santri</span>
+                                    {% endif %}
+                                    {% if p.santri.jenis_kelamin == 'PUTRA' %}
+                                        <span class="role-badge badge-putra">Putra)</span>
+                                    {% elif p.santri.jenis_kelamin == 'PUTRI' %}
+                                        <span class="role-badge badge-putri">Putri)</span>
+                                    {% endif %}
+                                </small>
+                                </td>
                                 <td><span class="badge bg-light text-dark">{{ p.santri.asrama }}</span></td>
                             </tr>
                             {% endfor %}
@@ -417,17 +430,6 @@
             <small class="text-muted">(Menuju Pondok)</small>
         </h5>
     </div>
-    <div class="card-body">
-        <div class="schedule-info">
-            <div class="icon">
-                <i class="fas fa-clock"></i>
-            </div>
-            <div>
-                <strong>Jadwal Kembali:</strong> {{ bus.rombongan.jadwal_kembali|datetime_wib if bus.rombongan.jadwal_kembali else 'Belum diatur' }}<br>
-                <strong>Titik Kumpul:</strong> {{ bus.rombongan.titik_kumpul_kembali or 'Belum diatur' }}
-            </div>
-        </div>
-
         {% if grouped_peserta_kembali %}
             {% for titik_jemput, pendaftar_list in grouped_peserta_kembali.items()|sort %}
             <div class="pickup-point">
@@ -444,7 +446,6 @@
                             <tr>
                                 <th style="width: 50px;">No.</th>
                                 <th>Nama Santri</th>
-                                <th>Titik Jemput</th>
                                 <th>Asrama</th>
                             </tr>
                         </thead>
@@ -452,8 +453,21 @@
                             {% for p in pendaftar_list|sort(attribute='santri.nama') %}
                             <tr>
                                 <td><strong>{{ loop.index }}</strong></td>
-                                <td>{{ p.santri.nama }}</td>
-                                <td>{{ p.santri.titik_jemput or '-' }}</td>
+                                <td>{{ p.santri.nama }}
+                                    <small class="text-muted">
+                                    {% if p.nama_jabatan %}
+                                        <span class="role-badge badge-jabatan">{{ p.nama_jabatan }}</span>
+                                    {% else %}
+                                        <span class="role-badge badge-santri">(Santri</span>
+                                    {% endif %}
+                                    {% if p.santri.jenis_kelamin == 'PUTRA' %}
+                                        <span class="role-badge badge-putra">Putra)</span>
+                                    {% elif p.santri.jenis_kelamin == 'PUTRI' %}
+                                        <span class="role-badge badge-putri">Putri)</span>
+                                    {% endif %}
+                                </small>
+                                </td>
+                                
                                 <td><span class="badge bg-light text-dark">{{ p.santri.asrama }}</span></td>
                             </tr>
                             {% endfor %}
