@@ -148,7 +148,7 @@ def santri_bisa_jadi_partisipan_query():
 
 class PartisipanForm(FlaskForm):
     santri = HiddenField('Pilih Santri', validators=[DataRequired()])
-    kategori = StringField('Kategori Partisipan', validators=[DataRequired()], description="Contoh: Panitia, Peserta Lomba, Khotmil Qur'an")
+    kategori = StringField('Kategori Partisipan', validators=[DataRequired()], description="Contoh: Marching band, Kecak, Demonstrasi, dll.")
     submit = SubmitField('Simpan Status Partisipan')
 
 class PartisipanEditForm(FlaskForm):

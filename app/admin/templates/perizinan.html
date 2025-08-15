@@ -2,63 +2,315 @@
 {% block title %}Manajemen Perizinan{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h2">Manajemen Perizinan</h1>
-</div>
-<p>Gunakan halaman ini untuk mencatat dan memantau santri yang izin tidak mengikuti kegiatan perpulangan.</p>
+<style>
+    :root {
+        --primary-blue: #2563eb;
+        --light-blue: #60a5fa;
+        --dark-blue: #1d4ed8;
+        --accent-blue: #3b82f6;
+        --background: #f8fafc;
+        --card-bg: #ffffff;
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --border-color: #e2e8f0;
+    }
 
-{% if current_user.role.name in ['Korpus', 'Keamanan'] %}
-<div class="card mb-4">
-    <div class="card-header">
-        <h5><i class="fas fa-plus-circle me-2"></i>Form Izin Baru</h5>
+    .perizinan-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+
+    .perizinan-header {
+        background: linear-gradient(135deg, var(--primary-blue), var(--dark-blue));
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    .perizinan-header::before {
+        content: '';
+        position: absolute;
+        top: -50px;
+        right: -50px;
+        width: 150px;
+        height: 150px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+    }
+
+    .perizinan-header h1 {
+        font-size: 2.25rem;
+        font-weight: 700;
+        margin: 0;
+        line-height: 1.2;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .perizinan-header p {
+        font-size: 1rem;
+        margin: 0.5rem 0 0;
+        opacity: 0.9;
+        max-width: 600px;
+    }
+
+    .form-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .form-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    }
+
+    .form-card-header {
+        background: var(--light-blue);
+        color: white;
+        padding: 1.25rem 1.5rem;
+        border-radius: 12px 12px 0 0;
+    }
+
+    .form-card-header h5 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .form-card-body {
+        padding: 1.5rem;
+        background: #fafbff;
+    }
+
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+        display: block;
+    }
+
+    .form-control, #select-santri-izin {
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 0.75rem;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        background: white;
+        width: 100%;
+    }
+
+    .form-control:focus, .ts-control.focus {
+        border-color: var(--primary-blue) !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+        outline: none !important;
+    }
+
+    .btn-primary {
+        background: var(--primary-blue);
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        color: white;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+    }
+
+    .btn-primary:hover {
+        background: var(--dark-blue);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
+    .nav-tabs {
+        border: none;
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 0.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+
+    .nav-tabs .nav-link {
+        border: none;
+        border-radius: 8px;
+        color: var(--text-secondary);
+        font-weight: 500;
+        padding: 0.75rem 1.5rem;
+        margin: 0 0.25rem;
+        transition: all 0.3s ease;
+    }
+
+    .nav-tabs .nav-link:hover {
+        background: var(--background);
+        color: var(--text-primary);
+    }
+
+    .nav-tabs .nav-link.active {
+        background: var(--primary-blue);
+        color: white;
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+    }
+
+    .data-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+
+    .search-form {
+        background: var(--background);
+        padding: 1.25rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .search-input-group {
+        display: flex;
+        gap: 0.75rem;
+        align-items: stretch;
+    }
+
+    .search-input {
+        flex: 1;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 0.75rem;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+    }
+
+    .search-input:focus {
+        border-color: var(--primary-blue);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        outline: none;
+    }
+
+    .table {
+        margin: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .table thead th {
+        background: #f1f5f9;
+        color: var(--text-primary);
+        font-weight: 600;
+        padding: 1rem;
+        font-size: 0.8rem;
+        border: none;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .table tbody tr:hover { background: #f8fafc; }
+    .table tbody td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+        vertical-align: middle;
+        font-size: 0.9rem;
+        color: var(--text-primary);
+    }
+
+    .badge { padding: 0.4rem 0.8rem; border-radius: 20px; font-weight: 500; font-size: 0.75rem; }
+    .badge-putra { background: #dbeafe; color: #1e40af; }
+    .badge-putri { background: #fef3c7; color: #92400e; }
+
+    .btn-action { padding: 0.5rem 1rem; font-size: 0.85rem; font-weight: 500; border-radius: 8px; transition: all 0.2s ease; }
+    .btn-edit { background: var(--accent-blue); color: white; border: none; }
+    .btn-edit:hover { background: var(--dark-blue); }
+    .btn-danger { background: #ef4444; color: white; border: none; }
+    .btn-danger:hover { background: #dc2626; }
+
+    .empty-state { text-align: center; padding: 2rem; color: var(--text-secondary); }
+    .empty-state i { font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.6; }
+
+</style>
+
+<div class="perizinan-container">
+    <div class="perizinan-header">
+        <h1><i class="fas fa-id-card me-3"></i>Manajemen Perizinan</h1>
+        <p>Gunakan halaman ini untuk mencatat dan memantau santri yang izin tidak mengikuti kegiatan perpulangan.</p>
+    </div>
+
+    {% if current_user.role.name in ['Korpus', 'Keamanan'] %}
+    <div class="form-card">
+        <div class="form-card-header">
+            <h5><i class="fas fa-plus-circle me-2"></i>Tambah Izin Baru</h5>
         </div>
-    <div class="card-body">
-        <form method="POST" action="{{ url_for('admin.perizinan') }}">
-        {{ form.hidden_tag() }}
-        <div class="form-group form-grid">
-            <label for="select-santri-izin">Pilih Santri</label>
-            <div>
-                <select id="select-santri-izin" placeholder="-- Cari Santri Aktif --"></select>
-                {{ form.santri() }} </div>
+        <div class="form-card-body">
+            <form method="POST" action="{{ url_for('admin.perizinan') }}">
+                {{ form.hidden_tag() }}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="select-santri-izin"><i class="fas fa-user me-2"></i>Pilih Santri</label>
+                            <select id="select-santri-izin" placeholder="🔍 Cari santri aktif..."></select>
+                            {{ form.santri(hidden=True) }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.tanggal_berakhir.id }}"><i class="fas fa-calendar me-2"></i>{{ form.tanggal_berakhir.label.text }}</label>
+                            {{ form.tanggal_berakhir(class="form-control") }}
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.keterangan.id }}"><i class="fas fa-sticky-note me-2"></i>{{ form.keterangan.label.text }}</label>
+                    {{ form.keterangan(class="form-control", rows=3, placeholder="Tuliskan keterangan atau alasan izin...") }}
+                </div>
+                <div class="text-end">
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
         </div>
-        <div class="form-group form-grid">
-            {{ form.tanggal_berakhir.label }}
-            {{ form.tanggal_berakhir() }}
-        </div>
-        <div class="form-group form-grid">
-            {{ form.keterangan.label }}
-            {{ form.keterangan(rows=3) }}
-        </div>
-        <div class="form-group" style="padding-left: 165px;">
-            {{ form.submit(class="btn btn-primary") }}
-        </div>
-    </form>
- </div>
-</div>
-{% endif %}
-<hr>
+    </div>
+    {% endif %}
 
     <ul class="nav nav-tabs">
-    <li class="nav-item">
-        <a class="nav-link {% if view_mode == 'aktif' %}active{% endif %}" href="{{ url_for('admin.perizinan', view='aktif') }}">Izin Aktif</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {% if view_mode == 'riwayat' %}active{% endif %}" href="{{ url_for('admin.perizinan', view='riwayat') }}">Riwayat Izin (Seudah selesai)</a>
-    </li>
-</ul>
+        <li class="nav-item">
+            <a class="nav-link {% if view_mode == 'aktif' %}active{% endif %}" href="{{ url_for('admin.perizinan', view='aktif') }}">
+                <i class="fas fa-clock me-2"></i>Izin Aktif
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if view_mode == 'riwayat' %}active{% endif %}" href="{{ url_for('admin.perizinan', view='riwayat') }}">
+                <i class="fas fa-history me-2"></i>Riwayat Izin
+            </a>
+        </li>
+    </ul>
 
-<div class="card">
-    <div class="card-body">
-        <form method="GET" class="mb-3">
-             <input type="hidden" name="view" value="{{ view_mode }}">
-            <div class="input-group">
-                <input type="text" name="nama" class="form-control" placeholder="Filter nama santri..." value="{{ request.args.get('nama', '') }}">
-                <button type="submit" class="btn btn-primary">Cari</button>
-            </div>
-        </form>
+    <div class="data-card">
+        <div class="search-form">
+            <form method="GET">
+                <input type="hidden" name="view" value="{{ view_mode }}">
+                <div class="search-input-group">
+                    <input type="text" name="nama" class="search-input" placeholder="🔍 Cari berdasarkan nama santri..." value="{{ request.args.get('nama', '') }}">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-2"></i>Cari
+                    </button>
+                </div>
+            </form>
+        </div>
 
         <div class="table-responsive">
-            <table class="table table-striped table-hover">
+            <table class="table">
                 <thead>
                     <tr>
                         <th>No.</th>
@@ -76,43 +328,59 @@
                 <tbody>
                     {% for izin in semua_izin %}
                     <tr>
-                        <td>{{ loop.index }}</td>
-                        <td>{{ izin.santri.nama }}</td>
                         <td>
-    {% if izin.santri.jenis_kelamin == 'Putra' %}
-        <span class="badge bg-success-subtle text-success">Putra</span>
-    {% elif izin.santri.jenis_kelamin == 'Putri' %}
-        <span class="badge bg-info-subtle text-info">Putri</span>
-    {% else %}
-        {{ izin.santri.jenis_kelamin }}
-    {% endif %}</td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle me-2" style="width: 32px; height: 32px; background: var(--primary-blue); border-radius: 50%; display: flex; align-items-center; justify-content: center; color: white; font-weight: 600; font-size: 0.9rem;">
+                                    {{ izin.santri.nama[0] }}
+                                </div>
+                                <strong>{{ izin.santri.nama }}</strong>
+                            </div>
+                        </td>
+                        <td>
+                            {% if izin.santri.jenis_kelamin == 'PUTRA' %}
+                            <span class="badge badge-putra"><i class="fas fa-mars me-1"></i>Putra</span>
+                            {% elif izin.santri.jenis_kelamin == 'PUTRI' %}
+                            <span class="badge badge-putri"><i class="fas fa-venus me-1"></i>Putri</span>
+                            {% else %}
+                            <span class="badge" style="background: var(--text-secondary); color: white;">{{ izin.santri.jenis_kelamin }}</span>
+                            {% endif %}
+                        </td>
                         <td>{{ izin.santri.asrama }}</td>
                         <td>{{ izin.santri.kabupaten }}</td>
                         <td>{{ izin.tanggal_berakhir|date_wib }}</td>
                         {% if current_user.role.name in ['Korpus', 'Keamanan'] %}
-                        <td>{{ izin.keterangan }}</td>
                         <td>
-                            <a href="{{ url_for('admin.edit_izin', izin_id=izin.id) }}" class="btn btn-secondary btn-sm">Edit</a>
-                            <form method="POST" action="{{ url_for('admin.cabut_izin', izin_id=izin.id) }}" style="display:inline;" onsubmit="return confirm('Anda yakin?');">
-                                <button type="submit" class="btn btn-danger btn-sm">Cabut Izin</button>
-                            </form>
+                            <div style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ izin.keterangan }}">
+                                {{ izin.keterangan }}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex gap-2">
+                                <a href="{{ url_for('admin.edit_izin', izin_id=izin.id) }}" class="btn btn-action btn-edit">Edit</a>
+                                <form method="POST" action="{{ url_for('admin.cabut_izin', izin_id=izin.id) }}" style="display:inline;" onsubmit="return confirm('⚠️ Anda yakin ingin mencabut izin ini?');">
+                                    <button type="submit" class="btn btn-action btn-danger">Cabut</button>
+                                </form>
+                            </div>
                         </td>
                         {% endif %}
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="7" class="text-center">Tidak ada data izin untuk ditampilkan.</td>
+                        <td colspan="{% if current_user.role.name in ['Korpus', 'Keamanan'] %}8{% else %}6{% endif %}" class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <h5>Tidak ada data izin</h5>
+                            <p class="text-muted">{% if view_mode == 'aktif' %}Belum ada izin aktif saat ini{% else %}Belum ada riwayat izin yang tersimpan{% endif %}</p>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        
     </div>
 </div>
-    
-    
-    <script>
 
+<script>
 document.addEventListener('DOMContentLoaded', function() {
     const hiddenSantriInput = document.getElementById('santri');
 
@@ -122,16 +390,33 @@ document.addEventListener('DOMContentLoaded', function() {
         searchField: 'nama',
         load: (query, callback) => {
             const url = `/admin/api/search-active-santri?q=${encodeURIComponent(query)}`;
-            fetch(url)
-                .then(response => response.json())
-                .then(json => {
-                    callback(json.results);
-                }).catch(() => {
-                    callback();
-                });
+            fetch(url).then(response => response.json()).then(json => {
+                callback(json.results);
+            }).catch(() => {
+                callback();
+            });
         },
         onChange: (value) => {
             hiddenSantriInput.value = value;
+        },
+        render: {
+            option: function(data, escape) {
+                return `
+                    <div class="d-flex align-items-center py-2 px-3">
+                        <div class="avatar-circle me-3" style="...">${escape(data.nama[0])}</div>
+                        <div>
+                            <div class="fw-medium">${escape(data.nama)}</div>
+                            <small class="text-muted">${escape(data.asrama || 'N/A')} • ${escape(data.kabupaten || 'N/A')}</small>
+                        </div>
+                    </div>`;
+            },
+            item: function(data, escape) {
+                return `
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-circle me-2" style="...">${escape(data.nama[0])}</div>
+                        <span>${escape(data.nama)}</span>
+                    </div>`;
+            }
         }
     });
 });

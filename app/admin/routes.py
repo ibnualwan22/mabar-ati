@@ -1734,7 +1734,7 @@ def export_keuangan_pdf():
         
         global_data = [
             ['Kategori', 'Jumlah', 'Persentase'],
-            ['Total Pemasukan Seharusnya', format_rupiah(data['global_total']), '100%'],
+            ['Total Pemasukan', format_rupiah(data['global_total']), '100%'],
             ['Total Diterima (Lunas)', format_rupiah(data['global_lunas']), 
              f"{(data['global_lunas']/data['global_total']*100):.1f}%" if data['global_total'] > 0 else "0%"],
             ['Sisa Tagihan (Belum Lunas)', format_rupiah(data['global_belum_lunas']), 
@@ -2639,3 +2639,45 @@ def cetak_kartu():
     unique_pendaftar = list({p.santri_id: p for p in semua_pendaftar}.values())
 
     return render_template('cetak_kartu.html', semua_pendaftar=unique_pendaftar)
+
+@admin_bp.route('/cetak-tiket')
+@login_required
+@role_required('Korpus', 'Korda', 'Korwil')
+def cetak_tiket():
+    active_edisi = get_active_edisi()
+    query = Pendaftaran.query.join(Santri)
+
+    if not active_edisi:
+        flash("Tidak ada edisi yang aktif untuk mencetak tiket.", "warning")
+        return redirect(url_for('admin.dashboard'))
+
+    # Filter berdasarkan edisi aktif
+    query = query.join(Rombongan, or_(
+        Pendaftaran.rombongan_pulang_id == Rombongan.id,
+        Pendaftaran.rombongan_kembali_id == Rombongan.id
+    )).filter(Rombongan.edisi_id == active_edisi.id)
+
+    # Filter berdasarkan hak akses Korda/Korwil
+    if current_user.role.name in ['Korwil', 'Korda']:
+        managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+        if not managed_rombongan_ids:
+            query = query.filter(db.false())
+        else:
+            query = query.filter(
+                or_(
+                    Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids),
+                    Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids)
+                )
+            )
+    
+    # Ambil semua pendaftar yang relevan
+    semua_pendaftar = query.options(
+        joinedload(Pendaftaran.santri),
+        joinedload(Pendaftaran.rombongan_pulang),
+        joinedload(Pendaftaran.bus_pulang)
+    ).order_by(Santri.nama).all()
+
+    # Hilangkan duplikat
+    unique_pendaftar = list({p.santri_id: p for p in semua_pendaftar}.values())
+
+    return render_template('cetak_tiket.html', semua_pendaftar=unique_pendaftar)

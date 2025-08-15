@@ -697,7 +697,7 @@
             </a>
         </li>
         {% endif %}
-        {% if current_user.role.name in ['Korpus', 'Korda'] %}
+        {% if current_user.role.name in ['Korpus'] %}
         <li class="nav-item">
             <a href="{{ url_for('admin.pendaftaran_rombongan') }}" 
                class="nav-link {{ 'active' if 'pendaftaran_rombongan' in request.endpoint else '' }}">
@@ -785,7 +785,7 @@
         </li>
         {% endif %}
 
-        {% if current_user.role.name in ['Korpus', 'Korda', 'Korwil'] %}
+        {% if current_user.role.name in ['Korpus', 'Korda'] %}
         <li class="nav-item">
             <a href="{{ url_for('admin.cetak_kartu') }}" 
                class="nav-link {{ 'active' if 'cetak_kartu' in request.endpoint else '' }}">
@@ -793,6 +793,14 @@
             </a>
         </li>
         {% endif %}
+
+        {% if current_user.role.name in ['Korpus', 'Korda'] %}
+<li class="nav-item">
+    <a href="{{ url_for('admin.cetak_tiket') }}" class="nav-link {{ 'active' if 'cetak_tiket' in request.endpoint else '' }}">
+        <i class="fas fa-ticket-alt"></i> Cetak Tiket
+    </a>
+</li>
+{% endif %}
         
         <li class="nav-item">
             <a href="{{ url_for('admin.log_aktivitas') }}" 

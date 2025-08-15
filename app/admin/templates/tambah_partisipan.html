@@ -1,33 +1,109 @@
 {% extends "_admin_layout.html" %}
-
 {% block title %}Tambah Partisipan Baru{% endblock %}
 
 {% block content %}
-        {% if current_user.role.name in ['Korpus', 'PJ Acara'] %}
-    <h1>Tambah Partisipan Baru</h1>
-    <a href="{{ url_for('admin.data_partisipan') }}">&larr; Kembali ke Data Partisipan</a>
+<style>
+    /* Menggunakan kembali style modern dari halaman perizinan */
+    :root {
+        --primary-blue: #2563eb;
+        --light-blue: #60a5fa;
+        --dark-blue: #1d4ed8;
+        --accent-blue: #3b82f6;
+        --background: #f8fafc;
+        --card-bg: #ffffff;
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --border-color: #e2e8f0;
+    }
+    .page-container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+    .page-header {
+        background: linear-gradient(135deg, var(--primary-blue), var(--dark-blue));
+        color: white; padding: 2rem; border-radius: 12px; margin-bottom: 2rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    .page-header h1 { font-size: 2.25rem; font-weight: 700; margin: 0; }
+    .page-header a { color: white; opacity: 0.9; text-decoration: none; transition: opacity 0.2s; }
+    .page-header a:hover { opacity: 1; }
+    .form-card {
+        background: var(--card-bg); border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 2rem;
+    }
+    .form-card-header {
+        background: var(--light-blue); color: white; padding: 1.25rem 1.5rem;
+        border-radius: 12px 12px 0 0;
+    }
+    .form-card-header h5 { margin: 0; font-size: 1.25rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+    .form-card-body { padding: 1.5rem; background: #fafbff; }
+    .form-group { margin-bottom: 1.25rem; }
+    .form-group label { font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem; font-size: 0.9rem; display: block; }
+    .form-control {
+        border: 1px solid var(--border-color); border-radius: 8px; padding: 0.75rem;
+        font-size: 0.9rem; transition: all 0.3s ease; background: white; width: 100%;
+    }
+    .form-control:focus {
+        border-color: var(--primary-blue);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); outline: none;
+    }
+    .btn-primary {
+        background: var(--primary-blue); border: none; border-radius: 8px; padding: 0.75rem 1.5rem;
+        font-weight: 600; color: white; transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+    }
+    .btn-primary:hover {
+        background: var(--dark-blue); transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+    .info-box {
+        background: #eef2ff;
+        border-left: 4px solid var(--accent-blue);
+        padding: 1rem;
+        margin-top: 1rem;
+        border-radius: 8px;
+        color: var(--text-primary);
+    }
+</style>
 
-    <form method="POST" style="margin-top: 2rem;">
-        {{ form.hidden_tag() }}
-        <div class="form-group form-grid">
-            <label for="select-santri-partisipan">Pilih Santri</label>
-            <div>
-                <select id="select-santri-partisipan" placeholder="-- Cari Santri Aktif --"></select>
-                {{ form.santri() }} </div>
+<div class="page-container">
+    <div class="page-header">
+        <h1>Tambah Partisipan Baru</h1>
+        <a href="{{ url_for('admin.data_partisipan') }}">&larr; Kembali ke Data Partisipan</a>
+    </div>
+
+    {% if current_user.role.name in ['Korpus', 'PJ Acara'] %}
+    <div class="form-card">
+        <div class="form-card-header">
+            <h5>Formulir Penambahan Partisipan</h5>
         </div>
+        <div class="form-card-body">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="select-santri-partisipan">Pilih Santri</label>
+                            <select id="select-santri-partisipan" placeholder="-- Cari Santri Aktif --"></select>
+                            {{ form.santri(hidden=True) }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            {{ form.kategori.label(class="form-label") }}
+                            {{ form.kategori(class="form-control", placeholder=form.kategori.description) }}
+                        </div>
+                    </div>
+                </div>
 
-        <div id="info-santri" class="info-box" style="display: none; margin-left: 165px;"></div>
+                <div id="info-santri" class="info-box" style="display: none;"></div>
 
-        <div class="form-group form-grid">
-            {{ form.kategori.label }}
-            {{ form.kategori(placeholder=form.kategori.description) }}
+                <div class="text-end mt-4">
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
         </div>
+    </div>
+    {% endif %}
+</div>
 
-        <div class="form-group" style="padding-left: 165px; margin-top: 2em;">
-            {{ form.submit(class="btn btn-primary") }}
-        </div>
-    </form>
-            {% endif %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const hiddenSantriInput = document.getElementById('santri');
@@ -35,15 +111,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     new TomSelect('#select-santri-partisipan', {
         valueField: 'id',
+        labelField: 'nama',
         searchField: 'nama',
-        render: {
-            option: function(data, escape) {
-                return `<div><strong>${escape(data.nama)}</strong><br><small>${escape(data.asrama || '')} - ${escape(data.kabupaten || '')}</small></div>`;
-            },
-            item: function(data, escape) {
-                return `<div>${escape(data.nama)}</div>`;
-            }
-        },
         load: (query, callback) => {
             const url = `/admin/api/search-santri-for-partisipan?q=${encodeURIComponent(query)}`;
             fetch(url)
@@ -54,8 +123,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     callback();
                 });
         },
-        onChange: (value) => {
+        onChange: function(value) {
             hiddenSantriInput.value = value;
+            // 'this.options' merujuk ke semua opsi yang ada di TomSelect
             const selectedData = this.options[value];
             if (selectedData) {
                 infoSantriDiv.innerHTML = `
@@ -67,6 +137,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 infoSantriDiv.style.display = 'block';
             } else {
                 infoSantriDiv.style.display = 'none';
+            }
+        },
+        render: {
+            option: function(data, escape) {
+                return `
+                    <div class="d-flex align-items-center py-2 px-3">
+                        <div class="avatar-circle me-3" style="width: 32px; height: 32px; background: var(--primary-blue); border-radius: 50%; display: flex; align-items-center; justify-content: center; color: white; font-weight: 600; font-size: 0.9rem;">
+                            ${escape(data.nama[0])}
+                        </div>
+                        <div>
+                            <div class="fw-medium">${escape(data.nama)}</div>
+                            <small class="text-muted">${escape(data.asrama || 'N/A')} • ${escape(data.kabupaten || 'N/A')}</small>
+                        </div>
+                    </div>
+                `;
+            },
+            item: function(data, escape) {
+                return `
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-circle me-2" style="width: 24px; height: 24px; background: var(--primary-blue); border-radius: 50%; display: flex; align-items-center; justify-content: center; color: white; font-weight: 600; font-size: 0.8rem;">
+                            ${escape(data.nama[0])}
+                        </div>
+                        <span>${escape(data.nama)}</span>
+                    </div>
+                `;
             }
         }
     });
