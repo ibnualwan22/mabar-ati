@@ -79,6 +79,12 @@ class Santri(db.Model):
     status_santri = db.Column(db.String(20), default='Aktif')
     nama_jabatan = db.Column(db.String(100), nullable=True)
     status_jabatan = db.Column(db.String(100), nullable=True)
+    wisuda_info = db.relationship('Wisuda', 
+                                  foreign_keys='Wisuda.santri_nis', 
+                                  primaryjoin='Santri.nis == Wisuda.santri_nis', 
+                                  backref='santri', 
+                                  uselist=False, 
+                                  cascade="all, delete-orphan")
 
     pendaftarans = db.relationship('Pendaftaran', back_populates='santri', lazy='dynamic', cascade="all, delete-orphan")
     izins = db.relationship('Izin', backref='santri', lazy='dynamic', cascade="all, delete-orphan")
@@ -187,5 +193,17 @@ class ActivityLog(db.Model):
 
     def __repr__(self):
         return f'<Log: {self.user.username} - {self.action_type} - {self.feature}>'
+    
+class Wisuda(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    # Menggunakan NIS sebagai Foreign Key
+    santri_nis = db.Column(db.String(30), db.ForeignKey('santri.nis'), nullable=False, unique=True)
+    edisi_id = db.Column(db.Integer, db.ForeignKey('edisi.id'), nullable=False)
+    kategori_wisuda = db.Column(db.String(150), nullable=False)
+    tanggal_penetapan = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relasi balik untuk akses mudah dari objek Edisi
+    edisi = db.relationship('Edisi', backref=db.backref('wisudawan', lazy='dynamic'))
     
     

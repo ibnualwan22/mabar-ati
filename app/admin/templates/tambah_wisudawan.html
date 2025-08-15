@@ -1,0 +1,49 @@
+{% extends "_admin_layout.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<h1 class="h2">{{ title }}</h1>
+<a href="{{ url_for('admin.manajemen_wisuda') }}">&larr; Kembali ke Manajemen Wisuda</a>
+
+<div class="card mt-3">
+    <div class="card-body">
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <div class="mb-3">
+                <label for="select-santri-wisuda" class="form-label">Pilih Santri</label>
+                <select id="select-santri-wisuda" placeholder="Cari santri aktif..."></select>
+                {{ form.santri(hidden=True) }}
+            </div>
+            <div class="mb-3">
+                {{ form.kategori_wisuda.label(class="form-label") }}
+                {{ form.kategori_wisuda(class="form-control", placeholder=form.kategori_wisuda.description) }}
+            </div>
+            {{ form.submit(class="btn btn-primary") }}
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    new TomSelect('#select-santri-wisuda', {
+        valueField: 'nis', // Menggunakan NIS sebagai nilai
+        searchField: 'nama',
+        load: (query, callback) => {
+            const url = `/admin/api/search-santri-for-wisuda?q=${encodeURIComponent(query)}`;
+            fetch(url).then(res => res.json()).then(json => callback(json.results)).catch(() => callback());
+        },
+        onChange: (value) => {
+            // value sekarang adalah NIS
+            document.getElementById('santri').value = value;
+        },
+        render: {
+            option: function(data, escape) {
+                return `<div><strong>${escape(data.nama)}</strong><br><small>NIS: ${escape(data.nis)} | ${escape(data.asrama || '')}</small></div>`;
+            },
+            item: function(data, escape) {
+                return `<div>${escape(data.nama)} (NIS: ${escape(data.nis)})</div>`;
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

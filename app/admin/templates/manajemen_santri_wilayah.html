@@ -890,7 +890,8 @@
                         <th style="width: 5%;">No.</th>
                         <th style="width: 22%;">Data Santri</th>
                         <th style="width: 13%;">Alamat</th>
-                        <th style="width: 28%;">Status & Pembayaran</th>
+                        <th style="width: 13%;">No. Wali</th>
+                        <th style="width: 18%;">Status & Pembayaran</th>
                         <th style="width: 12%;">Status Santri</th>
                         <th style="width: 18%;">Alokasi Bus</th>
                         <th style="width: 12%;">Aksi</th>
@@ -923,6 +924,13 @@
                                 <i class="fas fa-map-marker-alt"></i> {{ santri.kabupaten }}
                             </div>
                         </td>
+                        <td><div style="font-size: 0.875rem; color: var(--text-secondary);">
+        {% if santri.no_hp_wali %}
+            {{ santri.no_hp_wali[:4] }}-{{ santri.no_hp_wali[4:8] }}-{{ santri.no_hp_wali[8:12] }}
+        {% else %}
+            -
+        {% endif %}
+    </div></td>
                         <td>
                             {% if pendaftaran %}
                                 <div class="status-container">

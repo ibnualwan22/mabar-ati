@@ -1,7 +1,7 @@
 from . import admin_bp
 from flask import render_template, redirect, url_for, flash, request, jsonify, abort, Response, send_file
-from app.models import ActivityLog, Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, User, Edisi, Bus, Role
-from app.admin.forms import RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, UserForm, UserEditForm, EdisiForm, BusForm, KorlapdaForm
+from app.models import ActivityLog, Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, User, Edisi, Bus, Role, Wisuda
+from app.admin.forms import ImportWisudaForm, RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, UserForm, UserEditForm, EdisiForm, BusForm, KorlapdaForm, WisudaForm
 from app import db, login_manager
 import json, requests
 from collections import defaultdict
@@ -20,6 +20,7 @@ from reportlab.lib.units import inch, cm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.pdfgen import canvas
 import locale
+import pandas as pd
 
 
 
@@ -2681,3 +2682,124 @@ def cetak_tiket():
     unique_pendaftar = list({p.santri_id: p for p in semua_pendaftar}.values())
 
     return render_template('cetak_tiket.html', semua_pendaftar=unique_pendaftar)
+
+# 1. Halaman Utama Manajemen Wisuda (termasuk logika impor)
+@admin_bp.route('/manajemen-wisuda', methods=['GET', 'POST'])
+@login_required
+@role_required('Korpus', 'PJ Acara')
+def manajemen_wisuda():
+    active_edisi = get_active_edisi()
+    import_form = ImportWisudaForm()
+
+    if import_form.validate_on_submit():
+        file = import_form.file.data
+        kategori = import_form.kategori_wisuda.data
+
+        try:
+            df = pd.read_excel(file)
+            if 'NIS' not in df.columns:
+                flash('File Excel harus memiliki kolom bernama "NIS".', 'danger')
+                return redirect(url_for('admin.manajemen_wisuda'))
+
+            all_nis = df['NIS'].dropna().astype(str).tolist()
+
+            # Cari semua santri yang cocok dalam satu query
+            santri_map = {s.nis: s for s in Santri.query.filter(Santri.nis.in_(all_nis)).all()}
+
+            newly_graduated = []
+            for nis in all_nis:
+                if nis in santri_map:
+                    santri = santri_map[nis]
+                    # Cek apakah sudah ada data wisuda
+                    if not santri.wisuda_info:
+                        santri.status_santri = 'Wisuda'
+                        new_wisuda = Wisuda(
+                            santri_nis=santri.nis,
+                            edisi_id=active_edisi.id,
+                            kategori_wisuda=kategori
+                        )
+                        newly_graduated.append(new_wisuda)
+
+            if newly_graduated:
+                db.session.add_all(newly_graduated)
+                db.session.commit()
+                flash(f'{len(newly_graduated)} santri berhasil diimpor dan statusnya diubah menjadi Wisuda.', 'success')
+            else:
+                flash('Tidak ada santri baru yang diimpor. Mungkin semua sudah terdata.', 'info')
+
+        except Exception as e:
+            flash(f'Terjadi error saat memproses file: {e}', 'danger')
+
+        return redirect(url_for('admin.manajemen_wisuda'))
+
+    wisudawan_list = Wisuda.query.filter_by(edisi_id=active_edisi.id).options(joinedload(Wisuda.santri)).all()
+    
+    # 2. Kelompokkan data berdasarkan kategori
+    grouped_wisudawan = {}
+    for w in wisudawan_list:
+        kategori = w.kategori_wisuda
+        if kategori not in grouped_wisudawan:
+            grouped_wisudawan[kategori] = []
+        grouped_wisudawan[kategori].append(w)
+    # ------------------------------------
+
+    return render_template('manajemen_wisuda.html', 
+                           import_form=import_form, 
+                           grouped_wisudawan=grouped_wisudawan, # Kirim data yang sudah dikelompokkan
+                           active_edisi=active_edisi)
+
+# 2. Halaman untuk menambah wisudawan manual
+@admin_bp.route('/tambah-wisudawan', methods=['GET', 'POST'])
+@login_required
+@role_required('Korpus', 'PJ Acara')
+def tambah_wisudawan():
+    form = WisudaForm()
+    if form.validate_on_submit():
+        santri = Santri.query.filter_by(nis=form.santri.data).first()
+        if santri and not santri.wisuda_info:
+            santri.status_santri = 'Wisuda'
+            new_wisuda = Wisuda(
+                santri_nis=santri.nis,
+                edisi_id=get_active_edisi().id,
+                kategori_wisuda=form.kategori_wisuda.data
+            )
+            db.session.add(new_wisuda)
+            db.session.commit()
+            flash(f'{santri.nama} berhasil ditandai sebagai wisudawan.', 'success')
+            return redirect(url_for('admin.manajemen_wisuda'))
+        else:
+            flash('Santri tidak ditemukan atau sudah menjadi wisudawan.', 'warning')
+    return render_template('tambah_wisudawan.html', form=form, title="Tambah Wisudawan Manual")
+
+# 3. Route untuk menghapus status wisuda
+@admin_bp.route('/hapus-wisuda/<int:wisuda_id>', methods=['POST'])
+@login_required
+@role_required('Korpus', 'PJ Acara')
+def hapus_wisuda(wisuda_id):
+    wisuda = Wisuda.query.get_or_404(wisuda_id)
+    santri = wisuda.santri
+    santri.status_santri = 'Aktif' # Kembalikan statusnya
+    db.session.delete(wisuda)
+    db.session.commit()
+    flash(f'Status wisuda untuk {santri.nama} berhasil dihapus.', 'success')
+    return redirect(url_for('admin.manajemen_wisuda'))
+
+# 4. API endpoint baru untuk pencarian santri di form tambah
+@admin_bp.route('/api/search-santri-for-wisuda')
+@login_required
+def api_search_santri_for_wisuda():
+    q = request.args.get('q', '')
+    query = Santri.query.filter(
+        Santri.status_santri == 'Aktif',
+        Santri.wisuda_info == None,
+        Santri.nama.ilike(f'%{q}%')
+    ).limit(20)
+
+    results = [{
+        'id': s.id,
+        'nis': s.nis,
+        'nama': s.nama,
+        'asrama': s.asrama, 
+        'kabupaten': s.kabupaten
+    } for s in query.all()]
+    return jsonify({'results': results})

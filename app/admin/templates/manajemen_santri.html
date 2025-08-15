@@ -104,6 +104,7 @@
                         <th>No.</th>
                         <th>Nama Santri</th>
                         <th>Asrama & Alamat</th>
+                        <th>No. Wali</th>
                         <th>Keterangan</th>
                         <th>Detail Kelas</th>
                         <th>Status Santri</th>
@@ -118,7 +119,6 @@
                         <td>
                             <strong>{{ santri.nama }}</strong><br>
 <small class="text-muted">
-    Jenis Kelamin:
     {% if santri.jenis_kelamin == 'PUTRA' %}
         <span class="badge bg-success-subtle text-success">Putra</span>
     {% elif santri.jenis_kelamin == 'PUTRI' %}
@@ -126,12 +126,13 @@
     {% else %}
         {{ santri.jenis_kelamin }}
     {% endif %}
-</small>
+
                         </td>
                         <td>
                             {{ santri.asrama or '-' }}<br>
                             <small class="text-muted">{{ santri.kabupaten or '-' }}</small>
                         </td>
+                        <td>{{ santri.no_hp_wali or '-' }}</td>
 <td>
     {% if santri.nama_jabatan %}
         <strong>{{ santri.nama_jabatan }}</strong><br>

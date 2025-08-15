@@ -5,6 +5,7 @@ from wtforms_sqlalchemy.fields import QuerySelectField, QuerySelectMultipleField
 from app.models import Rombongan, Santri, Role
 from wtforms.fields import DateField
 from wtforms.widgets import ListWidget, CheckboxInput
+from flask_wtf.file import FileField, FileRequired, FileAllowed
 
 
 
@@ -239,4 +240,23 @@ class HubungkanPerangkatForm(FlaskForm):
         description="Masukkan ID unik dari aplikasi Traccar Client di HP Anda."
     )
     submit = SubmitField('Hubungkan & Mulai Pelacakan')
+
+class WisudaForm(FlaskForm):
+    """Form untuk menambahkan wisudawan satu per satu."""
+    santri = HiddenField('Santri', validators=[DataRequired()])
+    kategori_wisuda = StringField('Kategori Wisuda', 
+                                  validators=[DataRequired()], 
+                                  description="Contoh: Wisuda Amtsilati, Wisuda Al-Qur'an")
+    submit = SubmitField('Simpan Status Wisuda')
+
+class ImportWisudaForm(FlaskForm):
+    """Form untuk impor data wisudawan dari file Excel."""
+    file = FileField('Pilih File Excel (.xlsx)', validators=[
+        FileRequired(),
+        FileAllowed(['xlsx'], 'Hanya file .xlsx yang diizinkan!')
+    ])
+    kategori_wisuda = StringField('Kategori Wisuda untuk Semua Data', 
+                                  validators=[DataRequired()],
+                                  description="Kategori ini akan diterapkan ke semua santri di dalam file.")
+    submit = SubmitField('Impor Data')
 
