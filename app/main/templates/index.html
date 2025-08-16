@@ -246,8 +246,7 @@
                     <i class="fas fa-bus text-muted"></i>
                 </div>
                 <div>
-                    <strong class="text-dark d-block">{{ bus.nama_armada }}</strong>
-                    <small class="text-muted">{{ bus.nomor_lambung or bus.plat_nomor }}</small>
+                    <strong class="text-dark d-block">{{ bus.nama_armada }} - {{ bus.nomor_lambung or bus.plat_nomor }}</strong>
                 </div>
             </div>
             
@@ -332,61 +331,85 @@
     {% endfor %}
 {% endif %}
 
-        <section class="page-section" id="about">
-            <div class="container">
-                <div class="text-center">
-                    <h2 class="section-heading text-uppercase">Lini Masa</h2>
-                    <h3 class="section-subheading text-muted">Perjalanan Mabar Ati dalam melayani koordinasi perpulangan.</h3>
-                </div>
-                <ul class="timeline">
-                    <li>
-                        <div class="timeline-image"><img class="rounded-circle img-fluid" src="{{ url_for('static', filename='assets/img/about/1.jpg') }}" alt="..." /></div>
-                        <div class="timeline-panel">
-                            <div class="timeline-heading">
-                                <h4>2022</h4>
-                                <h4 class="subheading">Awal Mula Koordinasi</h4>
-                            </div>
-                            <div class="timeline-body"><p class="text-muted">Berawal dari kebutuhan untuk mengorganisir kepulangan bersama, sistem koordinasi pertama kali dibentuk secara manual melalui grup chat.</p></div>
-                        </div>
-                    </li>
-                    <li class="timeline-inverted">
-                        <div class="timeline-image"><img class="rounded-circle img-fluid" src="{{ url_for('static', filename='assets/img/about/2.jpg') }}" alt="..." /></div>
-                        <div class="timeline-panel">
-                            <div class="timeline-heading">
-                                <h4>2023</h4>
-                                <h4 class="subheading">Pembentukan Tim & Rute</h4>
-                            </div>
-                            <div class="timeline-body"><p class="text-muted">Tim inti terbentuk dan mulai memetakan rute-rute utama serta menunjuk Penanggung Jawab (PJ) untuk setiap daerah.</p></div>
-                        </div>
-                    </li>
-                    <li>
-                        <div class="timeline-image"><img class="rounded-circle img-fluid" src="{{ url_for('static', filename='assets/img/about/3.jpg') }}" alt="..." /></div>
-                        <div class="timeline-panel">
-                            <div class="timeline-heading">
-                                <h4>2024</h4>
-                                <h4 class="subheading">Digitalisasi Sistem</h4>
-                            </div>
-                            <div class="timeline-body"><p class="text-muted">Platform digital Mabar-Ati diluncurkan untuk mempermudah pendaftaran, pembayaran, dan penyebaran informasi.</p></div>
-                        </div>
-                    </li>
-                    <li class="timeline-inverted">
-                        <div class="timeline-image"><img class="rounded-circle img-fluid" src="{{ url_for('static', filename='assets/img/about/4.jpg') }}" alt="..." /></div>
-                        <div class="timeline-panel">
-                            <div class="timeline-heading">
-                                <h4>2025 - Sekarang</h4>
-                                <h4 class="subheading">Ekspansi & Peningkatan</h4>
-                            </div>
-                            <div class="timeline-body"><p class="text-muted">Terus melakukan ekspansi rute dan menyempurnakan fitur platform untuk memberikan layanan yang lebih baik dan komprehensif.</p></div>
-                        </div>
-                    </li>
-                    <li class="timeline-inverted">
-                        <div class="timeline-image">
-                            <h4>Mari<br />Bergabung<br />Bersama!</h4>
-                        </div>
-                    </li>
-                </ul>
+         <section class="gallery-section" id="gallery">
+        <div class="floating-shapes">
+            <div class="shape"></div>
+            <div class="shape"></div>
+            <div class="shape"></div>
+        </div>
+        
+        <div class="section-header">
+            <h2 class="section-title">Galeri Momen</h2>
+            <p class="section-subtitle">Dokumentasi perjalanan dan kebersamaan Mabar Ati dalam melayani koordinasi perpulangan</p>
+        </div>
+        
+        <div class="slider-container">
+            <button class="play-pause-btn" id="playPauseBtn">
+                <i class="fas fa-pause"></i>
+            </button>
+            
+            <div class="slider-counter">
+                <span id="currentSlide">1</span> / <span id="totalSlides">11</span>
             </div>
-        </section>
+            
+            <div class="slider-wrapper" id="sliderWrapper">
+                <div class="slide">
+                    <img src="{{ url_for('static', filename='assets/img/about/1.jpg') }}" alt="Photo 1" />
+                </div>
+                <div class="slide">
+                    <img src="{{ url_for('static', filename='assets/img/about/2.jpg') }}" alt="Photo 2" />
+                </div>
+                <div class="slide">
+                    <img src="{{ url_for('static', filename='assets/img/about/3.jpg') }}" alt="Photo 3" />
+                </div>
+                <div class="slide">
+                    <img src="{{ url_for('static', filename='assets/img/about/4.jpg') }}" alt="Photo 4" />
+                </div>
+                <div class="slide">
+                    <img src="{{ url_for('static', filename='assets/img/about/1.jpg') }}" alt="Photo 5" />
+                </div>
+                <div class="slide">
+                    <img src="{{ url_for('static', filename='assets/img/about/2.jpg') }}" alt="Photo 6" />
+                </div>
+                <div class="slide">
+                    <img src="{{ url_for('static', filename='assets/img/about/3.jpg') }}" alt="Photo 7" />
+                </div>
+                <div class="slide">
+                    <img src="{{ url_for('static', filename='assets/img/about/4.jpg') }}" alt="Photo 8" />
+                </div>
+                <div class="slide">
+                    <img src="{{ url_for('static', filename='assets/img/about/1.jpg') }}" alt="Photo 9" />
+                </div>
+                <div class="slide">
+                    <img src="{{ url_for('static', filename='assets/img/about/2.jpg') }}" alt="Photo 10" />
+                </div>
+                <div class="slide">
+                    <img src="{{ url_for('static', filename='assets/img/about/3.jpg') }}" alt="Photo 11" />
+                </div>
+            </div>
+            
+            <button class="slider-nav prev" id="prevBtn">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button class="slider-nav next" id="nextBtn">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            
+            <div class="slider-dots" id="sliderDots">
+                <div class="dot active" data-slide="0"></div>
+                <div class="dot" data-slide="1"></div>
+                <div class="dot" data-slide="2"></div>
+                <div class="dot" data-slide="3"></div>
+                <div class="dot" data-slide="4"></div>
+                <div class="dot" data-slide="5"></div>
+                <div class="dot" data-slide="6"></div>
+                <div class="dot" data-slide="7"></div>
+                <div class="dot" data-slide="8"></div>
+                <div class="dot" data-slide="9"></div>
+                <div class="dot" data-slide="10"></div>
+            </div>
+        </div>
+    </section>
 
         <section class="page-section bg-light" id="team">
             <div class="container">
@@ -457,7 +480,6 @@
                     </div>
                 </div>
             </div>
-        </section>
         </section>
 
 <div class="credits-overlay" id="creditsOverlay">
@@ -593,6 +615,9 @@
             </div>
         </div>
     </div>
+    <style>
+        
+    </style>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
         <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
 <script>
@@ -656,5 +681,158 @@ document.addEventListener('DOMContentLoaded', function () {
             header.style.backgroundImage = `url('${images[index]}')`;
         }, changeInterval);
     });
+
+class PhotoSlider {
+            constructor() {
+                this.currentSlide = 0;
+                this.totalSlides = 11;
+                this.isPlaying = true;
+                this.autoPlayInterval = null;
+                this.autoPlayDelay = 4000; // 4 seconds
+                
+                this.sliderWrapper = document.getElementById('sliderWrapper');
+                this.prevBtn = document.getElementById('prevBtn');
+                this.nextBtn = document.getElementById('nextBtn');
+                this.playPauseBtn = document.getElementById('playPauseBtn');
+                this.dots = document.querySelectorAll('.dot');
+                this.currentSlideSpan = document.getElementById('currentSlide');
+                
+                this.init();
+            }
+            
+            init() {
+                this.addEventListeners();
+                this.startAutoPlay();
+                this.updateSlider();
+            }
+            
+            addEventListeners() {
+                this.prevBtn.addEventListener('click', () => this.prevSlide());
+                this.nextBtn.addEventListener('click', () => this.nextSlide());
+                this.playPauseBtn.addEventListener('click', () => this.toggleAutoPlay());
+                
+                this.dots.forEach((dot, index) => {
+                    dot.addEventListener('click', () => this.goToSlide(index));
+                });
+                
+                // Touch/swipe support
+                let startX = null;
+                this.sliderWrapper.addEventListener('touchstart', (e) => {
+                    startX = e.touches[0].clientX;
+                });
+                
+                this.sliderWrapper.addEventListener('touchmove', (e) => {
+                    if (!startX) return;
+                    e.preventDefault();
+                });
+                
+                this.sliderWrapper.addEventListener('touchend', (e) => {
+                    if (!startX) return;
+                    
+                    const endX = e.changedTouches[0].clientX;
+                    const diff = startX - endX;
+                    
+                    if (Math.abs(diff) > 50) {
+                        if (diff > 0) {
+                            this.nextSlide();
+                        } else {
+                            this.prevSlide();
+                        }
+                    }
+                    
+                    startX = null;
+                });
+                
+                // Keyboard navigation
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowLeft') this.prevSlide();
+                    if (e.key === 'ArrowRight') this.nextSlide();
+                    if (e.key === ' ') {
+                        e.preventDefault();
+                        this.toggleAutoPlay();
+                    }
+                });
+                
+                // Pause on hover
+                this.sliderWrapper.addEventListener('mouseenter', () => {
+                    if (this.isPlaying) this.pauseAutoPlay();
+                });
+                
+                this.sliderWrapper.addEventListener('mouseleave', () => {
+                    if (this.isPlaying) this.startAutoPlay();
+                });
+            }
+            
+            nextSlide() {
+                this.currentSlide = (this.currentSlide + 1) % this.totalSlides;
+                this.updateSlider();
+                this.resetAutoPlay();
+            }
+            
+            prevSlide() {
+                this.currentSlide = (this.currentSlide - 1 + this.totalSlides) % this.totalSlides;
+                this.updateSlider();
+                this.resetAutoPlay();
+            }
+            
+            goToSlide(index) {
+                this.currentSlide = index;
+                this.updateSlider();
+                this.resetAutoPlay();
+            }
+            
+            updateSlider() {
+                const translateX = -this.currentSlide * (100 / this.totalSlides);
+                this.sliderWrapper.style.transform = `translateX(${translateX}%)`;
+                
+                // Update dots
+                this.dots.forEach((dot, index) => {
+                    dot.classList.toggle('active', index === this.currentSlide);
+                });
+                
+                // Update counter
+                this.currentSlideSpan.textContent = this.currentSlide + 1;
+            }
+            
+            startAutoPlay() {
+                if (!this.isPlaying) return;
+                
+                this.autoPlayInterval = setInterval(() => {
+                    this.nextSlide();
+                }, this.autoPlayDelay);
+            }
+            
+            pauseAutoPlay() {
+                if (this.autoPlayInterval) {
+                    clearInterval(this.autoPlayInterval);
+                    this.autoPlayInterval = null;
+                }
+            }
+            
+            resetAutoPlay() {
+                this.pauseAutoPlay();
+                if (this.isPlaying) {
+                    this.startAutoPlay();
+                }
+            }
+            
+            toggleAutoPlay() {
+                this.isPlaying = !this.isPlaying;
+                const icon = this.playPauseBtn.querySelector('i');
+                
+                if (this.isPlaying) {
+                    icon.className = 'fas fa-pause';
+                    this.startAutoPlay();
+                } else {
+                    icon.className = 'fas fa-play';
+                    this.pauseAutoPlay();
+                }
+            }
+        }
+        
+        // Initialize slider when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new PhotoSlider();
+        });
 </script>
 {% endblock %}

@@ -44,3 +44,40 @@ window.addEventListener('DOMContentLoaded', event => {
 
 });
 
+document.addEventListener('DOMContentLoaded', function() {
+            const galleryItems = document.querySelectorAll('.gallery-item');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.animationPlayState = 'running';
+                    }
+                });
+            }, {
+                threshold: 0.1
+            });
+
+            galleryItems.forEach(item => {
+                item.style.animationPlayState = 'paused';
+                observer.observe(item);
+            });
+
+            // Add click event for potential modal/lightbox functionality
+            galleryItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    // Add your lightbox/modal functionality here
+                    console.log('Gallery item clicked:', this);
+                });
+            });
+        });
+
+        // Add parallax effect to floating shapes
+        window.addEventListener('scroll', function() {
+            const scrolled = window.pageYOffset;
+            const shapes = document.querySelectorAll('.shape');
+            
+            shapes.forEach((shape, index) => {
+                const speed = 0.5 + (index * 0.2);
+                shape.style.transform = `translateY(${scrolled * speed}px) rotate(${scrolled * 0.1}deg)`;
+            });
+        });

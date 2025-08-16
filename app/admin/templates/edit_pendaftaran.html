@@ -1,93 +1,421 @@
 {% extends "_admin_layout.html" %}
+
 {% block title %}Edit Pendaftaran{% endblock %}
+
 {% block content %}
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h1 class="h2">Edit Detail Pendaftaran</h1>
-            <h2 class="h5 text-muted">
-                <strong>Santri:</strong> {{ pendaftaran.santri.nama }}
-            </h2>
+<div class="container-fluid px-0">
+    <!-- Header Section -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
+        <div class="mb-3 mb-md-0">
+            <h1 class="h2 mb-2 text-primary fw-bold">
+                <i class="fas fa-edit me-2"></i>Edit Detail Pendaftaran
+            </h1>
+            <div class="d-flex align-items-center text-muted">
+                <i class="fas fa-user me-2"></i>
+                <span class="me-2">Santri:</span>
+                <strong class="text-dark">{{ pendaftaran.santri.nama }}</strong>
+            </div>
         </div>
-        <a href="{{ url_for('admin.daftar_peserta', rombongan_id=pendaftaran.rombongan_pulang_id or pendaftaran.rombongan_kembali_id) }}">&larr; Kembali ke Daftar Peserta</a>
+        <a href="{{ url_for('admin.daftar_peserta', rombongan_id=pendaftaran.rombongan_pulang_id or pendaftaran.rombongan_kembali_id) }}" 
+           class="btn btn-outline-primary btn-sm d-flex align-items-center">
+            <i class="fas fa-arrow-left me-2"></i>
+            Kembali ke Daftar Peserta
+        </a>
     </div>
 
-    <form method="POST" action="" class="mt-4">
+    <!-- Form Section -->
+    <form method="POST" action="" class="needs-validation" novalidate>
         {{ form.hidden_tag() }}
+        
         <div class="row g-4">
-            <div class="col-md-6">
-                <div class="card h-100">
-                    <div class="card-header fw-bold">Detail Perjalanan Pulang</div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label">Rombongan Pulang</label>
-                            <input type="text" class="form-control" value="{{ pendaftaran.rombongan_pulang.nama_rombongan if pendaftaran.rombongan_pulang else 'N/A' }}" readonly>
+            <!-- Perjalanan Pulang Card -->
+            <div class="col-lg-6">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-header bg-primary text-white py-3">
+                        <h5 class="card-title mb-0 d-flex align-items-center">
+                            <i class="fas fa-plane-departure me-2"></i>
+                            Detail Perjalanan Pulang
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <!-- Rombongan Pulang (Read Only) -->
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold text-dark">
+                                <i class="fas fa-users me-1 text-primary"></i>
+                                Rombongan Pulang
+                            </label>
+                            <input type="text" 
+                                   class="form-control bg-light" 
+                                   value="{{ pendaftaran.rombongan_pulang.nama_rombongan if pendaftaran.rombongan_pulang else 'Tidak Terdaftar' }}" 
+                                   readonly>
                         </div>
-                        <div class="mb-3">{{ form.status_pulang.label(class="form-label") }} {{ form.status_pulang(class="form-select") }}</div>
-                        <div class="mb-3">{{ form.metode_pembayaran_pulang.label(class="form-label") }} {{ form.metode_pembayaran_pulang(class="form-select") }}</div>
-                        <div class="mb-3">{{ form.titik_turun.label(class="form-label") }} {{ form.titik_turun(class="form-select") }}</div>
-                        <div class="mb-3">{{ form.bus_pulang.label(class="form-label") }} {{ form.bus_pulang(class="form-select") }}</div>
+
+                        <!-- Status Pulang -->
+                        <div class="mb-4">
+                            {{ form.status_pulang.label(class="form-label fw-semibold text-dark d-flex align-items-center") }}
+                            <i class="fas fa-info-circle me-1 text-primary"></i>
+                            {{ form.status_pulang(class="form-select") }}
+                            {% if form.status_pulang.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.status_pulang.errors %}
+                                        <small class="text-danger">{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Metode Pembayaran Pulang -->
+                        <div class="mb-4">
+                            {{ form.metode_pembayaran_pulang.label(class="form-label fw-semibold text-dark d-flex align-items-center") }}
+                            <i class="fas fa-credit-card me-1 text-primary"></i>
+                            {{ form.metode_pembayaran_pulang(class="form-select") }}
+                        </div>
+
+                        <!-- Titik Turun -->
+                        <div class="mb-4">
+                            {{ form.titik_turun.label(class="form-label fw-semibold text-dark d-flex align-items-center") }}
+                            <i class="fas fa-map-marker-alt me-1 text-primary"></i>
+                            {{ form.titik_turun(class="form-select") }}
+                        </div>
+
+                        <!-- Bus Pulang -->
+                        <div class="mb-0">
+                            {{ form.bus_pulang.label(class="form-label fw-semibold text-dark d-flex align-items-center") }}
+                            <i class="fas fa-bus me-1 text-primary"></i>
+                            {{ form.bus_pulang(class="form-select") }}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-6">
-                <div class="card h-100">
-                    <div class="card-header fw-bold">Detail Perjalanan Kembali</div>
-                    <div class="card-body">
-                        <div class="mb-3">{{ form.rombongan_kembali.label(class="form-label") }} {{ form.rombongan_kembali(class="form-select") }}</div>
-                        <div class="mb-3" id="field-titik-jemput">
-                            {{ form.titik_jemput_kembali.label(class="form-label") }}
+            <!-- Perjalanan Kembali Card -->
+            <div class="col-lg-6">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-header bg-success text-white py-3">
+                        <h5 class="card-title mb-0 d-flex align-items-center">
+                            <i class="fas fa-plane-arrival me-2"></i>
+                            Detail Perjalanan Kembali
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <!-- Rombongan Kembali -->
+                        <div class="mb-4">
+                            {{ form.rombongan_kembali.label(class="form-label fw-semibold text-dark d-flex align-items-center") }}
+                            <i class="fas fa-users me-1 text-success"></i>
+                            {{ form.rombongan_kembali(class="form-select") }}
+                        </div>
+
+                        <!-- Titik Jemput Kembali -->
+                        <div class="mb-4" id="field-titik-jemput">
+                            {{ form.titik_jemput_kembali.label(class="form-label fw-semibold text-dark d-flex align-items-center") }}
+                            <i class="fas fa-map-marker-alt me-1 text-success"></i>
                             {{ form.titik_jemput_kembali(class="form-select") }}
                         </div>
-                        <div class="mb-3">{{ form.bus_kembali.label(class="form-label") }} {{ form.bus_kembali(class="form-select") }}</div>
-                        <div class="mb-3">{{ form.status_kembali.label(class="form-label") }} {{ form.status_kembali(class="form-select") }}</div>
-                        <div class="mb-3">{{ form.metode_pembayaran_kembali.label(class="form-label") }} {{ form.metode_pembayaran_kembali(class="form-select") }}</div>
+
+                        <!-- Bus Kembali -->
+                        <div class="mb-4">
+                            {{ form.bus_kembali.label(class="form-label fw-semibold text-dark d-flex align-items-center") }}
+                            <i class="fas fa-bus me-1 text-success"></i>
+                            {{ form.bus_kembali(class="form-select") }}
+                        </div>
+
+                        <!-- Status Kembali -->
+                        <div class="mb-4">
+                            {{ form.status_kembali.label(class="form-label fw-semibold text-dark d-flex align-items-center") }}
+                            <i class="fas fa-info-circle me-1 text-success"></i>
+                            {{ form.status_kembali(class="form-select") }}
+                        </div>
+
+                        <!-- Metode Pembayaran Kembali -->
+                        <div class="mb-0">
+                            {{ form.metode_pembayaran_kembali.label(class="form-label fw-semibold text-dark d-flex align-items-center") }}
+                            <i class="fas fa-credit-card me-1 text-success"></i>
+                            {{ form.metode_pembayaran_kembali(class="form-select") }}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="form-group mt-4">{{ form.submit(class="btn btn-primary") }}</div>
+
+        <!-- Action Buttons -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="d-flex flex-column flex-md-row gap-3 justify-content-center justify-content-md-start">
+                    {{ form.submit(class="btn btn-primary btn-lg px-5 d-flex align-items-center justify-content-center") }}
+                    <i class="fas fa-save me-2"></i>
+                    <a href="{{ url_for('admin.daftar_peserta', rombongan_id=pendaftaran.rombongan_pulang_id or pendaftaran.rombongan_kembali_id) }}" 
+                       class="btn btn-outline-secondary btn-lg px-5 d-flex align-items-center justify-content-center">
+                        <i class="fas fa-times me-2"></i>
+                        Batal
+                    </a>
+                </div>
+            </div>
+        </div>
     </form>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="position-fixed top-0 start-0 w-100 h-100 d-none" style="background: rgba(255,255,255,0.8); z-index: 9999;">
+    <div class="d-flex justify-content-center align-items-center h-100">
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <div class="mt-2 text-primary fw-semibold">Memperbarui data...</div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Custom styles for form elements */
+.form-select, .form-control {
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.form-select:focus, .form-control:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.1);
+}
+
+.form-label {
+    margin-bottom: 0.5rem;
+    color: #374151;
+}
+
+.card {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.card-header {
+    border-bottom: none;
+}
+
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+    border: none;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+}
+
+.btn-outline-primary {
+    border: 2px solid #2563eb;
+    color: #2563eb;
+}
+
+.btn-outline-primary:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+    transform: translateY(-1px);
+}
+
+.btn-outline-secondary {
+    border: 2px solid #6b7280;
+    color: #6b7280;
+}
+
+.btn-outline-secondary:hover {
+    background: #6b7280;
+    border-color: #6b7280;
+    transform: translateY(-1px);
+}
+
+/* Animation for form validation */
+.was-validated .form-select:valid,
+.was-validated .form-control:valid {
+    border-color: #10b981;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%2310b981' d='m2.3 6.73.94-.94 2.96 2.96L5.26 9.7z'/%3e%3c/svg%3e");
+}
+
+.was-validated .form-select:invalid,
+.was-validated .form-control:invalid {
+    border-color: #ef4444;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1.5rem !important;
+    }
+    
+    .btn-lg {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+    }
+}
+</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const rombonganKembaliSelect = document.getElementById('rombongan_kembali');
     const busKembaliSelect = document.getElementById('bus_kembali');
     const titikJemputSelect = document.getElementById('titik_jemput_kembali');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const form = document.querySelector('form');
+
+    // Show loading function
+    function showLoading() {
+        loadingOverlay.classList.remove('d-none');
+    }
+
+    // Hide loading function
+    function hideLoading() {
+        loadingOverlay.classList.add('d-none');
+    }
+
+    // Add loading state to selects
+    function setSelectLoading(selectElement, isLoading) {
+        if (isLoading) {
+            selectElement.disabled = true;
+            selectElement.innerHTML = '<option value="">Memuat...</option>';
+        } else {
+            selectElement.disabled = false;
+        }
+    }
 
     function updateKembaliOptions(rombonganId) {
+        // Show loading state
+        setSelectLoading(busKembaliSelect, true);
+        setSelectLoading(titikJemputSelect, true);
+
         // Jika pilihan dikosongkan, gunakan rombongan pulang sebagai default
         if (!rombonganId) {
             rombonganId = {{ pendaftaran.rombongan_pulang_id or 'null' }};
-            if (!rombonganId) { // Keluar jika tidak ada rombongan pulang sama sekali
+            if (!rombonganId) {
                 busKembaliSelect.innerHTML = '<option value="">-- Pilih Rombongan Dulu --</option>';
                 titikJemputSelect.innerHTML = '<option value="">-- Pilih Rombongan Dulu --</option>';
+                setSelectLoading(busKembaliSelect, false);
+                setSelectLoading(titikJemputSelect, false);
                 return;
             }
         }
         
-         // Ambil data detail rombongan dari API
+        // Ambil data detail rombongan dari API
         fetch(`/admin/api/rombongan-detail/${rombonganId}`)
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return res.json();
+            })
             .then(data => {
                 // Update pilihan Bus Kembali
-                const busChoices = data.buses.map(bus => `<option value="${bus.id}">${bus.nama_armada} - ${bus.nomor_lambung || bus.plat_nomor} (Sisa: ${bus.sisa_kuota_kembali})</option>`).join('');
+                const busChoices = data.buses.map(bus => {
+                    const displayName = `${bus.nama_armada} - ${bus.nomor_lambung || bus.plat_nomor}`;
+                    const quota = `(Sisa: ${bus.sisa_kuota_kembali})`;
+                    return `<option value="${bus.id}" ${bus.sisa_kuota_kembali <= 0 ? 'disabled' : ''}>${displayName} ${quota}</option>`;
+                }).join('');
                 busKembaliSelect.innerHTML = '<option value="">-- Pilih Bus --</option>' + busChoices;
                 
                 // Update pilihan Titik Jemput Kembali
-                const titikChoices = data.tarifs.map(t => `<option value="${t.titik_turun}">${t.titik_turun}</option>`).join('');
+                const titikChoices = data.tarifs.map(t => 
+                    `<option value="${t.titik_turun}">${t.titik_turun}</option>`
+                ).join('');
                 titikJemputSelect.innerHTML = '<option value="">-- Pilih Titik Jemput --</option>' + titikChoices;
 
-                // Set nilai bus kembali jika masih ada di pilihan baru
-                busKembaliSelect.value = "{{ pendaftaran.bus_kembali_id or '' }}";
+                // Set nilai yang sudah ada sebelumnya
+                const currentBusKembali = "{{ pendaftaran.bus_kembali_id or '' }}";
+                const currentTitikJemput = "{{ pendaftaran.titik_jemput_kembali or '' }}";
+                
+                if (currentBusKembali) {
+                    busKembaliSelect.value = currentBusKembali;
+                }
+                if (currentTitikJemput) {
+                    titikJemputSelect.value = currentTitikJemput;
+                }
+
+                // Remove loading state
+                setSelectLoading(busKembaliSelect, false);
+                setSelectLoading(titikJemputSelect, false);
+            })
+            .catch(error => {
+                console.error('Error fetching rombongan details:', error);
+                
+                // Show error state
+                busKembaliSelect.innerHTML = '<option value="">-- Error memuat data --</option>';
+                titikJemputSelect.innerHTML = '<option value="">-- Error memuat data --</option>';
+                
+                setSelectLoading(busKembaliSelect, false);
+                setSelectLoading(titikJemputSelect, false);
+                
+                // Show user-friendly error message
+                const toast = document.createElement('div');
+                toast.className = 'toast align-items-center text-white bg-danger border-0 position-fixed';
+                toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+                toast.innerHTML = `
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Gagal memuat data rombongan. Silakan coba lagi.
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                `;
+                document.body.appendChild(toast);
+                
+                const bsToast = new bootstrap.Toast(toast);
+                bsToast.show();
+                
+                // Remove toast after it's hidden
+                toast.addEventListener('hidden.bs.toast', () => {
+                    document.body.removeChild(toast);
+                });
             });
     }
 
-    // Tambahkan event listener untuk mengubah pilihan saat rombongan kembali diganti
-    rombonganKembaliSelect.addEventListener('change', () => updateKembaliOptions(rombonganKembaliSelect.value));
+    // Event listener untuk mengubah pilihan saat rombongan kembali diganti
+    if (rombonganKembaliSelect) {
+        rombonganKembaliSelect.addEventListener('change', function() {
+            updateKembaliOptions(this.value);
+        });
+    }
+    
+    // Form submission with loading state
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            showLoading();
+            
+            // Optional: Add form validation
+            if (!form.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+                hideLoading();
+            }
+            
+            form.classList.add('was-validated');
+        });
+    }
     
     // Panggil sekali saat halaman dimuat untuk mengisi data awal
-    updateKembaliOptions(rombonganKembaliSelect.value);
+    const initialRombonganKembali = rombonganKembaliSelect ? rombonganKembaliSelect.value : null;
+    updateKembaliOptions(initialRombonganKembali);
+
+    // Add smooth animations to form elements
+    const formElements = document.querySelectorAll('.form-select, .form-control');
+    formElements.forEach(element => {
+        element.addEventListener('focus', function() {
+            this.parentElement.style.transform = 'scale(1.02)';
+            this.parentElement.style.transition = 'transform 0.2s ease';
+        });
+        
+        element.addEventListener('blur', function() {
+            this.parentElement.style.transform = 'scale(1)';
+        });
+    });
 });
 </script>
 {% endblock %}

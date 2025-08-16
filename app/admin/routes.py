@@ -1060,8 +1060,19 @@ def perizinan():
         query = query.filter_by(status='Aktif')
 
     search_nama = request.args.get('nama')
+    # --- TAMBAHKAN FILTER BARU ---
+    f_jenis_kelamin = request.args.get('jenis_kelamin')
+
+    # Join dengan tabel Santri untuk bisa memfilter
+    if search_nama or f_jenis_kelamin:
+        query = query.join(Santri)
+    
     if search_nama:
-        query = query.join(Santri).filter(Santri.nama.ilike(f'%{search_nama}%'))
+        query = query.filter(Santri.nama.ilike(f'%{search_nama}%'))
+    
+    if f_jenis_kelamin:
+        query = query.filter(Santri.jenis_kelamin == f_jenis_kelamin)
+    # --- AKHIR FILTER BARU ---
     
     semua_izin = query.order_by(Izin.tanggal_berakhir.desc()).all()
 
@@ -1088,6 +1099,176 @@ def perizinan():
                            form=form, 
                            semua_izin=semua_izin,
                            view_mode=view_mode)
+
+@admin_bp.route('/export/perizinan/<jenis_kelamin>')
+@login_required
+@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara')
+def export_perizinan(jenis_kelamin):
+    """Export data perizinan ke Excel berdasarkan jenis kelamin"""
+    
+    # Validasi parameter jenis_kelamin
+    if jenis_kelamin.upper() not in ['PUTRA', 'PUTRI']:
+        flash("Jenis kelamin tidak valid!", "danger")
+        return redirect(url_for('admin.perizinan'))
+    
+    active_edisi = get_active_edisi()
+    if not active_edisi:
+        flash("Tidak ada edisi aktif!", "danger")
+        return redirect(url_for('admin.perizinan'))
+    
+    try:
+        # Query semua izin (aktif dan riwayat) berdasarkan jenis kelamin
+        query = db.session.query(Izin, Santri).join(Santri).filter(
+            Izin.edisi == active_edisi,
+            Santri.jenis_kelamin == jenis_kelamin.upper()
+        ).order_by(Izin.tanggal_berakhir.desc())
+        
+        results = query.all()
+        
+        # Buat data untuk DataFrame
+        data = []
+        for i, (izin, santri) in enumerate(results, 1):
+            data.append({
+                'No': i,
+                'Nama Santri': santri.nama,
+                'Jenis Kelamin': 'Putra' if santri.jenis_kelamin == 'PUTRA' else 'Putri',
+                'Asrama': santri.asrama or '-',
+                'Kabupaten': santri.kabupaten or '-',
+                'Izin Sampai': izin.tanggal_berakhir.strftime('%d/%m/%Y') if izin.tanggal_berakhir else '-',
+                'Status': izin.status,
+                'Keterangan': izin.keterangan or '-',
+                'Dicatat Oleh': izin.user.username if hasattr(izin, 'user') and izin.user else '-'
+            })
+        
+        # Buat DataFrame
+        df = pd.DataFrame(data)
+        
+        # Buat Excel file dalam memory
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            # Sheet utama dengan data
+            sheet_name = f'Perizinan {jenis_kelamin.title()}'
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
+            
+            # Ambil workbook dan worksheet untuk formatting
+            workbook = writer.book
+            worksheet = writer.sheets[sheet_name]
+            
+            # Format header
+            from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+            
+            header_font = Font(bold=True, color='FFFFFF')
+            header_fill = PatternFill(start_color='2563EB', end_color='2563EB', fill_type='solid')
+            border = Border(
+                left=Side(style='thin'),
+                right=Side(style='thin'),
+                top=Side(style='thin'),
+                bottom=Side(style='thin')
+            )
+            
+            # Format header row
+            for col_num, column in enumerate(df.columns, 1):
+                cell = worksheet.cell(row=1, column=col_num)
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+                cell.border = border
+            
+            # Auto-adjust column widths
+            for column in worksheet.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                
+                adjusted_width = min(max_length + 2, 50)
+                worksheet.column_dimensions[column_letter].width = adjusted_width
+            
+            # Format data rows
+            for row in range(2, len(df) + 2):
+                for col in range(1, len(df.columns) + 1):
+                    cell = worksheet.cell(row=row, column=col)
+                    cell.border = border
+                    cell.alignment = Alignment(horizontal='left', vertical='center')
+            
+            # Tambah sheet ringkasan
+            summary_data = {
+                'Informasi': [
+                    'Total Izin',
+                    'Izin Aktif', 
+                    'Izin Selesai',
+                    'Tanggal Export',
+                    'Export Oleh',
+                    'Edisi'
+                ],
+                'Value': [
+                    len(df),
+                    len(df[df['Status'] == 'Aktif']) if len(df) > 0 else 0,
+                    len(df[df['Status'] == 'Selesai']) if len(df) > 0 else 0,
+                    datetime.now().strftime('%d/%m/%Y %H:%M'),
+                    current_user.username,
+                    active_edisi.nama
+                ]
+            }
+            
+            summary_df = pd.DataFrame(summary_data)
+            summary_df.to_excel(writer, sheet_name='Ringkasan', index=False)
+            
+            # Format sheet ringkasan
+            summary_sheet = writer.sheets['Ringkasan']
+            for col_num in range(1, 3):
+                cell = summary_sheet.cell(row=1, column=col_num)
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+                cell.border = border
+            
+            # Auto-adjust summary columns
+            for column in summary_sheet.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                
+                adjusted_width = max_length + 2
+                summary_sheet.column_dimensions[column_letter].width = adjusted_width
+                
+            # Format data rows di summary
+            for row in range(2, len(summary_df) + 2):
+                for col in range(1, 3):
+                    cell = summary_sheet.cell(row=row, column=col)
+                    cell.border = border
+                    cell.alignment = Alignment(horizontal='left', vertical='center')
+        
+        output.seek(0)
+        
+        # Generate filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'perizinan_{jenis_kelamin.lower()}_{active_edisi.nama}_{timestamp}.xlsx'
+        
+        # Log activity
+        log_activity('Export', 'Perizinan', f"Export data perizinan {jenis_kelamin.title()} ke Excel: {len(df)} record")
+        
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except Exception as e:
+        flash(f"Terjadi kesalahan saat mengexport data: {str(e)}", "danger")
+        return redirect(url_for('admin.perizinan'))
 
 @admin_bp.route('/izin/edit/<int:izin_id>', methods=['GET', 'POST'])
 @login_required
@@ -2292,7 +2473,7 @@ def manajemen_santri_wilayah():
     
     # 5. Lakukan paginasi
     page = request.args.get('page', 1, type=int)
-    per_page = 20
+    per_page = 50
     pagination = query.order_by(Santri.nama).paginate(page=page, per_page=per_page, error_out=False)
     
     # 6. Ambil data pendaftaran yang relevan untuk santri di halaman saat ini
