@@ -2577,9 +2577,11 @@ def export_santri_wilayah():
     # Get all santri (no pagination for export)
     santri_list = query.order_by(Santri.nama).all()
     
-    # Get pendaftaran data for all santri
+    # Get pendaftaran data for all santri with tarif data
     santri_ids = [s.id for s in santri_list]
     pendaftaran_map = {}
+    tarif_map = {}
+    
     if santri_ids:
         pendaftarans = Pendaftaran.query.options(
             selectinload(Pendaftaran.bus_pulang),
@@ -2591,6 +2593,16 @@ def export_santri_wilayah():
             Pendaftaran.santri_id.in_(santri_ids)
         ).all()
         pendaftaran_map = {p.santri_id: p for p in pendaftarans}
+        
+        # Get tarif data untuk kalkulasi biaya
+        for p in pendaftarans:
+            if p.rombongan_pulang_id and p.titik_turun:
+                tarif = Tarif.query.filter_by(
+                    rombongan_id=p.rombongan_pulang_id, 
+                    titik_turun=p.titik_turun
+                ).first()
+                if tarif:
+                    tarif_map[f"{p.rombongan_pulang_id}_{p.titik_turun}"] = tarif
 
     # Create workbook
     wb = Workbook()
@@ -2608,19 +2620,23 @@ def export_santri_wilayah():
     header_alignment = Alignment(horizontal='center', vertical='center')
     border = Border(left=Side(style='thin'), right=Side(style='thin'), 
                    top=Side(style='thin'), bottom=Side(style='thin'))
+    
+    # Style for unpaid santri (red background)
+    unpaid_fill = PatternFill(start_color='FFE6E6', end_color='FFE6E6', fill_type='solid')
+    unpaid_font = Font(name='Arial', size=10, color='CC0000')
 
     # Set headers based on export type
     if export_type == 'pulang':
         headers = [
             'No', 'Nama Santri', 'Jenis Kelamin', 'Kabupaten', 'Status Santri', 
             'Jabatan', 'Status Pulang', 'Metode Pembayaran', 'Rombongan', 
-            'Nama Bus', 'Nomor Lambung', 'Tanggal Export'
+            'Nama Bus', 'Nomor Lambung', 'Biaya Pulang', 'Total Biaya'
         ]
     else:  # kembali
         headers = [
             'No', 'Nama Santri', 'Jenis Kelamin', 'Kabupaten', 'Status Santri',
             'Jabatan', 'Status Kembali', 'Metode Pembayaran', 'Rombongan',
-            'Nama Bus', 'Nomor Lambung', 'Tanggal Export'
+            'Nama Bus', 'Nomor Lambung', 'Biaya Kembali', 'Total Biaya'
         ]
 
     # Write headers
@@ -2631,9 +2647,15 @@ def export_santri_wilayah():
         cell.alignment = header_alignment
         cell.border = border
 
+    # Initialize counters for summary
+    total_transfer = 0
+    total_cash = 0
+    total_biaya_pulang = 0
+    total_biaya_kembali = 0
+    count_transfer = 0
+    count_cash = 0
+
     # Write data
-    current_date = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
-    
     for idx, santri in enumerate(santri_list, 2):
         pendaftaran = pendaftaran_map.get(santri.id)
         
@@ -2647,39 +2669,159 @@ def export_santri_wilayah():
             santri.nama_jabatan or 'Santri'
         ]
         
+        # Determine if santri has unpaid status
+        is_unpaid = False
+        
         # Add specific data based on export type
         if export_type == 'pulang':
             if pendaftaran:
+                # Calculate biaya pulang - sesuai logika di pendaftaran_rombongan
+                biaya_pulang = 0
+                if pendaftaran.status_pulang and pendaftaran.status_pulang != 'Tidak Ikut':
+                    if pendaftaran.rombongan_pulang_id and pendaftaran.titik_turun:
+                        tarif_key = f"{pendaftaran.rombongan_pulang_id}_{pendaftaran.titik_turun}"
+                        tarif = tarif_map.get(tarif_key)
+                        if not tarif:
+                            # Fetch tarif if not in map
+                            tarif = Tarif.query.filter_by(
+                                rombongan_id=pendaftaran.rombongan_pulang_id, 
+                                titik_turun=pendaftaran.titik_turun
+                            ).first()
+                        if tarif:
+                            biaya_pulang = tarif.harga_bus + tarif.fee_korda + 10000
+                            total_biaya_pulang += biaya_pulang
+                
+                # Count payment methods for pulang
+                if (pendaftaran.status_pulang and pendaftaran.status_pulang != 'Tidak Ikut' and 
+                    pendaftaran.metode_pembayaran_pulang):
+                    if 'transfer' in pendaftaran.metode_pembayaran_pulang.lower():
+                        count_transfer += 1
+                        total_transfer += biaya_pulang
+                    elif 'cash' in pendaftaran.metode_pembayaran_pulang.lower():
+                        count_cash += 1
+                        total_cash += biaya_pulang
+                
+                # Check if unpaid (metode pembayaran kosong dan status bukan 'Tidak Ikut')
+                if (pendaftaran.status_pulang and pendaftaran.status_pulang != 'Tidak Ikut' and 
+                    not pendaftaran.metode_pembayaran_pulang):
+                    is_unpaid = True
+                
                 row_data.extend([
                     pendaftaran.status_pulang,
                     pendaftaran.metode_pembayaran_pulang or '-',
                     pendaftaran.rombongan_pulang.nama_rombongan if pendaftaran.rombongan_pulang else '-',
                     pendaftaran.bus_pulang.nama_armada if pendaftaran.bus_pulang else '-',
-                    pendaftaran.bus_pulang.nomor_lambung if pendaftaran.bus_pulang else '-'
+                    pendaftaran.bus_pulang.nomor_lambung if pendaftaran.bus_pulang else '-',
+                    f"Rp {biaya_pulang:,.0f}".replace(',', '.') if biaya_pulang > 0 else 'Rp 0',
+                    f"Rp {pendaftaran.total_biaya:,.0f}".replace(',', '.') if pendaftaran.total_biaya else 'Rp 0'
                 ])
             else:
-                row_data.extend(['Belum Terdaftar', '-', '-', '-', '-'])
+                row_data.extend(['Belum Terdaftar', '-', '-', '-', '-', 'Rp 0', 'Rp 0'])
         else:  # kembali
             if pendaftaran:
+                # Calculate biaya kembali - sesuai logika di pendaftaran_rombongan
+                biaya_kembali = 0
+                if pendaftaran.status_kembali and pendaftaran.status_kembali != 'Tidak Ikut':
+                    # Tentukan rombongan dan titik untuk kembali
+                    rombongan_kembali_id = pendaftaran.rombongan_kembali_id or pendaftaran.rombongan_pulang_id
+                    titik_jemput_kembali = pendaftaran.titik_jemput_kembali or pendaftaran.titik_turun
+                    
+                    if rombongan_kembali_id and titik_jemput_kembali:
+                        tarif_key = f"{rombongan_kembali_id}_{titik_jemput_kembali}"
+                        tarif = tarif_map.get(tarif_key)
+                        if not tarif:
+                            # Fetch tarif if not in map
+                            tarif = Tarif.query.filter_by(
+                                rombongan_id=rombongan_kembali_id, 
+                                titik_turun=titik_jemput_kembali
+                            ).first()
+                            if tarif:
+                                tarif_map[tarif_key] = tarif
+                        if tarif:
+                            biaya_kembali = tarif.harga_bus + tarif.fee_korda + 10000
+                            total_biaya_kembali += biaya_kembali
+                
+                # Count payment methods for kembali
+                if (pendaftaran.status_kembali and pendaftaran.status_kembali != 'Tidak Ikut' and 
+                    pendaftaran.metode_pembayaran_kembali):
+                    if 'transfer' in pendaftaran.metode_pembayaran_kembali.lower():
+                        count_transfer += 1
+                        total_transfer += biaya_kembali
+                    elif 'cash' in pendaftaran.metode_pembayaran_kembali.lower():
+                        count_cash += 1
+                        total_cash += biaya_kembali
+                
+                # Check if unpaid (metode pembayaran kosong dan status bukan 'Tidak Ikut')
+                if (pendaftaran.status_kembali and pendaftaran.status_kembali != 'Tidak Ikut' and 
+                    not pendaftaran.metode_pembayaran_kembali):
+                    is_unpaid = True
+                
                 row_data.extend([
                     pendaftaran.status_kembali,
                     pendaftaran.metode_pembayaran_kembali or '-',
                     pendaftaran.rombongan_kembali.nama_rombongan if pendaftaran.rombongan_kembali else 
                     (pendaftaran.rombongan_pulang.nama_rombongan if pendaftaran.rombongan_pulang else '-'),
                     pendaftaran.bus_kembali.nama_armada if pendaftaran.bus_kembali else '-',
-                    pendaftaran.bus_kembali.nomor_lambung if pendaftaran.bus_kembali else '-'
+                    pendaftaran.bus_kembali.nomor_lambung if pendaftaran.bus_kembali else '-',
+                    f"Rp {biaya_kembali:,.0f}".replace(',', '.') if biaya_kembali > 0 else 'Rp 0',
+                    f"Rp {pendaftaran.total_biaya:,.0f}".replace(',', '.') if pendaftaran.total_biaya else 'Rp 0'
                 ])
             else:
-                row_data.extend(['Belum Terdaftar', '-', '-', '-', '-'])
+                row_data.extend(['Belum Terdaftar', '-', '-', '-', '-', 'Rp 0', 'Rp 0'])
         
-        # Add export date
-        row_data.append(current_date)
-        
-        # Write row data
+        # Write row data with conditional styling
         for col, value in enumerate(row_data, 1):
             cell = ws.cell(row=idx, column=col, value=value)
             cell.border = border
             cell.alignment = Alignment(vertical='center')
+            
+            # Apply red styling for unpaid santri
+            if is_unpaid:
+                cell.fill = unpaid_fill
+                cell.font = unpaid_font
+
+    # Add summary section at the bottom
+    summary_row_start = len(santri_list) + 4  # Start 3 rows after the last data
+    
+    # Summary styles
+    summary_header_font = Font(name='Arial', size=12, bold=True, color='FFFFFF')
+    summary_header_fill = PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid')
+    summary_value_font = Font(name='Arial', size=11, bold=True, color='000000')
+    summary_label_font = Font(name='Arial', size=11, bold=False, color='000000')
+    
+    # Summary data
+    summary_data = [
+        ('RINGKASAN PEMBAYARAN', '', True),
+        ('Total Pembayaran Transfer:', f"{count_transfer} orang - Rp {total_transfer:,.0f}".replace(',', '.'), False),
+        ('Total Pembayaran Cash:', f"{count_cash} orang - Rp {total_cash:,.0f}".replace(',', '.'), False),
+        ('', '', False),
+        ('RINGKASAN BIAYA', '', True),
+    ]
+    
+    if export_type == 'pulang':
+        summary_data.append(('Total Biaya Pulang:', f"Rp {total_biaya_pulang:,.0f}".replace(',', '.'), False))
+    else:
+        summary_data.append(('Total Biaya Kembali:', f"Rp {total_biaya_kembali:,.0f}".replace(',', '.'), False))
+    
+    # Write summary
+    for i, (label, value, is_header) in enumerate(summary_data):
+        row_idx = summary_row_start + i
+        
+        # Write label
+        if label:  # Only write if label is not empty
+            label_cell = ws.cell(row=row_idx, column=1, value=label)
+            if is_header:
+                label_cell.font = summary_header_font
+                label_cell.fill = summary_header_fill
+                # Merge cells for headers
+                ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=4)
+            else:
+                label_cell.font = summary_label_font
+        
+        # Write value
+        if value and not is_header:
+            value_cell = ws.cell(row=row_idx, column=2, value=value)
+            value_cell.font = summary_value_font
 
     # Auto-adjust column widths
     for column in ws.columns:
