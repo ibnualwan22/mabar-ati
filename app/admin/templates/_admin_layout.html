@@ -705,7 +705,7 @@
             </a>
         </li>
         {% endif %}
-        {% if current_user.role.name in ['Korpus', 'Korwil', 'Korda'] %}
+        {% if current_user.role.name in ['Korpus', 'Korwil'] %}
         <li class="nav-item">
             <a href="{{ url_for('admin.daftar_peserta_global') }}" 
                class="nav-link {{ 'active' if 'daftar_peserta_global' in request.endpoint else '' }}">
@@ -743,7 +743,7 @@
                 <i class="fas fa-user-tag"></i> Data Partisipan
             </a>
         </li>
-        {% if current_user.role.name in ['Korpus', 'PJ Acara'] %}
+        {% if current_user.role.name in ['Korpus', 'PJ Acara', 'Korda'] %}
         <li class="nav-item">
             <a href="{{ url_for('admin.manajemen_wisuda') }}" 
                class="nav-link {{ 'active' if 'wisuda' in request.endpoint else '' }}">
@@ -760,6 +760,19 @@
             </a>
         </li>
         {% endif %}
+        {% if current_user.role.name in ['Bendahara Pusat', 'Korpus'] %}
+<li class="nav-heading">Manajemen Bendahara</li>
+<li class="nav-item">
+    <a href="{{ url_for('admin.bendahara_dashboard') }}" class="nav-link {{ 'active' if 'bendahara_dashboard' in request.endpoint else '' }}">
+        <i class="fas fa-cash-register"></i> Dashboard Bendahara
+    </a>
+</li>
+<li class="nav-item">
+    <a href="{{ url_for('admin.bendahara_pengeluaran') }}" class="nav-link {{ 'active' if 'bendahara_pengeluaran' in request.endpoint else '' }}">
+        <i class="fas fa-file-invoice-dollar"></i> Catat Pengeluaran
+    </a>
+</li>
+{% endif %}
         
         {% if current_user.role.name == 'Korpus' %}
         <li class="nav-heading">Pengaturan Sistem</li>

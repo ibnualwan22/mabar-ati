@@ -1,11 +1,11 @@
 from . import admin_bp
 from flask import render_template, redirect, url_for, flash, request, jsonify, abort, Response, send_file, current_app
-from app.models import ActivityLog, Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, User, Edisi, Bus, Role, Wisuda
-from app.admin.forms import ImportWisudaForm, RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, UserForm, UserEditForm, EdisiForm, BusForm, KorlapdaForm, WisudaForm
+from app.models import ActivityLog, Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, Transaksi, User, Edisi, Bus, Role, Wisuda
+from app.admin.forms import ImportWisudaForm, RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, TransaksiForm, UserForm, UserEditForm, EdisiForm, BusForm, KorlapdaForm, WisudaForm
 from app import db, login_manager
 import json, requests
 from collections import defaultdict
-from sqlalchemy import update, text, or_, and_
+from sqlalchemy import update, text, or_, and_, func
 from datetime import date, datetime
 from flask_login import login_user, logout_user, current_user, login_required
 from functools import wraps
@@ -1792,48 +1792,18 @@ def manajemen_keuangan():
             Rombongan, Pendaftaran.rombongan_pulang_id == Rombongan.id
         ).filter(Rombongan.edisi_id == active_edisi.id)
 
-        selected_rombongan_id = request.args.get('rombongan_id', type=int)
-
-    # 2. Siapkan daftar rombongan untuk dropdown filter berdasarkan peran
-    rombongan_for_filter = []
-    managed_rombongan_ids = []
-    if current_user.role.name in ['Korwil', 'Korda']:
-        managed_rombongan_ids = {r.id for r in current_user.managed_rombongan}
-        rombongan_for_filter = [r for r in current_user.managed_rombongan]
-    else: # Korpus
-        rombongan_for_filter = Rombongan.query.filter_by(edisi_id=active_edisi.id).order_by(Rombongan.nama_rombongan).all()
-
-    # 3. Siapkan query dasar
-    pendaftaran_query = Pendaftaran.query.options(
-        selectinload(Pendaftaran.rombongan_pulang).selectinload(Rombongan.tarifs),
-        selectinload(Pendaftaran.rombongan_kembali).selectinload(Rombongan.tarifs)
-    ).filter(Pendaftaran.edisi_id == active_edisi.id)
-
-    # Terapkan filter peran untuk Korda/Korwil
-    if current_user.role.name in ['Korwil', 'Korda']:
-        if not managed_rombongan_ids:
-            pendaftaran_query = pendaftaran_query.filter(db.false())
-        else:
-            pendaftaran_query = pendaftaran_query.filter(
-                or_(
-                    Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids),
-                    Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids)
+        managed_rombongan_ids = set()
+        if current_user.role.name in ['Korwil', 'Korda']:
+            managed_rombongan_ids = {r.id for r in current_user.managed_rombongan}
+            if not managed_rombongan_ids:
+                pendaftaran_query = pendaftaran_query.filter(db.false())
+            else:
+                pendaftaran_query = pendaftaran_query.filter(
+                    or_(
+                        Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids),
+                        Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids)
+                    )
                 )
-            )
-    
-    # 4. BARU: Terapkan filter rombongan yang dipilih ke query utama
-    if selected_rombongan_id:
-        # Pastikan Korda/Korwil hanya bisa memfilter rombongan yang mereka kelola
-        if current_user.role.name in ['Korwil', 'Korda'] and selected_rombongan_id not in managed_rombongan_ids:
-            abort(403) # Akses ditolak jika mencoba filter rombongan orang lain
-        
-        pendaftaran_query = pendaftaran_query.filter(
-            or_(
-                Pendaftaran.rombongan_pulang_id == selected_rombongan_id,
-                Pendaftaran.rombongan_kembali_id == selected_rombongan_id
-            )
-        )
-    # --- AKHIR BAGIAN LOGIKA BARU ---
         
         all_pendaftaran = pendaftaran_query.all()
 
@@ -1881,7 +1851,7 @@ def manajemen_keuangan():
         financial_data['global_lunas'] = financial_data['pulang_lunas'] + financial_data['kembali_lunas']
         financial_data['global_belum_lunas'] = financial_data['global_total'] - financial_data['global_lunas']
 
-    return render_template('manajemen_keuangan.html', data=financial_data, rombongan_for_filter=rombongan_for_filter)
+    return render_template('manajemen_keuangan.html', data=financial_data)
 
 @admin_bp.route('/keuangan/export-pdf')
 @login_required
@@ -3167,7 +3137,7 @@ def cetak_tiket():
 # 1. Halaman Utama Manajemen Wisuda (termasuk logika impor)
 @admin_bp.route('/manajemen-wisuda', methods=['GET', 'POST'])
 @login_required
-@role_required('Korpus', 'PJ Acara')
+@role_required('Korpus', 'PJ Acara', 'Korwil', 'Korda')
 def manajemen_wisuda():
     active_edisi = get_active_edisi()
     import_form = ImportWisudaForm()
@@ -3324,3 +3294,136 @@ def update_nomor_wali(santri_id):
     db.session.commit()
 
     return jsonify({'success': True, 'message': 'Nomor HP wali berhasil diperbarui dan disinkronkan.'})
+
+@admin_bp.route('/bendahara')
+@login_required
+@role_required('Bendahara Pusat', 'Korpus')
+def bendahara_dashboard():
+    active_edisi = get_active_edisi()
+    if not active_edisi:
+        flash("Tidak ada edisi aktif.", "warning")
+        return render_template('bendahara_dashboard.html', active_edisi=None, rombongan_data_list=[])
+
+    # Hitung saldo rekening virtual (tidak berubah)
+    pemasukan_saya = db.session.query(func.sum(Transaksi.jumlah)).filter_by(edisi_id=active_edisi.id, tipe='PEMASUKAN', rekening='REKENING_SAYA').scalar() or 0
+    pengeluaran_saya = db.session.query(func.sum(Transaksi.jumlah)).filter_by(edisi_id=active_edisi.id, tipe='PENGELUARAN', rekening='REKENING_SAYA').scalar() or 0
+    saldo_rekening_saya = pemasukan_saya - pengeluaran_saya
+    saldo_rekening_bus = db.session.query(func.sum(Transaksi.jumlah)).filter_by(edisi_id=active_edisi.id, tipe='PEMASUKAN', rekening='REKENING_BUS').scalar() or 0
+
+    all_rombongan = Rombongan.query.filter_by(edisi_id=active_edisi.id).all()
+    rombongan_data_list = []
+    
+    for rombongan in all_rombongan:
+        # --- BLOK PERHITUNGAN BARU YANG LEBIH AKURAT DAN EFISIEN ---
+        # Hitung sisa tagihan (peserta yang belum lunas di salah satu perjalanan)
+        sisa_tagihan = Pendaftaran.query.filter(
+            or_(
+                Pendaftaran.rombongan_pulang_id == rombongan.id,
+                Pendaftaran.rombongan_kembali_id == rombongan.id
+            ),
+            or_(
+                Pendaftaran.status_pulang == 'Belum Bayar',
+                Pendaftaran.status_kembali == 'Belum Bayar'
+            )
+        ).count()
+
+        # Kalkulasi setoran bus yang siap (Lunas)
+        setoran_bus_pulang = db.session.query(func.sum(Tarif.harga_bus)).join(Pendaftaran, Pendaftaran.titik_turun == Tarif.titik_turun).filter(Pendaftaran.rombongan_pulang_id == rombongan.id, Pendaftaran.status_pulang == 'Lunas', Tarif.rombongan_id == rombongan.id).scalar() or 0
+        setoran_bus_kembali = db.session.query(func.sum(Tarif.harga_bus)).join(Pendaftaran, Pendaftaran.titik_jemput_kembali == Tarif.titik_turun).filter(Pendaftaran.rombongan_kembali_id == rombongan.id, Pendaftaran.status_kembali == 'Lunas', Tarif.rombongan_id == rombongan.id).scalar() or 0
+        setoran_bus_total = setoran_bus_pulang + setoran_bus_kembali
+        
+        # Kalkulasi setoran lain (Fee Korda + Fee Pondok) yang siap (Lunas)
+        setoran_lain_pulang = db.session.query(func.sum(Tarif.fee_korda + 10000)).join(Pendaftaran, Pendaftaran.titik_turun == Tarif.titik_turun).filter(Pendaftaran.rombongan_pulang_id == rombongan.id, Pendaftaran.status_pulang == 'Lunas', Tarif.rombongan_id == rombongan.id).scalar() or 0
+        setoran_lain_kembali = db.session.query(func.sum(Tarif.fee_korda + 10000)).join(Pendaftaran, Pendaftaran.titik_jemput_kembali == Tarif.titik_turun).filter(Pendaftaran.rombongan_kembali_id == rombongan.id, Pendaftaran.status_kembali == 'Lunas', Tarif.rombongan_id == rombongan.id).scalar() or 0
+        setoran_lain_total = setoran_lain_pulang + setoran_lain_kembali
+        
+        rombongan_data_list.append({
+            'rombongan': rombongan,
+            'sisa_tagihan': sisa_tagihan,
+            'setoran_bus': setoran_bus_total,
+            'setoran_lain': setoran_lain_total
+        })
+        # --- AKHIR BLOK PERBAIKAN ---
+
+    return render_template('bendahara_dashboard.html', 
+                           saldo_rekening_saya=saldo_rekening_saya,
+                           saldo_rekening_bus=saldo_rekening_bus,
+                           rombongan_data_list=rombongan_data_list,
+                           active_edisi=active_edisi)
+
+# 2. Rute Konfirmasi Setoran
+@admin_bp.route('/bendahara/konfirmasi-setor/<int:rombongan_id>', methods=['POST'])
+@login_required
+@role_required('Bendahara Pusat', 'Korpus')
+def konfirmasi_setor(rombongan_id):
+    tipe = request.args.get('tipe')
+    nominal = request.form.get('nominal')
+    rombongan = Rombongan.query.get_or_404(rombongan_id)
+    active_edisi = get_active_edisi()
+    
+    if not tipe or not nominal:
+        flash("Tipe setoran dan nominal harus diisi.", "danger")
+        return redirect(url_for('admin.bendahara_dashboard'))
+
+    try:
+        nominal = float(nominal)
+        if nominal <= 0:
+            flash("Nominal harus lebih dari 0.", "danger")
+            return redirect(url_for('admin.bendahara_dashboard'))
+    except ValueError:
+        flash("Nominal tidak valid.", "danger")
+        return redirect(url_for('admin.bendahara_dashboard'))
+
+    if tipe == 'bus':
+        if nominal > 0:
+            transaksi = Transaksi(edisi_id=active_edisi.id, deskripsi=f"Setoran Biaya Bus dari {rombongan.nama_rombongan}", jumlah=nominal, tipe='PEMASUKAN', rekening='REKENING_BUS', user_id=current_user.id)
+            db.session.add(transaksi)
+            rombongan.status_setoran_bus = 'Sudah Setor'
+            rombongan.tanggal_setoran_bus = datetime.utcnow()
+            flash(f'Setoran biaya bus Rp {"{:,.0f}".format(nominal).replace(",", ".")} berhasil dikonfirmasi.', 'success')
+
+    elif tipe == 'fee_pondok':
+        if nominal > 0:
+            transaksi = Transaksi(edisi_id=active_edisi.id, deskripsi=f"Setoran Fee Pondok dari {rombongan.nama_rombongan}", jumlah=nominal, tipe='PEMASUKAN', rekening='REKENING_SAYA', user_id=current_user.id)
+            db.session.add(transaksi)
+            rombongan.status_setoran_fee_pondok = 'Sudah Setor'
+            rombongan.tanggal_setoran_fee_pondok = datetime.utcnow()
+            flash(f'Setoran fee pondok Rp {"{:,.0f}".format(nominal).replace(",", ".")} berhasil dikonfirmasi.', 'success')
+            
+    db.session.commit()
+    return redirect(url_for('admin.bendahara_dashboard'))
+
+# 3. Rute Halaman Pengeluaran
+@admin_bp.route('/bendahara/pengeluaran', methods=['GET', 'POST'])
+@login_required
+@role_required('Bendahara Pusat', 'Korpus')
+def bendahara_pengeluaran():
+    active_edisi = get_active_edisi()
+    form = TransaksiForm()
+    
+    if form.validate_on_submit():
+        pengeluaran = Transaksi(
+            edisi_id=active_edisi.id,
+            deskripsi=form.deskripsi.data,
+            jumlah=form.jumlah.data,
+            tipe='PENGELUARAN',
+            rekening='REKENING_SAYA',
+            user_id=current_user.id
+        )
+        db.session.add(pengeluaran)
+        db.session.commit()
+        flash('Data pengeluaran berhasil dicatat.', 'success')
+        return redirect(url_for('admin.bendahara_pengeluaran'))
+
+    # Hitung saldo untuk ditampilkan
+    pemasukan_saya = db.session.query(func.sum(Transaksi.jumlah)).filter_by(edisi_id=active_edisi.id, tipe='PEMASUKAN', rekening='REKENING_SAYA').scalar() or 0
+    pengeluaran_saya = db.session.query(func.sum(Transaksi.jumlah)).filter_by(edisi_id=active_edisi.id, tipe='PENGELUARAN', rekening='REKENING_SAYA').scalar() or 0
+    saldo_rekening_saya = pemasukan_saya - pengeluaran_saya
+    
+    # Ambil riwayat pengeluaran
+    riwayat_pengeluaran = Transaksi.query.filter_by(edisi_id=active_edisi.id, tipe='PENGELUARAN').order_by(Transaksi.tanggal.desc()).all()
+
+    return render_template('bendahara_pengeluaran.html', 
+                           form=form, 
+                           saldo_rekening_saya=saldo_rekening_saya,
+                           riwayat_pengeluaran=riwayat_pengeluaran)

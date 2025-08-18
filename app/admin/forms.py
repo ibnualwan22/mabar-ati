@@ -260,3 +260,8 @@ class ImportWisudaForm(FlaskForm):
                                   description="Kategori ini akan diterapkan ke semua santri di dalam file.")
     submit = SubmitField('Impor Data')
 
+class TransaksiForm(FlaskForm):
+    deskripsi = StringField('Deskripsi Pengeluaran', validators=[DataRequired()])
+    jumlah = IntegerField('Jumlah (Rp)', validators=[DataRequired()])
+    submit = SubmitField('Catat Pengeluaran')
+

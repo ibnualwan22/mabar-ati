@@ -124,6 +124,11 @@ class Rombongan(db.Model):
     jadwal_berangkat = db.Column(db.DateTime)
     batas_pembayaran_berangkat = db.Column(db.Date)
     titik_jemput_berangkat = db.Column(db.String(200))
+    status_setoran_bus = db.Column(db.String(20), default='Belum Lunas') # Pilihan: Belum Lunas, Siap Setor, Sudah Setor
+    tanggal_setoran_bus = db.Column(db.DateTime)
+
+    status_setoran_lain = db.Column(db.String(20), default='Belum Lunas') # Untuk Fee Pondok & Korda
+    tanggal_setoran_lain = db.Column(db.DateTime)
 
     # Relasi
     tarifs = db.relationship('Tarif', backref='rombongan', cascade="all, delete-orphan")
@@ -206,4 +211,17 @@ class Wisuda(db.Model):
     # Relasi balik untuk akses mudah dari objek Edisi
     edisi = db.relationship('Edisi', backref=db.backref('wisudawan', lazy='dynamic'))
     
+
+class Transaksi(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    edisi_id = db.Column(db.Integer, db.ForeignKey('edisi.id'), nullable=False)
+    deskripsi = db.Column(db.String(255), nullable=False)
+    jumlah = db.Column(db.Integer, nullable=False)
+    tipe = db.Column(db.String(20), nullable=False) # 'PEMASUKAN' atau 'PENGELUaran'
+    rekening = db.Column(db.String(50)) # 'REKENING_SAYA' atau 'REKENING_BUS'
+    tanggal = db.Column(db.DateTime, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+    user = db.relationship('User', backref='transaksi_dicatat')
+    edisi = db.relationship('Edisi', backref='transaksi')
     

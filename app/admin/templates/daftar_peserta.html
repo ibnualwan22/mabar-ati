@@ -102,7 +102,11 @@
                             <td><strong>{{ loop.index }}</strong></td>
                             <td>
                                 <div class="student-name">{{ pendaftaran.santri.nama }}</div>
-                                <small class="text-muted">NIS: {{ pendaftaran.santri.nis }}</small>
+                                {% if pendaftaran.santri.jenis_kelamin == 'PUTRA' %}
+                                        <div class="gender-badge gender-putra">(Putra)</div>
+                                    {% elif pendaftaran.santri.jenis_kelamin == 'PUTRI' %}
+                                        <div class="gender-badge gender-putri">(Putri)</div>
+                                    {% endif %}
                             </td>
                             <td>
                                 <div class="location-info">

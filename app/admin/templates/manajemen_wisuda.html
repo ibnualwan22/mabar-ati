@@ -1,8 +1,10 @@
 {% extends "_admin_layout.html" %}
 {% block title %}Manajemen Wisuda{% endblock %}
 {% block content %}
+
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h2">Manajemen Wisuda</h1>
+        {% if current_user.role.name in ['Korpus','Pj Acara'] %}
     <a href="{{ url_for('admin.tambah_wisudawan') }}" class="btn btn-primary">
         <i class="fas fa-plus me-2"></i>Tambah Wisudawan Manual
     </a>
@@ -20,7 +22,10 @@
                 <div class="col-md-2">{{ import_form.submit(class="btn btn-success w-100") }}</div>
             </div>
         </form>
+        
     </div>
+            {% endif %}
+
 </div>
 
 {% if not grouped_wisudawan %}
@@ -41,8 +46,10 @@
                     <tr>
                         <th>No.</th>
                         <th>Nama Santri</th>
-                        <th>NIS</th>
+                        <th>Alamat</th>
+                        {% if current_user.role.name in ['Korpus','Pj Acara'] %}
                         <th>Aksi</th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -50,12 +57,14 @@
                     <tr>
                         <td>{{ loop.index }}</td>
                         <td>{{ w.santri.nama if w.santri else 'Santri tidak ditemukan' }}</td>
-                        <td>{{ w.santri.nis if w.santri else 'N/A' }}</td>
+                        <td>{{ w.santri.kabupaten if w.santri else 'N/A' }}</td>
+                                {% if current_user.role.name in ['Korpus','Pj Acara'] %}
                         <td>
                             <form method="POST" action="{{ url_for('admin.hapus_wisuda', wisuda_id=w.id) }}" onsubmit="return confirm('Yakin ingin menghapus status wisuda untuk {{ w.santri.nama if w.santri else '' }}?');">
                                 <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
                             </form>
                         </td>
+                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>

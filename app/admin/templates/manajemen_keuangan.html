@@ -24,31 +24,6 @@
     </div>
     {% endif %}
 </div>
-<div class="card mb-4">
-    <div class="card-header">
-        <h5><i class="fas fa-filter me-2"></i>Filter Laporan Keuangan</h5>
-    </div>
-    <div class="card-body">
-        <form method="GET" action="{{ url_for('admin.manajemen_keuangan') }}">
-            <div class="row align-items-end">
-                <div class="col-md-10">
-                    <label for="rombongan_id" class="form-label">Tampilkan Laporan untuk Rombongan:</label>
-                    <select name="rombongan_id" id="rombongan_id" class="form-select">
-                        <option value="">-- Tampilkan Akumulasi Semua Rombongan --</option>
-                        {% for rombongan in rombongan_for_filter %}
-                            <option value="{{ rombongan.id }}" {% if request.args.get('rombongan_id')|int == rombongan.id %}selected{% endif %}>
-                                {{ rombongan.nama_rombongan }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100">Filter</button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
 
 {% if active_edisi %}
     <!-- Global Summary Cards -->

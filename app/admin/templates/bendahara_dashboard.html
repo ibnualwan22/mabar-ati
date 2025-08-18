@@ -1,0 +1,79 @@
+{% extends "_admin_layout.html" %}
+{% block title %}Dashboard Bendahara{% endblock %}
+{% block content %}
+<h1 class="h2">Dashboard Bendahara</h1>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card text-center text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Saldo Rekening Saya (Fee)</h5>
+                <p class="card-text h3">Rp {{ "{:,.0f}".format(saldo_rekening_saya).replace(',', '.') }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card text-center text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Saldo Rekening Bus</h5>
+                <p class="card-text h3">Rp {{ "{:,.0f}".format(saldo_rekening_bus).replace(',', '.') }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h5>Status Setoran per Rombongan</h5></div>
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Nama Rombongan</th>
+                    <th>Setoran Bus (Siap)</th>
+                    <th>Setoran Lain (Siap)</th>
+                    <th>Peserta Belum Lunas</th>
+                    <th>Aksi Setoran Bus</th>
+                    <th>Aksi Setoran Lain</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in rombongan_data_list %}
+                {% set rombongan = item.rombongan %}
+                <tr>
+                    <td>{{ rombongan.nama_rombongan }}</td>
+                    <td>Rp {{ "{:,.0f}".format(item.setoran_bus).replace(',', '.') }}</td>
+                    <td>Rp {{ "{:,.0f}".format(item.setoran_lain).replace(',', '.') }}</td>
+                    <td>
+                        {% if item.sisa_tagihan > 0 %}
+                            <span class="badge bg-danger">{{ item.sisa_tagihan }} orang</span>
+                        {% else %}
+                            <span class="badge bg-success">Semua Lunas</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if rombongan.status_setoran_bus == 'Sudah Setor' %}
+                            <span class="badge bg-success">Disetor {{ rombongan.tanggal_setoran_bus|datetime_wib }}</span>
+                        {% else %}
+                            <form method="POST" action="{{ url_for('admin.konfirmasi_setor', rombongan_id=rombongan.id, tipe='bus') }}"
+                                  {% if item.sisa_tagihan > 0 %} onsubmit="return confirm('PERINGATAN: Masih ada {{ item.sisa_tagihan }} peserta belum lunas. Yakin lanjut?');" {% endif %}>
+                                <button type="submit" class="btn btn-sm {{ 'btn-warning' if item.sisa_tagihan > 0 else 'btn-primary' }}">Konfirmasi</button>
+                            </form>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if rombongan.status_setoran_lain == 'Sudah Setor' %}
+                             <span class="badge bg-success">Disetor {{ rombongan.tanggal_setoran_lain|datetime_wib }}</span>
+                        {% else %}
+                            <form method="POST" action="{{ url_for('admin.konfirmasi_setor', rombongan_id=rombongan.id, tipe='lain') }}"
+                                  {% if item.sisa_tagihan > 0 %} onsubmit="return confirm('PERINGATAN: Masih ada {{ item.sisa_tagihan }} peserta belum lunas. Yakin lanjut?');" {% endif %}>
+                                <button type="submit" class="btn btn-sm {{ 'btn-warning' if item.sisa_tagihan > 0 else 'btn-primary' }}">Konfirmasi</button>
+                            </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

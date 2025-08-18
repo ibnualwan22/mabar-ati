@@ -4,14 +4,248 @@
 
 {% block content %}
 <style>
-    /* Style untuk header card baru */
-    .page-header { background: linear-gradient(135deg, #4f46e5, #818cf8); border-radius: 12px; color: white; padding: 2rem; margin-bottom: 2rem; }
-    .page-title { font-size: 2rem; font-weight: 700; }
-    .page-subtitle { font-size: 1.125rem; opacity: 0.9; }
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
-    .stat-card { background: rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 1.25rem; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); text-align: center; }
-    .stat-number { font-size: 2rem; font-weight: 700; }
-    .stat-label { font-size: 0.875rem; opacity: 0.9; }
+    :root {
+        --primary-color: #4f46e5;
+        --primary-light: #818cf8;
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --border-color: #e2e8f0;
+        --border-radius: 12px;
+    }
+    
+    /* Page Header Styles */
+    .page-header { 
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-light)); 
+        border-radius: var(--border-radius); 
+        color: white; 
+        padding: 2rem; 
+        margin-bottom: 2rem; 
+        position: relative; 
+        overflow: hidden; 
+    }
+    .page-title { 
+        font-size: 2rem; 
+        font-weight: 700; 
+        margin-bottom: 0.5rem; 
+    }
+    .page-subtitle { 
+        font-size: 1.125rem; 
+        opacity: 0.9; 
+        margin-bottom: 1.5rem; 
+    }
+    .stats-grid { 
+        display: grid; 
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); 
+        gap: 1rem; 
+    }
+    .stat-card { 
+        background: rgba(255, 255, 255, 0.15); 
+        border-radius: var(--border-radius); 
+        padding: 1.25rem; 
+        backdrop-filter: blur(10px); 
+        border: 1px solid rgba(255, 255, 255, 0.1); 
+        text-align: center; 
+    }
+    .stat-number { 
+        font-size: 2rem; 
+        font-weight: 700; 
+        display: block; 
+        margin-bottom: 0.25rem; 
+    }
+    .stat-label { 
+        font-size: 0.875rem; 
+        opacity: 0.9; 
+    }
+    
+    /* Main Card Styles */
+    .main-card { 
+        border: none; 
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); 
+        border-radius: 12px; 
+        overflow: hidden; 
+        background: white; 
+    }
+    .card-header { 
+        background: #f8fafc; 
+        border-bottom: 1px solid var(--border-color); 
+        padding: 1.5rem; 
+    }
+    .card-header h5 { 
+        margin: 0; 
+        color: var(--text-primary); 
+        font-weight: 600; 
+        display: flex; 
+        align-items: center; 
+        gap: 0.75rem; 
+    }
+    .header-icon { 
+        width: 36px; 
+        height: 36px; 
+        background: var(--primary-color); 
+        border-radius: 50%; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        color: white; 
+        font-size: 1rem; 
+    }
+    
+    /* Filter Card Styles */
+    .filter-card {
+        border: none;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+        border-radius: 12px;
+        margin-bottom: 2rem;
+    }
+    
+    /* Enhanced Table Styles */
+    .enhanced-table th { 
+        background: #fafbfc; 
+        color: var(--text-primary); 
+        font-weight: 600; 
+        border: none; 
+        padding: 1rem 0.875rem; 
+        font-size: 0.875rem; 
+        border-bottom: 2px solid var(--border-color); 
+    }
+    .enhanced-table td { 
+        border: none; 
+        padding: 1rem 0.875rem; 
+        font-size: 0.875rem; 
+        vertical-align: middle; 
+        border-bottom: 1px solid #f1f5f9; 
+    }
+    .enhanced-table tbody tr:last-child td { 
+        border-bottom: none; 
+    }
+    .enhanced-table tbody tr:hover { 
+        background: #f8fafc; 
+    }
+    
+    /* Student Info Styles */
+    .student-name { 
+        font-weight: 600; 
+        color: var(--text-primary); 
+    }
+    .student-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    .gender-badge {
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        display: inline-block;
+    }
+    .gender-putra {
+        background: #dcfce7;
+        color: #166534;
+    }
+    .gender-putri {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    
+    /* Rombongan Info Styles */
+    .rombongan-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+    }
+    .rombongan-badge {
+        background: #eef2ff;
+        color: #4338ca;
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        display: inline-block;
+    }
+    
+    /* Location Info Styles */
+    .location-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+    }
+    .location-badge {
+        background: #f0fdf4;
+        color: #166534;
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        display: inline-block;
+    }
+    
+    /* Bus Badge Styles */
+    .bus-badge { 
+        background: #e0f2fe; 
+        color: #075985; 
+        border: 1px solid #bae6fd; 
+        font-weight: 600; 
+        padding: 0.375rem 0.625rem; 
+        border-radius: 8px; 
+        font-size: 0.75rem; 
+        display: inline-block; 
+    }
+    
+    /* Status Badge Styles */
+    .status-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .status-badge { 
+        font-size: 0.75rem; 
+        font-weight: 600; 
+        padding: 0.375rem 0.625rem; 
+        border-radius: 8px; 
+    }
+    .status-lunas { 
+        background: #dcfce7; 
+        color: #166534; 
+    }
+    .status-belum { 
+        background: #fef2f2; 
+        color: #991b1b; 
+    }
+    
+    /* Cost Badge */
+    .cost-badge {
+        background: #fef3c7;
+        color: #92400e;
+        font-weight: 600;
+        padding: 0.375rem 0.625rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        white-space: nowrap;
+    }
+    
+    /* Empty State */
+    .empty-state { 
+        text-align: center; 
+        padding: 4rem 2rem; 
+        color: var(--text-secondary); 
+    }
+    .empty-state i { 
+        font-size: 4rem; 
+        margin-bottom: 1.5rem; 
+        opacity: 0.3; 
+    }
+    
+    /* Pagination Styles */
+    .pagination {
+        --bs-pagination-color: var(--primary-color);
+        --bs-pagination-hover-color: white;
+        --bs-pagination-hover-bg: var(--primary-color);
+        --bs-pagination-active-bg: var(--primary-color);
+        --bs-pagination-active-border-color: var(--primary-color);
+    }
 </style>
 
 <div class="page-header">
@@ -47,9 +281,12 @@
     </div>
 </div>
 
-<div class="card">
+<div class="filter-card card">
     <div class="card-header">
-        <h5>Filter Data Peserta</h5>
+        <h5>
+            <div class="header-icon"><i class="fas fa-filter"></i></div>
+            Filter Data Peserta
+        </h5>
     </div>
     <div class="card-body">
         <form method="GET" action="{{ url_for('admin.daftar_peserta_global') }}">
@@ -83,94 +320,133 @@
     </div>
 </div>
 
-<div class="card mt-4">
+<div class="main-card">
     <div class="card-header">
-        <h5>Daftar Peserta (Total ditemukan: {{ pagination.total }})</h5>
+        <h5>
+            <div class="header-icon"><i class="fas fa-users"></i></div>
+            Daftar Peserta Global (Total ditemukan: {{ pagination.total }})
+        </h5>
     </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-striped table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th>No.</th>
-                        <th>Nama Santri</th>
-                        <th>Rombongan</th>
-                        <th>Titik Turun & Jemput</th>
-                        <th>Bus Pulang</th>
-                        <th>Bus Kembali</th>
-                        <th>Status Bayar</th>
-                        <th>Total Biaya</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for pendaftaran in pagination.items %}
-                    <tr>
-                        <td>{{ loop.index + (pagination.page - 1) * pagination.per_page }}</td>
-                        <td>
-                            <strong>{{ pendaftaran.santri.nama }}</strong><br>
-                            <small class="text-muted">
-                                {% if pendaftaran.santri.jenis_kelamin == 'PUTRA' %}
-                                    <span class="badge bg-success-subtle text-success">Putra</span>
-                                {% elif pendaftaran.santri.jenis_kelamin == 'PUTRI' %}
-                                    <span class="badge bg-info-subtle text-info">Putri</span>
-                                {% endif %}
-                            </small>
-                        </td>
-                        <td>
-                            Pulang: {{ pendaftaran.rombongan_pulang.nama_rombongan if pendaftaran.rombongan_pulang else 'N/A' }}<br>
-                            <small class="text-muted">Kembali: {{ pendaftaran.rombongan_kembali.nama_rombongan if pendaftaran.rombongan_kembali else (pendaftaran.rombongan_pulang.nama_rombongan if pendaftaran.rombongan_pulang else 'N/A') }}</small>
-                        </td>
-                        <td>
-                            Turun: {{ pendaftaran.titik_turun or '-' }}<br>
-                            <small class="text-muted">Jemput: {{ pendaftaran.titik_jemput_kembali or pendaftaran.titik_turun or '-' }}</small>
-                        </td>
-                        <td>
-                            {% if pendaftaran.bus_pulang %}
-                                <span class="badge bg-info text-dark">{{ pendaftaran.bus_pulang.nama_armada }}</span>
-                            {% else %}-{% endif %}
-                        </td>
-                        <td>
-                            {% if pendaftaran.bus_kembali %}
-                                <span class="badge bg-info text-dark">{{ pendaftaran.bus_kembali.nama_armada }}</span>
-                            {% else %}-{% endif %}
-                        </td>
-                        <td>
-                            <span class="badge bg-success">Pulang: {{ pendaftaran.status_pulang }}</span><br>
-                            <span class="badge bg-warning text-dark mt-1">Kembali: {{ pendaftaran.status_kembali }}</span>
-                        </td>
-                        <td>Rp {{ "{:,.0f}".format(pendaftaran.total_biaya).replace(',', '.') }}</td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="8" class="text-center">Tidak ada data peserta yang cocok dengan filter Anda.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        <div class="mt-4 d-flex justify-content-center">
-             <nav>
-                <ul class="pagination mb-0">
-                    {% set args = request.args.to_dict() %}
-                    {% do args.pop('page', None) %}
-                    <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
-                        <a class="page-link" href="{{ url_for('admin.daftar_peserta_global', page=pagination.prev_num, **args) }}">«</a>
-                    </li>
-                    {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
-                        {% if page_num %}
-                            <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
-                                <a class="page-link" href="{{ url_for('admin.daftar_peserta_global', page=page_num, **args) }}">{{ page_num }}</a>
-                            </li>
-                        {% else %}
-                            <li class="page-item disabled"><span class="page-link">…</span></li>
-                        {% endif %}
-                    {% endfor %}
-                    <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
-                        <a class="page-link" href="{{ url_for('admin.daftar_peserta_global', page=pagination.next_num, **args) }}">»</a>
-                    </li>
-                </ul>
-            </nav>
-        </div>
+    
+    <div class="card-body p-0">
+        {% if pagination.items %}
+            <div class="table-responsive">
+                <table class="enhanced-table table">
+                    <thead>
+                        <tr>
+                            <th>No.</th>
+                            <th>Data Santri</th>
+                            <th>Rombongan</th>
+                            <th>Titik Turun & Jemput</th>
+                            <th>Bus Pulang</th>
+                            <th>Bus Kembali</th>
+                            <th>Status Pembayaran</th>
+                            <th>Total Biaya</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pendaftaran in pagination.items %}
+                        <tr>
+                            <td><strong>{{ loop.index + (pagination.page - 1) * pagination.per_page }}</strong></td>
+                            <td>
+                                <div class="student-info">
+                                    <div class="student-name">{{ pendaftaran.santri.nama }}</div>
+                                    {% if pendaftaran.santri.jenis_kelamin == 'PUTRA' %}
+                                        <div class="gender-badge gender-putra">Putra</div>
+                                    {% elif pendaftaran.santri.jenis_kelamin == 'PUTRI' %}
+                                        <div class="gender-badge gender-putri">Putri</div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="rombongan-info">
+                                    <div>
+                                        <small class="text-muted">Pulang:</small><br>
+                                        <div class="rombongan-badge">{{ pendaftaran.rombongan_pulang.nama_rombongan if pendaftaran.rombongan_pulang else 'N/A' }}</div>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted">Kembali:</small><br>
+                                        <div class="rombongan-badge">{{ pendaftaran.rombongan_kembali.nama_rombongan if pendaftaran.rombongan_kembali else (pendaftaran.rombongan_pulang.nama_rombongan if pendaftaran.rombongan_pulang else 'N/A') }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="location-info">
+                                    <div>
+                                        <small class="text-muted">Turun:</small><br>
+                                        <div class="location-badge">{{ pendaftaran.titik_turun or '-' }}</div>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted">Jemput:</small><br>
+                                        <div class="location-badge">{{ pendaftaran.titik_jemput_kembali or pendaftaran.titik_turun or '-' }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if pendaftaran.bus_pulang %}
+                                    <div class="bus-badge">
+                                        {{ pendaftaran.bus_pulang.nama_armada }}
+                                    </div>
+                                {% else %}<span class="text-muted">-</span>{% endif %}
+                            </td>
+                            <td>
+                                {% if pendaftaran.bus_kembali %}
+                                    <div class="bus-badge">
+                                        {{ pendaftaran.bus_kembali.nama_armada }}
+                                    </div>
+                                {% else %}<span class="text-muted">-</span>{% endif %}
+                            </td>
+                            <td>
+                                <div class="status-container">
+                                    <div class="status-badge {{ 'status-lunas' if pendaftaran.status_pulang == 'Lunas' else 'status-belum' }}">
+                                        Pulang: {{ pendaftaran.status_pulang }}
+                                    </div>
+                                    <div class="status-badge {{ 'status-lunas' if pendaftaran.status_kembali == 'Lunas' else 'status-belum' }}">
+                                        Kembali: {{ pendaftaran.status_kembali }}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cost-badge">
+                                    Rp {{ "{:,.0f}".format(pendaftaran.total_biaya).replace(',', '.') }}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="p-4 d-flex justify-content-center">
+                <nav>
+                    <ul class="pagination mb-0">
+                        {% set args = request.args.to_dict() %}
+                        {% do args.pop('page', None) %}
+                        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('admin.daftar_peserta_global', page=pagination.prev_num, **args) }}">«</a>
+                        </li>
+                        {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                            {% if page_num %}
+                                <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                                    <a class="page-link" href="{{ url_for('admin.daftar_peserta_global', page=page_num, **args) }}">{{ page_num }}</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">…</span></li>
+                            {% endif %}
+                        {% endfor %}
+                        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('admin.daftar_peserta_global', page=pagination.next_num, **args) }}">»</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-users-slash"></i>
+                <h4>Tidak Ada Data</h4>
+                <p>Tidak ada data peserta yang cocok dengan filter Anda.</p>
+            </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
