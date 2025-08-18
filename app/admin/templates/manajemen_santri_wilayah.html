@@ -1038,6 +1038,14 @@
                                     <i class="fas fa-user-plus"></i> Daftar
                                 </a>
                             {% endif %}
+                            <button type="button" class="btn btn-info edit-wali-btn" 
+            data-bs-toggle="modal" 
+            data-bs-target="#editWaliModal"
+            data-santri-id="{{ santri.id }}"
+            data-santri-nama="{{ santri.nama }}"
+            data-nomor-wali="{{ santri.no_hp_wali or '' }}">
+        Edit No. Wali
+    </button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -1111,11 +1119,71 @@
         Menampilkan {{ pagination.items|length }} dari {{ pagination.total }} data (Halaman {{ pagination.page }} dari {{ pagination.pages }})
     </div>
 </div>
+
+<div class="modal fade" id="editWaliModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Nomor HP Wali</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="edit-wali-form">
+            <input type="hidden" id="modal-santri-id" name="santri_id">
+            <div class="mb-3">
+                <label class="form-label">Nama Santri</label>
+                <input type="text" id="modal-santri-nama" class="form-control" readonly>
+            </div>
+            <div class="mb-3">
+                <label for="modal-nomor-wali" class="form-label">Nomor HP Wali Baru</label>
+                <input type="text" id="modal-nomor-wali" class="form-control" placeholder="Contoh: 08123456789" required>
+            </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <button type="button" id="simpan-nomor-wali-btn" class="btn btn-primary">Simpan Perubahan</button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endif %}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Animate statistics on page load
+    const editWaliModal = document.getElementById('editWaliModal');
+    const modalSantriId = document.getElementById('modal-santri-id');
+    const modalSantriNama = document.getElementById('modal-santri-nama');
+    const modalNomorWali = document.getElementById('modal-nomor-wali');
+    const simpanBtn = document.getElementById('simpan-nomor-wali-btn');
+    editWaliModal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        modalSantriId.value = button.dataset.santriId;
+        modalSantriNama.value = button.dataset.santriNama;
+        modalNomorWali.value = button.dataset.nomorWali;
+    });
+
+    simpanBtn.addEventListener('click', function() {
+        const santriId = modalSantriId.value;
+        const newPhoneNumber = modalNomorWali.value;
+        
+        fetch(`/admin/santri/update-wali/${santriId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ no_hp_wali: newPhoneNumber })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message); // Tampilkan pesan sukses atau error
+            if(data.success) {
+                window.location.reload(); // Muat ulang halaman jika berhasil
+            }
+        });
+    });
+});
     const statNumbers = document.querySelectorAll('.total-stat-number, .gender-stat div:last-child');
     statNumbers.forEach(stat => {
         const finalNumber = parseInt(stat.textContent);
@@ -1279,6 +1347,5 @@ document.addEventListener('DOMContentLoaded', function() {
             this.style.transform = 'scale(1)';
         });
     });
-});
 </script>
 {% endblock %}

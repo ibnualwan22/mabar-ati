@@ -705,7 +705,7 @@
             </a>
         </li>
         {% endif %}
-        {% if current_user.role.name in ['Korpus', 'Korwil'] %}
+        {% if current_user.role.name in ['Korpus', 'Korwil', 'Korda'] %}
         <li class="nav-item">
             <a href="{{ url_for('admin.daftar_peserta_global') }}" 
                class="nav-link {{ 'active' if 'daftar_peserta_global' in request.endpoint else '' }}">

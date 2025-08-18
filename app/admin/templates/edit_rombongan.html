@@ -1,0 +1,403 @@
+{% extends "_admin_layout.html" %}
+{% block title %}Edit Rombongan{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-edit text-primary me-2"></i>Edit Rombongan: {{ rombongan.nama_rombongan }}
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('admin.manajemen_rombongan') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Kembali
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-gradient bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-edit me-2"></i>Form Edit Rombongan
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" novalidate>
+                    {{ form.hidden_tag() }}
+                    
+                    <!-- Informasi Dasar Rombongan -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary fw-bold mb-3">
+                                <i class="fas fa-info-circle me-2"></i>Informasi Dasar
+                            </h6>
+                        </div>
+                        
+                        <div class="col-md-12 mb-3">
+                            {{ form.nama_rombongan.label(class="form-label fw-semibold") }}
+                            {{ form.nama_rombongan(class="form-control" + (" is-invalid" if form.nama_rombongan.errors else "")) }}
+                            {% if form.nama_rombongan.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.nama_rombongan.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Cakupan Wilayah -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary fw-bold mb-3">
+                                <i class="fas fa-map me-2"></i>Cakupan Wilayah
+                            </h6>
+                        </div>
+                        
+                        <div class="col-md-12 mb-3">
+                            {{ form.cakupan_wilayah.label(class="form-label fw-semibold") }}
+                            {{ form.cakupan_wilayah(class="form-control" + (" is-invalid" if form.cakupan_wilayah.errors else ""), rows="4", placeholder='Masukkan wilayah dalam format JSON, contoh: ["Jakarta", "Bogor", "Depok"]') }}
+                            {% if form.cakupan_wilayah.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.cakupan_wilayah.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Pastikan cakupan wilayah sudah benar, jika ada yang salah harap hubungi admin dan hapus data rombongan kemudian buat ulang dengan data cakupan wilayah yang benar
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Penanggung Jawab -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary fw-bold mb-3">
+                                <i class="fas fa-user-tie me-2"></i>Penanggung Jawab
+                            </h6>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.penanggung_jawab_putra.label(class="form-label fw-semibold") }}
+                            {{ form.penanggung_jawab_putra(class="form-control" + (" is-invalid" if form.penanggung_jawab_putra.errors else "")) }}
+                            {% if form.penanggung_jawab_putra.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.penanggung_jawab_putra.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.kontak_person_putra.label(class="form-label fw-semibold") }}
+                            {{ form.kontak_person_putra(class="form-control" + (" is-invalid" if form.kontak_person_putra.errors else "")) }}
+                            {% if form.kontak_person_putra.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.kontak_person_putra.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.penanggung_jawab_putri.label(class="form-label fw-semibold") }}
+                            {{ form.penanggung_jawab_putri(class="form-control" + (" is-invalid" if form.penanggung_jawab_putri.errors else "")) }}
+                            {% if form.penanggung_jawab_putri.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.penanggung_jawab_putri.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.kontak_person_putri.label(class="form-label fw-semibold") }}
+                            {{ form.kontak_person_putri(class="form-control" + (" is-invalid" if form.kontak_person_putri.errors else "")) }}
+                            {% if form.kontak_person_putri.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.kontak_person_putri.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Informasi Pembayaran -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary fw-bold mb-3">
+                                <i class="fas fa-credit-card me-2"></i>Informasi Pembayaran
+                            </h6>
+                        </div>
+                        
+                        <div class="col-md-12 mb-3">
+                            {{ form.nomor_rekening.label(class="form-label fw-semibold") }}
+                            {{ form.nomor_rekening(class="form-control" + (" is-invalid" if form.nomor_rekening.errors else ""), rows="3") }}
+                            {% if form.nomor_rekening.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.nomor_rekening.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Jadwal Perjalanan -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary fw-bold mb-3">
+                                <i class="fas fa-calendar-alt me-2"></i>Jadwal Perjalanan
+                            </h6>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.jadwal_pulang.label(class="form-label fw-semibold") }}
+                            {{ form.jadwal_pulang(class="form-control" + (" is-invalid" if form.jadwal_pulang.errors else "")) }}
+                            {% if form.jadwal_pulang.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.jadwal_pulang.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.batas_pembayaran_pulang.label(class="form-label fw-semibold") }}
+                            {{ form.batas_pembayaran_pulang(class="form-control" + (" is-invalid" if form.batas_pembayaran_pulang.errors else "")) }}
+                            {% if form.batas_pembayaran_pulang.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.batas_pembayaran_pulang.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.jadwal_berangkat.label(class="form-label fw-semibold") }}
+                            {{ form.jadwal_berangkat(class="form-control" + (" is-invalid" if form.jadwal_berangkat.errors else "")) }}
+                            {% if form.jadwal_berangkat.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.jadwal_berangkat.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.batas_pembayaran_berangkat.label(class="form-label fw-semibold") }}
+                            {{ form.batas_pembayaran_berangkat(class="form-control" + (" is-invalid" if form.batas_pembayaran_berangkat.errors else "")) }}
+                            {% if form.batas_pembayaran_berangkat.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.batas_pembayaran_berangkat.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-12 mb-3">
+                            {{ form.titik_jemput_berangkat.label(class="form-label fw-semibold") }}
+                            {{ form.titik_jemput_berangkat(class="form-control" + (" is-invalid" if form.titik_jemput_berangkat.errors else ""), rows="3") }}
+                            {% if form.titik_jemput_berangkat.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.titik_jemput_berangkat.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Tarif -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary fw-bold mb-3">
+                                <i class="fas fa-money-bill-wave me-2"></i>Tarif Titik Turun/Jemput
+                            </h6>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div id="tarif-container">
+                                {% for tarif_form in form.tarifs %}
+                                    <div class="row mb-3 tarif-row">
+                                        <div class="col-md-4">
+                                            {{ tarif_form.titik_turun.label(class="form-label fw-semibold") }}
+                                            {{ tarif_form.titik_turun(class="form-control") }}
+                                        </div>
+                                        <div class="col-md-3">
+                                            {{ tarif_form.harga_bus.label(class="form-label fw-semibold") }}
+                                            {{ tarif_form.harga_bus(class="form-control", type="number") }}
+                                        </div>
+                                        <div class="col-md-3">
+                                            {{ tarif_form.fee_korda.label(class="form-label fw-semibold") }}
+                                            {{ tarif_form.fee_korda(class="form-control", type="number") }}
+                                        </div>
+                                        <div class="col-md-2 d-flex align-items-end">
+                                            <button type="button" class="btn btn-outline-danger btn-sm remove-tarif">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="add-tarif">
+                                <i class="fas fa-plus me-2"></i>Tambah Tarif
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="row">
+                        <div class="col-12">
+                            <hr class="my-4">
+                            <div class="d-flex justify-content-end gap-2">
+                                <a href="{{ url_for('admin.manajemen_rombongan') }}" class="btn btn-secondary">
+                                    <i class="fas fa-times me-2"></i>Batal
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Simpan Perubahan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Informasi Bus (jika ada) -->
+{% if rombongan %}
+<div class="row mt-4">
+    <div class="col-lg-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-gradient bg-info text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bus me-2"></i>Bus Terdaftar
+                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#tambahBusModal">
+                    <i class="fas fa-plus me-2"></i>Tambah Bus Baru
+                </button>
+                </h5>
+                
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for bus in rombongan.buses %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">{{ bus.nama_armada }}</h6>
+                                <p class="card-text small">
+                                    <strong>Nomor Lambung:</strong> {{ bus.nomor_lambung or 'Belum diatur' }}<br>
+                                    <strong>Plat Nomor:</strong> {{ bus.plat_nomor or 'Belum diatur' }}<br>
+                                    <strong>Kapasitas:</strong> {{ bus.kapasitas or 'Belum diatur' }} orang
+                                </p>
+                                <a href="{{ url_for('admin.detail_bus', bus_id=bus.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye me-1"></i>Detail
+                                </a>
+                                <form method="POST" 
+                                          action="{{ url_for('admin.hapus_bus', bus_id=bus.id) }}" 
+                                          style="display:inline;" 
+                                          onsubmit="return confirm('Yakin ingin menghapus bus ini?');">
+                                        <button type="submit" class="btn btn-outline-danger">
+                                            <i class="fas fa-trash me-1"></i>Hapus
+                                        </button>
+                                    </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if rombongan %}
+    <!-- Modal Tambah Bus -->
+    <div class="modal fade" id="tambahBusModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content shadow">
+                <form method="POST" action="{{ url_for('admin.tambah_bus', rombongan_id=rombongan.id) }}">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-plus me-2"></i>Tambah Bus Baru
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        {{ bus_form.hidden_tag() }}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                {{ bus_form.nama_armada.label(class="form-label fw-semibold") }}
+                                {{ bus_form.nama_armada(class="form-control") }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ bus_form.kuota.label(class="form-label fw-semibold") }}
+                                {{ bus_form.kuota(class="form-control") }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ bus_form.nomor_lambung.label(class="form-label fw-semibold") }}
+                                {{ bus_form.nomor_lambung(class="form-control") }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ bus_form.plat_nomor.label(class="form-label fw-semibold") }}
+                                {{ bus_form.plat_nomor(class="form-control") }}
+                            </div>
+                            <div class="col-12">
+                                {{ bus_form.keterangan.label(class="form-label fw-semibold") }}
+                                {{ bus_form.keterangan(class="form-control", rows=3) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-2"></i>Batal
+                        </button>
+                        {{ bus_form.submit(class="btn btn-success") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let tarifCount = {{ form.tarifs|length }};
+    
+    // Function to add new tarif row
+    function addTarifRow() {
+        const container = document.getElementById('tarif-container');
+        const newRow = document.createElement('div');
+        newRow.className = 'row mb-3 tarif-row';
+        newRow.innerHTML = `
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Titik Turun</label>
+                <input class="form-control" name="tarifs-${tarifCount}-titik_turun" type="text">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Harga Bus</label>
+                <input class="form-control" name="tarifs-${tarifCount}-harga_bus" type="number">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Fee Korda</label>
+                <input class="form-control" name="tarifs-${tarifCount}-fee_korda" type="number" value="0">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="button" class="btn btn-outline-danger btn-sm remove-tarif">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(newRow);
+        tarifCount++;
+    }
+    
+    
+    // Add tarif button
+    document.getElementById('add-tarif').addEventListener('click', addTarifRow);
+    
+    // Remove tarif buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-tarif') || e.target.closest('.remove-tarif')) {
+            const row = e.target.closest('.tarif-row');
+            if (row) {
+                row.remove();
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

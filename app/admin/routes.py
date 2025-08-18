@@ -1,5 +1,5 @@
 from . import admin_bp
-from flask import render_template, redirect, url_for, flash, request, jsonify, abort, Response, send_file
+from flask import render_template, redirect, url_for, flash, request, jsonify, abort, Response, send_file, current_app
 from app.models import ActivityLog, Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, User, Edisi, Bus, Role, Wisuda
 from app.admin.forms import ImportWisudaForm, RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, UserForm, UserEditForm, EdisiForm, BusForm, KorlapdaForm, WisudaForm
 from app import db, login_manager
@@ -379,10 +379,11 @@ def tambah_rombongan():
 @login_required
 @role_required('Korpus', 'Korda')
 def edit_rombongan(id):
+    """Route untuk edit rombongan dengan manajemen bus"""
     active_edisi = get_active_edisi()
     rombongan = Rombongan.query.get_or_404(id)
-    bus_form = BusForm()
 
+    # Validasi akses rombongan
     if active_edisi and rombongan.edisi_id != active_edisi.id:
         flash("Anda tidak bisa mengedit rombongan dari edisi yang sudah selesai.", "danger")
         return redirect(url_for('admin.manajemen_rombongan'))
@@ -390,46 +391,91 @@ def edit_rombongan(id):
     if current_user.role.name == 'Korda' and rombongan not in current_user.managed_rombongan:
         abort(403)
 
+    # Buat form untuk rombongan dan bus
     form = RombonganForm(obj=rombongan)
+    bus_form = BusForm()
 
     if form.validate_on_submit():
-        # Update semua field dari form ke objek rombongan
-        rombongan.nama_rombongan=form.nama_rombongan.data
-        rombongan.penanggung_jawab_putra=form.penanggung_jawab_putra.data
-        rombongan.kontak_person_putra=form.kontak_person_putra.data
-        rombongan.penanggung_jawab_putri=form.penanggung_jawab_putri.data
-        rombongan.kontak_person_putri=form.kontak_person_putri.data
-        rombongan.nomor_rekening=form.nomor_rekening.data
-        rombongan.cakupan_wilayah=json.loads(form.cakupan_wilayah.data or '[]')
-        rombongan.jadwal_pulang=form.jadwal_pulang.data
-        rombongan.batas_pembayaran_pulang=form.batas_pembayaran_pulang.data
-        rombongan.jadwal_berangkat=form.jadwal_berangkat.data
-        rombongan.batas_pembayaran_berangkat=form.batas_pembayaran_berangkat.data
-        rombongan.titik_jemput_berangkat=form.titik_jemput_berangkat.data
-        
-        # Update tarif
-        # Hapus tarif lama dan ganti dengan yang baru dari form 
-        for tarif in rombongan.tarifs:
-            db.session.delete(tarif)
+        try:
+            # Update semua field dari form ke objek rombongan
+            rombongan.nama_rombongan = form.nama_rombongan.data
+            rombongan.penanggung_jawab_putra = form.penanggung_jawab_putra.data
+            rombongan.kontak_person_putra = form.kontak_person_putra.data
+            rombongan.penanggung_jawab_putri = form.penanggung_jawab_putri.data
+            rombongan.kontak_person_putri = form.kontak_person_putri.data
+            rombongan.nomor_rekening = form.nomor_rekening.data
 
-        for tarif_data in form.tarifs.data:
-            if tarif_data['titik_turun'] and tarif_data['harga_bus'] is not None:
-                rombongan.tarifs.append(Tarif(**tarif_data))
-        
-        log_activity('Edit', 'Pendaftaran', f"Mengubah detail rombongan : '{rombongan.nama_rombongan}'")
-        db.session.commit()
-        flash('Data rombongan berhasil diperbarui!', 'success')
-        return redirect(url_for('admin.manajemen_rombongan'))
+            
+            # Handle cakupan_wilayah - parse JSON string
+            try:
+                cakupan_wilayah_data = form.cakupan_wilayah.data
+                if cakupan_wilayah_data:
+                    rombongan.cakupan_wilayah = json.loads(form.cakupan_wilayah.data)
+                else:
+                    rombongan.cakupan_wilayah = []
+            except json.JSONDecodeError:
+                flash("Format cakupan wilayah tidak valid. Gunakan format JSON yang benar.", "danger")
+                return render_template('edit_rombongan.html', 
+                                     form=form, 
+                                     bus_form=bus_form,
+                                     title="Edit Rombongan", 
+                                     rombongan=rombongan)
+            
+            rombongan.jadwal_pulang = form.jadwal_pulang.data
+            rombongan.batas_pembayaran_pulang = form.batas_pembayaran_pulang.data
+            rombongan.jadwal_berangkat = form.jadwal_berangkat.data
+            rombongan.batas_pembayaran_berangkat = form.batas_pembayaran_berangkat.data
+            rombongan.titik_jemput_berangkat = form.titik_jemput_berangkat.data
+            
+            # Update tarif - hapus tarif lama dan ganti dengan yang baru
+            for tarif in rombongan.tarifs:
+                db.session.delete(tarif)
+
+            for tarif_data in form.tarifs.data:
+                if tarif_data['titik_turun'] and tarif_data['harga_bus'] is not None:
+                    new_tarif = Tarif(
+                        titik_turun=tarif_data['titik_turun'],
+                        harga_bus=tarif_data['harga_bus'],
+                        fee_korda=tarif_data.get('fee_korda', 0),
+                        rombongan=rombongan
+                    )
+                    rombongan.tarifs.append(new_tarif)
+            
+            # Log aktivitas
+            log_activity('Edit', 'Rombongan', f"Mengubah detail rombongan: '{rombongan.nama_rombongan}'")
+            
+            db.session.commit()
+            flash('Data rombongan berhasil diperbarui!', 'success')
+            return redirect(url_for('admin.edit_rombongan', id=rombongan.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Terjadi kesalahan saat menyimpan data: {str(e)}', 'danger')
 
     # Isi data untuk request GET (pertama kali halaman dibuka)
-    form.cakupan_wilayah.data = json.dumps(rombongan.cakupan_wilayah or [])
-    while len(form.tarifs) > 0:
-        form.tarifs.pop_entry()
-    for tarif in rombongan.tarifs:
-        form.tarifs.append_entry(tarif)
+    if request.method == 'GET':
+        # Set cakupan_wilayah sebagai JSON string untuk tampilan di form
+        form.cakupan_wilayah.data = json.dumps(rombongan.cakupan_wilayah or [], ensure_ascii=False, indent=2)
+        
+        # Clear existing tarif entries and add current ones
+        while len(form.tarifs) > 0:
+            form.tarifs.pop_entry()
+        
+        for tarif in rombongan.tarifs:
+            tarif_form = form.tarifs.append_entry()
+            tarif_form.titik_turun.data = tarif.titik_turun
+            tarif_form.harga_bus.data = tarif.harga_bus
+            tarif_form.fee_korda.data = tarif.fee_korda
 
-    return render_template('form_rombongan.html', form=form, title=f"Edit Rombongan", rombongan=rombongan, bus_form=bus_form)
+        # Jika tidak ada tarif, tambahkan satu baris kosong
+        if not rombongan.tarifs:
+            form.tarifs.append_entry()
 
+    return render_template('edit_rombongan.html', 
+                         form=form, 
+                         bus_form=bus_form,
+                         title="Edit Rombongan", 
+                         rombongan=rombongan)
 
 @admin_bp.route('/rombongan/hapus/<int:id>', methods=['POST'])
 @login_required
@@ -599,62 +645,48 @@ def impor_santri():
 @role_required('Korpus')
 def impor_semua_santri():
     try:
-        api_url = "https://dev.amtsilatipusat.com/api/student?limit=2000"
+        api_url = "https://sigap.amtsilatipusat.com/api/student?limit=2000"
         response = requests.get(api_url, timeout=60)
         response.raise_for_status()
         santri_from_api = response.json().get('data', [])
 
-        # Ambil semua ID yang sudah ada untuk perbandingan cepat
-        existing_ids = {s.api_student_id for s in Santri.query.with_entities(Santri.api_student_id).all()}
+        # 1. Ambil semua santri yang ada berdasarkan NIS sebagai patokan
+        existing_santri_map_by_nis = {s.nis: s for s in Santri.query.all() if s.nis}
         
-        new_count = 0
         updated_count = 0
-        to_create = []
-
+        new_count = 0
+        
+        to_create_mappings = []
+        
         for data in santri_from_api:
-            api_id = data.get('id')
-            if not api_id:
-                continue
+            api_nis = data.get('nis')
+            if not api_nis:
+                continue # Lewati data dari API yang tidak memiliki NIS
 
-            # --- Logika Baru untuk Jabatan ---
             leadership_data = data.get('leadership')
-            nama_jabatan_val = None
-            status_jabatan_val = None
-            if leadership_data and isinstance(leadership_data, dict):
-                nama_jabatan_val = leadership_data.get('name')
-                status_jabatan_val = leadership_data.get('status')
-            # --------------------------------
-
-            if api_id in existing_ids:
-                # --- METODE UPDATE DENGAN RAW SQL (Sudah Termasuk Jabatan) ---
-                sql = text("""
-                    UPDATE santri SET
-                        nama = :nama, nis = :nis, kabupaten = :kabupaten, asrama = :asrama,
-                        no_hp_wali = :no_hp_wali, jenis_kelamin = :jenis_kelamin,
-                        kelas_formal = :kelas_formal, kelas_ngaji = :kelas_ngaji,
-                        nama_jabatan = :nama_jabatan, status_jabatan = :status_jabatan
-                    WHERE api_student_id = :api_id
-                """)
+            
+            # 2. Cek apakah santri sudah ada di database lokal berdasarkan NIS
+            if api_nis in existing_santri_map_by_nis:
+                # Jika ADA, update datanya
+                santri_to_update = existing_santri_map_by_nis[api_nis]
                 
-                db.session.execute(sql, {
-                    'nama': data.get('name', 'Tanpa Nama'),
-                    'nis': data.get('nis', 'N/A'),
-                    'kabupaten': data.get('regency'),
-                    'asrama': data.get('activeDormitory'),
-                    'no_hp_wali': data.get('parrentPhone'),
-                    'jenis_kelamin': data.get('gender'),
-                    'kelas_formal': data.get('formalClass'),
-                    'kelas_ngaji': data.get('activeClass'),
-                    'nama_jabatan': nama_jabatan_val,
-                    'status_jabatan': status_jabatan_val,
-                    'api_id': api_id
-                })
+                santri_to_update.api_student_id = data.get('id') # Sinkronkan ulang ID API
+                santri_to_update.nama = data.get('name', 'Tanpa Nama')
+                santri_to_update.kabupaten = data.get('regency')
+                santri_to_update.asrama = data.get('activeDormitory')
+                santri_to_update.no_hp_wali = data.get('parrentPhone')
+                santri_to_update.jenis_kelamin = data.get('gender')
+                santri_to_update.kelas_formal = data.get('formalClass')
+                santri_to_update.kelas_ngaji = data.get('activeClass')
+                santri_to_update.nama_jabatan = leadership_data.get('name') if leadership_data else None
+                santri_to_update.status_jabatan = leadership_data.get('status') if leadership_data else None
+                
                 updated_count += 1
             else:
-                # Logika 'create' (Sudah Termasuk Jabatan)
-                new_santri_data = {
-                    'api_student_id': api_id,
-                    'nis': data.get('nis', 'N/A'),
+                # Jika TIDAK ADA, siapkan untuk dibuat sebagai data baru
+                to_create_mappings.append({
+                    'api_student_id': data.get('id'),
+                    'nis': api_nis,
                     'nama': data.get('name', 'Tanpa Nama'),
                     'kabupaten': data.get('regency'),
                     'asrama': data.get('activeDormitory'),
@@ -662,14 +694,14 @@ def impor_semua_santri():
                     'jenis_kelamin': data.get('gender'),
                     'kelas_formal': data.get('formalClass'),
                     'kelas_ngaji': data.get('activeClass'),
-                    'nama_jabatan': nama_jabatan_val,
-                    'status_jabatan': status_jabatan_val
-                }
-                to_create.append(new_santri_data)
-        
-        if to_create:
-            db.session.bulk_insert_mappings(Santri, to_create)
-            new_count = len(to_create)
+                    'nama_jabatan': leadership_data.get('name') if leadership_data else None,
+                    'status_jabatan': leadership_data.get('status') if leadership_data else None,
+                })
+
+        # Proses pembuatan data baru secara massal
+        if to_create_mappings:
+            db.session.bulk_insert_mappings(Santri, to_create_mappings)
+            new_count = len(to_create_mappings)
 
         db.session.commit()
         log_activity('Sinkronisasi', 'Santri', f"Sinkronisasi massal: {new_count} baru, {updated_count} diperbarui.")
@@ -679,11 +711,13 @@ def impor_semua_santri():
         flash(f"Gagal mengambil data dari API Induk: {e}", "danger")
     except Exception as e:
         db.session.rollback()
-        flash(f"Terjadi error saat memproses data: {e}", "danger")
-        print(f"Error detail: {e}")
+        flash(f"Terjadi error saat memproses data. Cek terminal untuk detail.", "danger")
+        print("=====================================")
+        print(f"Error detail impor santri: {e}")
+        print("=====================================")
 
     return redirect(url_for('admin.manajemen_santri'))
-
+                            
 @admin_bp.route('/santri/edit/<int:id>', methods=['GET', 'POST'])
 def edit_santri(id):
     # Fungsi ini sekarang hanya untuk mengedit data minor, pendaftaran dipindah
@@ -968,81 +1002,148 @@ def search_santri_api():
 
 @admin_bp.route('/rombongan/<int:rombongan_id>/peserta')
 @login_required
-@role_required('Korpus', 'Korwil', 'Korda')
+@role_required('Korpus', 'Korda', 'Korwil')
 def daftar_peserta(rombongan_id):
     rombongan = Rombongan.query.get_or_404(rombongan_id)
-    # Verifikasi Kepemilikan
-    if current_user.role.name in ['Korwil', 'Korda']:
-        if rombongan not in current_user.managed_rombongan:
-            abort(403)
-    
-    # Query baru untuk mencari pendaftar baik dari perjalanan pulang maupun kembali
-    pendaftar = Pendaftaran.query.options(
+    pendaftar = Pendaftaran.query.filter(
+        or_(
+            Pendaftaran.rombongan_pulang_id == rombongan_id,
+            Pendaftaran.rombongan_kembali_id == rombongan_id
+        )
+    ).options(
         joinedload(Pendaftaran.santri),
         joinedload(Pendaftaran.bus_pulang),
         joinedload(Pendaftaran.bus_kembali),
-        joinedload(Pendaftaran.rombongan_kembali) # <-- Tambahkan ini untuk akses nama rombongan kembali
-    ).filter(
-        or_(
-            Pendaftaran.rombongan_pulang_id == rombongan.id,
-            Pendaftaran.rombongan_kembali_id == rombongan.id
-        )
+        joinedload(Pendaftaran.rombongan_kembali)
     ).all()
 
-    # Hilangkan duplikat jika ada santri yang PP di rombongan yang sama
-    unique_pendaftar = {p.id: p for p in pendaftar}.values()
+    # --- BLOK PERHITUNGAN STATISTIK BARU ---
+    stats = {
+        'total_peserta': 0,
+        'sudah_bus_pulang': 0,
+        'sudah_bus_kembali': 0,
+        'lunas_pulang': 0,
+        'lunas_kembali': 0, # Statistik baru untuk lunas kembali
+    }
+    
+    managed_rombongan_ids = []
+    is_manager = False
+    if current_user.role.name in ['Korwil', 'Korda']:
+        managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+        is_manager = True
 
-    return render_template('daftar_peserta.html', rombongan=rombongan, pendaftar=unique_pendaftar)
+    for p in pendaftar:
+        # Hanya hitung peserta yang benar-benar ikut rombongan ini
+        is_pulang_in_this_rombongan = p.rombongan_pulang_id == rombongan_id
+        is_kembali_in_this_rombongan = (p.rombongan_kembali_id == rombongan_id) or \
+                                       (p.rombongan_kembali_id is None and p.rombongan_pulang_id == rombongan_id)
 
-@admin_bp.route('/peserta')
-@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara')
+        # Jika user adalah Korda/Korwil, pastikan rombongan ini milik mereka
+        is_managed = not is_manager or rombongan_id in managed_rombongan_ids
+
+        if is_managed and (is_pulang_in_this_rombongan or is_kembali_in_this_rombongan):
+            stats['total_peserta'] += 1
+            if is_pulang_in_this_rombongan:
+                if p.bus_pulang:
+                    stats['sudah_bus_pulang'] += 1
+                if p.status_pulang == 'Lunas':
+                    stats['lunas_pulang'] += 1
+            
+            if is_kembali_in_this_rombongan:
+                if p.bus_kembali:
+                    stats['sudah_bus_kembali'] += 1
+                if p.status_kembali == 'Lunas':
+                    stats['lunas_kembali'] += 1
+
+    return render_template('daftar_peserta.html', 
+                           rombongan=rombongan, 
+                           pendaftar=pendaftar,
+                           stats=stats) # Kirim statistik ke template
+
+@admin_bp.route('/peserta-global')
 @login_required
+@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan')
 def daftar_peserta_global():
-    page = request.args.get('page', 1, type=int)
     active_edisi = get_active_edisi()
-    
-    # Query dasar yang menghubungkan Pendaftaran, Rombongan, dan Santri
-    query = db.session.query(Pendaftaran).join(Santri).join(Rombongan, Pendaftaran.rombongan_pulang_id == Rombongan.id)
+    if not active_edisi:
+        return render_template('daftar_peserta_global.html', pagination=None, all_rombongan=[], stats={})
 
-    if active_edisi:
-        query = query.filter(Rombongan.edisi_id == active_edisi.id)
-    else:
-        query = query.filter(db.false())
-
-    # Ambil semua parameter filter dari URL
-    f_nama = request.args.get('nama')
-    f_rombongan_id = request.args.get('rombongan_id', type=int)
-    f_status_bayar = request.args.get('status_bayar')
+    # Siapkan filter dasar dan daftar rombongan untuk dropdown filter
+    base_query = Pendaftaran.query.filter(Pendaftaran.edisi_id == active_edisi.id)
+    all_rombongan_for_filter = Rombongan.query.filter_by(edisi_id=active_edisi.id).order_by(Rombongan.nama_rombongan).all()
     
-    # Terapkan filter ke query jika ada
-    if f_nama:
-        # Join eksplisit ke Santri diperlukan untuk filter nama
-        query = query.join(Santri).filter(Santri.nama.ilike(f'%{f_nama}%'))
-    if f_rombongan_id:
-        # Filter berdasarkan rombongan pulang ATAU rombongan kembali
-        from sqlalchemy import or_
-        query = query.filter(
-            or_(
-                Pendaftaran.rombongan_pulang_id == f_rombongan_id,
-                Pendaftaran.rombongan_kembali_id == f_rombongan_id
+    managed_rombongan_ids = []
+    stats = {}
+
+    # --- BAGIAN LOGIKA STATISTIK & FILTER BARU ---
+    # Tentukan filter berdasarkan peran (role)
+    if current_user.role.name in ['Korwil', 'Korda']:
+        managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+        
+        if not managed_rombongan_ids:
+            base_query = base_query.filter(db.false())
+            stats = {'total_peserta': 0, 'sudah_bus_pulang': 0, 'sudah_bus_kembali': 0, 'lunas_pulang': 0, 'lunas_kembali': 0}
+        else:
+            # Filter query utama untuk tabel
+            base_query = base_query.filter(
+                or_(
+                    Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids),
+                    Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids)
+                )
             )
-        )
-    # Perbaiki filter status bayar untuk model baru
-    if f_status_bayar:
-        if f_status_bayar == 'Lunas':
-            query = query.filter(Pendaftaran.status_pulang == 'Lunas', Pendaftaran.status_kembali.in_(['Lunas', 'Tidak Ikut']))
-        elif f_status_bayar == 'Belum Lunas':
-            query = query.filter((Pendaftaran.status_pulang == 'Belum Bayar') | (Pendaftaran.status_kembali == 'Belum Bayar'))
+            all_rombongan_for_filter = [r for r in all_rombongan_for_filter if r.id in managed_rombongan_ids]
 
-    pagination = query.order_by(Santri.nama).paginate(page=page, per_page=50, error_out=False)
+            # Hitung statistik secara presisi untuk Korda/Korwil
+            stats['total_peserta'] = base_query.count()
+            stats['sudah_bus_pulang'] = Pendaftaran.query.filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.bus_pulang_id != None, Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids)).count()
+            stats['lunas_pulang'] = Pendaftaran.query.filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.status_pulang == 'Lunas', Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids)).count()
+            
+            # Untuk kembali, perhitungkan kasus lintas rombongan
+            kembali_filter = or_(
+                Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids),
+                and_(Pendaftaran.rombongan_kembali_id == None, Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids))
+            )
+            stats['sudah_bus_kembali'] = Pendaftaran.query.filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.bus_kembali_id != None, kembali_filter).count()
+            stats['lunas_kembali'] = Pendaftaran.query.filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.status_kembali == 'Lunas', kembali_filter).count()
 
+    else: # Logika untuk Korpus (melihat semua)
+        stats['total_peserta'] = base_query.count()
+        stats['sudah_bus_pulang'] = base_query.filter(Pendaftaran.bus_pulang_id != None).count()
+        stats['sudah_bus_kembali'] = base_query.filter(Pendaftaran.bus_kembali_id != None).count()
+        stats['lunas_pulang'] = base_query.filter(Pendaftaran.status_pulang == 'Lunas').count()
+        stats['lunas_kembali'] = base_query.filter(Pendaftaran.status_kembali == 'Lunas').count()
 
-    # Ambil semua rombongan untuk mengisi dropdown filter
-    all_rombongan = Rombongan.query.filter_by(edisi=active_edisi).order_by(Rombongan.nama_rombongan).all() if active_edisi else []
+    # Terapkan filter dari form ke query utama
+    # (Logika filter ini tetap sama seperti sebelumnya)
+    nama = request.args.get('nama')
+    rombongan_id = request.args.get('rombongan_id', type=int)
+    status_bayar = request.args.get('status_bayar')
 
-    return render_template('daftar_peserta_global.html', 
-                           pagination=pagination, # Kirim objek pagination
-                           all_rombongan=all_rombongan)
+    query = base_query.join(Pendaftaran.santri).options(
+        joinedload(Pendaftaran.rombongan_pulang),
+        joinedload(Pendaftaran.rombongan_kembali),
+        joinedload(Pendaftaran.bus_pulang),
+        joinedload(Pendaftaran.bus_kembali)
+    )
+
+    if nama:
+        query = query.filter(Santri.nama.ilike(f'%{nama}%'))
+    if rombongan_id:
+        query = query.filter(or_(Pendaftaran.rombongan_pulang_id == rombongan_id, Pendaftaran.rombongan_kembali_id == rombongan_id))
+    if status_bayar:
+        if status_bayar == 'Lunas':
+            query = query.filter(or_(Pendaftaran.status_pulang == 'Lunas', Pendaftaran.status_kembali == 'Lunas'))
+        elif status_bayar == 'Belum Lunas':
+            query = query.filter(or_(Pendaftaran.status_pulang == 'Belum Bayar', Pendaftaran.status_kembali == 'Belum Bayar'))
+
+    # Lakukan paginasi
+    page = request.args.get('page', 1, type=int)
+    pagination = query.order_by(Santri.nama).paginate(page=page, per_page=20, error_out=False)
+
+    return render_template('daftar_peserta_global.html',
+                           pagination=pagination,
+                           all_rombongan=all_rombongan_for_filter,
+                           stats=stats)
 
 @admin_bp.route('/perizinan', methods=['GET', 'POST'])
 @login_required
@@ -1691,18 +1792,48 @@ def manajemen_keuangan():
             Rombongan, Pendaftaran.rombongan_pulang_id == Rombongan.id
         ).filter(Rombongan.edisi_id == active_edisi.id)
 
-        managed_rombongan_ids = set()
-        if current_user.role.name in ['Korwil', 'Korda']:
-            managed_rombongan_ids = {r.id for r in current_user.managed_rombongan}
-            if not managed_rombongan_ids:
-                pendaftaran_query = pendaftaran_query.filter(db.false())
-            else:
-                pendaftaran_query = pendaftaran_query.filter(
-                    or_(
-                        Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids),
-                        Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids)
-                    )
+        selected_rombongan_id = request.args.get('rombongan_id', type=int)
+
+    # 2. Siapkan daftar rombongan untuk dropdown filter berdasarkan peran
+    rombongan_for_filter = []
+    managed_rombongan_ids = []
+    if current_user.role.name in ['Korwil', 'Korda']:
+        managed_rombongan_ids = {r.id for r in current_user.managed_rombongan}
+        rombongan_for_filter = [r for r in current_user.managed_rombongan]
+    else: # Korpus
+        rombongan_for_filter = Rombongan.query.filter_by(edisi_id=active_edisi.id).order_by(Rombongan.nama_rombongan).all()
+
+    # 3. Siapkan query dasar
+    pendaftaran_query = Pendaftaran.query.options(
+        selectinload(Pendaftaran.rombongan_pulang).selectinload(Rombongan.tarifs),
+        selectinload(Pendaftaran.rombongan_kembali).selectinload(Rombongan.tarifs)
+    ).filter(Pendaftaran.edisi_id == active_edisi.id)
+
+    # Terapkan filter peran untuk Korda/Korwil
+    if current_user.role.name in ['Korwil', 'Korda']:
+        if not managed_rombongan_ids:
+            pendaftaran_query = pendaftaran_query.filter(db.false())
+        else:
+            pendaftaran_query = pendaftaran_query.filter(
+                or_(
+                    Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids),
+                    Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids)
                 )
+            )
+    
+    # 4. BARU: Terapkan filter rombongan yang dipilih ke query utama
+    if selected_rombongan_id:
+        # Pastikan Korda/Korwil hanya bisa memfilter rombongan yang mereka kelola
+        if current_user.role.name in ['Korwil', 'Korda'] and selected_rombongan_id not in managed_rombongan_ids:
+            abort(403) # Akses ditolak jika mencoba filter rombongan orang lain
+        
+        pendaftaran_query = pendaftaran_query.filter(
+            or_(
+                Pendaftaran.rombongan_pulang_id == selected_rombongan_id,
+                Pendaftaran.rombongan_kembali_id == selected_rombongan_id
+            )
+        )
+    # --- AKHIR BAGIAN LOGIKA BARU ---
         
         all_pendaftaran = pendaftaran_query.all()
 
@@ -1750,7 +1881,7 @@ def manajemen_keuangan():
         financial_data['global_lunas'] = financial_data['pulang_lunas'] + financial_data['kembali_lunas']
         financial_data['global_belum_lunas'] = financial_data['global_total'] - financial_data['global_lunas']
 
-    return render_template('manajemen_keuangan.html', data=financial_data)
+    return render_template('manajemen_keuangan.html', data=financial_data, rombongan_for_filter=rombongan_for_filter)
 
 @admin_bp.route('/keuangan/export-pdf')
 @login_required
@@ -2535,7 +2666,7 @@ def export_santri_wilayah():
     else:
         santri_in_wilayah_ids = [s.id for s in Santri.query.with_entities(Santri.id).all()]
 
-    # Apply the same filters as the main view
+    # Apply the same filters as the main view BUT with rombongan restriction
     query = Santri.query.filter(Santri.id.in_(santri_in_wilayah_ids))
     
     nama_filter = request.args.get('nama')
@@ -2550,7 +2681,7 @@ def export_santri_wilayah():
     if status_santri_filter:
         query = query.filter(Santri.status_santri == status_santri_filter)
     
-    # Apply registration status filter
+    # Apply registration status filter WITH ROMBONGAN RESTRICTION
     if status_daftar_filter and santri_in_wilayah_ids:
         rombongan_filter_pulang = db.true()
         rombongan_filter_kembali = db.true()
@@ -2573,6 +2704,35 @@ def export_santri_wilayah():
         elif status_daftar_filter == 'belum_kembali':
             santri_ids_sudah = [s_id for s_id, in db.session.query(Pendaftaran.santri_id).filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.santri_id.in_(santri_in_wilayah_ids), Pendaftaran.status_kembali != 'Tidak Ikut', rombongan_filter_kembali).distinct()]
             query = query.filter(Santri.id.notin_(santri_ids_sudah))
+
+    # ADDITIONAL FILTER: Only include santri registered in managed rombongan for specific export type
+    if current_user.role.name in ['Korwil', 'Korda'] and managed_rombongan_ids:
+        if export_type == 'pulang':
+            # Only santri registered in managed rombongan for pulang
+            santri_ids_in_managed_rombongan = [
+                s_id for s_id, in db.session.query(Pendaftaran.santri_id).filter(
+                    Pendaftaran.edisi_id == active_edisi.id,
+                    Pendaftaran.santri_id.in_(santri_in_wilayah_ids),
+                    Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids)
+                ).distinct()
+            ]
+        else:  # kembali
+            # Only santri registered in managed rombongan for kembali (or pulang if kembali is null)
+            santri_ids_in_managed_rombongan = [
+                s_id for s_id, in db.session.query(Pendaftaran.santri_id).filter(
+                    Pendaftaran.edisi_id == active_edisi.id,
+                    Pendaftaran.santri_id.in_(santri_in_wilayah_ids),
+                    or_(
+                        Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids),
+                        and_(
+                            Pendaftaran.rombongan_kembali_id.is_(None), 
+                            Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids)
+                        )
+                    )
+                ).distinct()
+            ]
+        
+        query = query.filter(Santri.id.in_(santri_ids_in_managed_rombongan))
 
     # Get all santri (no pagination for export)
     santri_list = query.order_by(Santri.nama).all()
@@ -2621,22 +2781,22 @@ def export_santri_wilayah():
     border = Border(left=Side(style='thin'), right=Side(style='thin'), 
                    top=Side(style='thin'), bottom=Side(style='thin'))
     
-    # Style for unpaid santri (red background)
-    unpaid_fill = PatternFill(start_color='FFE6E6', end_color='FFE6E6', fill_type='solid')
-    unpaid_font = Font(name='Arial', size=10, color='CC0000')
+    # Style for unpaid santri (red background) - ENHANCED
+    unpaid_fill = PatternFill(start_color='FFCCCC', end_color='FFCCCC', fill_type='solid')
+    unpaid_font = Font(name='Arial', size=10, bold=True, color='CC0000')
 
     # Set headers based on export type
     if export_type == 'pulang':
         headers = [
             'No', 'Nama Santri', 'Jenis Kelamin', 'Kabupaten', 'Status Santri', 
             'Jabatan', 'Status Pulang', 'Metode Pembayaran', 'Rombongan', 
-            'Nama Bus', 'Nomor Lambung', 'Biaya Pulang', 'Total Biaya'
+            'Nama Bus', 'Biaya Pulang'
         ]
     else:  # kembali
         headers = [
             'No', 'Nama Santri', 'Jenis Kelamin', 'Kabupaten', 'Status Santri',
             'Jabatan', 'Status Kembali', 'Metode Pembayaran', 'Rombongan',
-            'Nama Bus', 'Nomor Lambung', 'Biaya Kembali', 'Total Biaya'
+            'Nama Bus', 'Biaya Kembali'
         ]
 
     # Write headers
@@ -2654,6 +2814,7 @@ def export_santri_wilayah():
     total_biaya_kembali = 0
     count_transfer = 0
     count_cash = 0
+    count_belum_lunas = 0
 
     # Write data
     for idx, santri in enumerate(santri_list, 2):
@@ -2669,7 +2830,7 @@ def export_santri_wilayah():
             santri.nama_jabatan or 'Santri'
         ]
         
-        # Determine if santri has unpaid status
+        # Determine if santri has unpaid status based on status pulang/kembali
         is_unpaid = False
         
         # Add specific data based on export type
@@ -2691,32 +2852,30 @@ def export_santri_wilayah():
                             biaya_pulang = tarif.harga_bus + tarif.fee_korda + 10000
                             total_biaya_pulang += biaya_pulang
                 
-                # Count payment methods for pulang
-                if (pendaftaran.status_pulang and pendaftaran.status_pulang != 'Tidak Ikut' and 
-                    pendaftaran.metode_pembayaran_pulang):
-                    if 'transfer' in pendaftaran.metode_pembayaran_pulang.lower():
-                        count_transfer += 1
-                        total_transfer += biaya_pulang
-                    elif 'cash' in pendaftaran.metode_pembayaran_pulang.lower():
-                        count_cash += 1
-                        total_cash += biaya_pulang
-                
-                # Check if unpaid (metode pembayaran kosong dan status bukan 'Tidak Ikut')
-                if (pendaftaran.status_pulang and pendaftaran.status_pulang != 'Tidak Ikut' and 
-                    not pendaftaran.metode_pembayaran_pulang):
+                # Determine if unpaid based on status_pulang = 'Belum Bayar'
+                if pendaftaran.status_pulang == 'Belum Bayar':
                     is_unpaid = True
+                    count_belum_lunas += 1
+                elif pendaftaran.status_pulang and pendaftaran.status_pulang not in ['Tidak Ikut', 'Belum Bayar']:
+                    # Count payment methods for paid santri
+                    if pendaftaran.metode_pembayaran_pulang:
+                        if 'transfer' in pendaftaran.metode_pembayaran_pulang.lower():
+                            count_transfer += 1
+                            total_transfer += biaya_pulang
+                        elif 'cash' in pendaftaran.metode_pembayaran_pulang.lower():
+                            count_cash += 1
+                            total_cash += biaya_pulang
                 
                 row_data.extend([
                     pendaftaran.status_pulang,
                     pendaftaran.metode_pembayaran_pulang or '-',
                     pendaftaran.rombongan_pulang.nama_rombongan if pendaftaran.rombongan_pulang else '-',
-                    pendaftaran.bus_pulang.nama_armada if pendaftaran.bus_pulang else '-',
-                    pendaftaran.bus_pulang.nomor_lambung if pendaftaran.bus_pulang else '-',
+                    f"{pendaftaran.bus_pulang.nama_armada} - {pendaftaran.bus_pulang.nomor_lambung}" if pendaftaran.bus_pulang else '-',
                     f"Rp {biaya_pulang:,.0f}".replace(',', '.') if biaya_pulang > 0 else 'Rp 0',
-                    f"Rp {pendaftaran.total_biaya:,.0f}".replace(',', '.') if pendaftaran.total_biaya else 'Rp 0'
                 ])
             else:
-                row_data.extend(['Belum Terdaftar', '-', '-', '-', '-', 'Rp 0', 'Rp 0'])
+                row_data.extend(['Belum Terdaftar', '-', '-', '-', 'Rp 0'])
+                
         else:  # kembali
             if pendaftaran:
                 # Calculate biaya kembali - sesuai logika di pendaftaran_rombongan
@@ -2741,33 +2900,31 @@ def export_santri_wilayah():
                             biaya_kembali = tarif.harga_bus + tarif.fee_korda + 10000
                             total_biaya_kembali += biaya_kembali
                 
-                # Count payment methods for kembali
-                if (pendaftaran.status_kembali and pendaftaran.status_kembali != 'Tidak Ikut' and 
-                    pendaftaran.metode_pembayaran_kembali):
-                    if 'transfer' in pendaftaran.metode_pembayaran_kembali.lower():
-                        count_transfer += 1
-                        total_transfer += biaya_kembali
-                    elif 'cash' in pendaftaran.metode_pembayaran_kembali.lower():
-                        count_cash += 1
-                        total_cash += biaya_kembali
-                
-                # Check if unpaid (metode pembayaran kosong dan status bukan 'Tidak Ikut')
-                if (pendaftaran.status_kembali and pendaftaran.status_kembali != 'Tidak Ikut' and 
-                    not pendaftaran.metode_pembayaran_kembali):
-                    is_unpaid = True
+                # Determine payment status for kembali
+                if pendaftaran.status_kembali and pendaftaran.status_kembali != 'Tidak Ikut':
+                    if not pendaftaran.metode_pembayaran_kembali:
+                        is_unpaid = True
+                        status_kembali = 'Tidak'
+                        count_belum_lunas += 1
+                    else:
+                        # Count payment methods for kembali
+                        if 'transfer' in pendaftaran.metode_pembayaran_kembali.lower():
+                            count_transfer += 1
+                            total_transfer += biaya_kembali
+                        elif 'cash' in pendaftaran.metode_pembayaran_kembali.lower():
+                            count_cash += 1
+                            total_cash += biaya_kembali
                 
                 row_data.extend([
                     pendaftaran.status_kembali,
                     pendaftaran.metode_pembayaran_kembali or '-',
                     pendaftaran.rombongan_kembali.nama_rombongan if pendaftaran.rombongan_kembali else 
                     (pendaftaran.rombongan_pulang.nama_rombongan if pendaftaran.rombongan_pulang else '-'),
-                    pendaftaran.bus_kembali.nama_armada if pendaftaran.bus_kembali else '-',
-                    pendaftaran.bus_kembali.nomor_lambung if pendaftaran.bus_kembali else '-',
+                    f"{pendaftaran.bus_kembali.nama_armada} - {pendaftaran.bus_kembali.nomor_lambung}" if pendaftaran.bus_kembali else '-',
                     f"Rp {biaya_kembali:,.0f}".replace(',', '.') if biaya_kembali > 0 else 'Rp 0',
-                    f"Rp {pendaftaran.total_biaya:,.0f}".replace(',', '.') if pendaftaran.total_biaya else 'Rp 0'
                 ])
             else:
-                row_data.extend(['Belum Terdaftar', '-', '-', '-', '-', 'Rp 0', 'Rp 0'])
+                row_data.extend(['Belum Terdaftar', '-', '-', '-', '-', 'Rp 0'])
         
         # Write row data with conditional styling
         for col, value in enumerate(row_data, 1):
@@ -2775,7 +2932,7 @@ def export_santri_wilayah():
             cell.border = border
             cell.alignment = Alignment(vertical='center')
             
-            # Apply red styling for unpaid santri
+            # Apply red styling for unpaid santri - ENHANCED
             if is_unpaid:
                 cell.fill = unpaid_fill
                 cell.font = unpaid_font
@@ -2789,11 +2946,12 @@ def export_santri_wilayah():
     summary_value_font = Font(name='Arial', size=11, bold=True, color='000000')
     summary_label_font = Font(name='Arial', size=11, bold=False, color='000000')
     
-    # Summary data
+    # Summary data - ENHANCED with payment status
     summary_data = [
         ('RINGKASAN PEMBAYARAN', '', True),
         ('Total Pembayaran Transfer:', f"{count_transfer} orang - Rp {total_transfer:,.0f}".replace(',', '.'), False),
         ('Total Pembayaran Cash:', f"{count_cash} orang - Rp {total_cash:,.0f}".replace(',', '.'), False),
+        ('Total Belum Lunas:', f"{count_belum_lunas} orang", False),
         ('', '', False),
         ('RINGKASAN BIAYA', '', True),
     ]
@@ -3126,3 +3284,43 @@ def api_search_santri_for_wisuda():
         'kabupaten': s.kabupaten
     } for s in query.all()]
     return jsonify({'results': results})
+
+@admin_bp.route('/santri/update-wali/<int:santri_id>', methods=['POST'])
+@login_required
+@role_required('Korpus', 'Korda', 'Korwil')
+def update_nomor_wali(santri_id):
+    santri = Santri.query.get_or_404(santri_id)
+    new_phone_number = request.json.get('no_hp_wali')
+
+    if not new_phone_number:
+        return jsonify({'success': False, 'message': 'Nomor HP tidak boleh kosong.'}), 400
+
+    # --- Bagian Sinkronisasi ke API Induk (Sudah Disederhanakan) ---
+    try:
+        if not santri.nis:
+            return jsonify({'success': False, 'message': f'Santri {santri.nama} tidak memiliki NIS untuk sinkronisasi.'}), 400
+
+        api_url = f"{current_app.config['API_INDUK_URL']}/{santri.nis}"
+        payload = json.dumps({"parrentPhone": new_phone_number})
+        headers = {
+            'Content-Type': 'application/json' # Header yang lebih sederhana
+        }
+
+        print(api_url, payload)  # Debugging output
+        
+        response = requests.request("PATCH", api_url, headers=headers, data=payload, timeout=15)
+        response.raise_for_status()
+
+        print(response.text)
+
+    except requests.exceptions.RequestException as e:
+        error_message = f"Gagal sinkronisasi ke server induk. Respon: {e.response.text if e.response else 'Tidak ada respon'}"
+        return jsonify({'success': False, 'message': error_message}), 500
+    # --- Akhir Bagian Sinkronisasi ---
+
+    # Jika sinkronisasi berhasil, update database lokal kita
+    santri.no_hp_wali = new_phone_number
+    log_activity('Edit', 'Santri', f"Mengubah nomor HP wali untuk santri: '{santri.nama}'")
+    db.session.commit()
+
+    return jsonify({'success': True, 'message': 'Nomor HP wali berhasil diperbarui dan disinkronkan.'})

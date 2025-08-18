@@ -10,6 +10,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     TRACCAR_URL = "https://traccar.amtsilatipusat.com" # Ganti jika URL Anda berbeda
     TRACCAR_TOKEN = "RzBFAiAQcc1IbBoWuFRQbnM6W21yE_iUEE2tGR7kuSVejbJtuwIhALraY2GnGENCvllH0I5dLQAioz-4ABWjhA2PABaSxM3-eyJ1IjoyLCJlIjoiMjAyNS0xMC0xOVQxNzowMDowMC4wMDArMDA6MDAifQ"
+    API_INDUK_URL = "https://sigap.amtsilatipusat.com/api/student"
 
 class DevelopmentConfig(Config):
     """Konfigurasi untuk Development (MySQL Lokal)."""
