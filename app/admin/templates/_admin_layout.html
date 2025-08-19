@@ -752,7 +752,7 @@
         </li>
         {% endif %}
         {% if current_user.role.name in ['Korpus', 'Korda', 'Korwil'] %}
-        <li class="nav-heading">Manajemen Keuangan & User</li>
+        <li class="nav-heading">Manajemen Keuangan</li>
         <li class="nav-item">
             <a href="{{ url_for('admin.manajemen_keuangan') }}" 
                class="nav-link {{ 'active' if 'manajemen_keuangan' in request.endpoint else '' }}">
@@ -761,15 +761,20 @@
         </li>
         {% endif %}
         {% if current_user.role.name in ['Bendahara Pusat', 'Korpus'] %}
-<li class="nav-heading">Manajemen Bendahara</li>
+
 <li class="nav-item">
     <a href="{{ url_for('admin.bendahara_dashboard') }}" class="nav-link {{ 'active' if 'bendahara_dashboard' in request.endpoint else '' }}">
         <i class="fas fa-cash-register"></i> Dashboard Bendahara
     </a>
 </li>
 <li class="nav-item">
-    <a href="{{ url_for('admin.bendahara_pengeluaran') }}" class="nav-link {{ 'active' if 'bendahara_pengeluaran' in request.endpoint else '' }}">
-        <i class="fas fa-file-invoice-dollar"></i> Catat Pengeluaran
+    <a href="{{ url_for('admin.bendahara_buku_kas') }}" class="nav-link {{ 'active' if 'bendahara_buku_kas' in request.endpoint else '' }}">
+        <i class="fas fa-book"></i> Buku Kas
+    </a>
+</li>
+<li class="nav-item">
+    <a href="{{ url_for('admin.bendahara_buku_kas_bus') }}" class="nav-link {{ 'active' if 'buku_kas_bus' in request.endpoint else '' }}">
+        <i class="fas fa-bus"></i> Buku Kas Bus
     </a>
 </li>
 {% endif %}

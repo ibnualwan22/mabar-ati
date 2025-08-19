@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, TextAreaField, IntegerField, DateTimeLocalField, FieldList, FormField, SubmitField, Form, HiddenField, SelectField, PasswordField, BooleanField, DateTimeLocalField
-from wtforms.validators import DataRequired, Optional, EqualTo, Length, URL
+from wtforms.validators import DataRequired, Optional, EqualTo, Length, URL, NumberRange
 from wtforms_sqlalchemy.fields import QuerySelectField, QuerySelectMultipleField
 from app.models import Rombongan, Santri, Role
 from wtforms.fields import DateField
@@ -264,4 +264,9 @@ class TransaksiForm(FlaskForm):
     deskripsi = StringField('Deskripsi Pengeluaran', validators=[DataRequired()])
     jumlah = IntegerField('Jumlah (Rp)', validators=[DataRequired()])
     submit = SubmitField('Catat Pengeluaran')
+
+class KonfirmasiSetoranForm(FlaskForm):
+    jumlah_disetor = IntegerField('Nominal yang Disetor', 
+                                  validators=[DataRequired(), NumberRange(min=1, message="Jumlah harus lebih dari 0")])
+    submit = SubmitField('Konfirmasi')
 

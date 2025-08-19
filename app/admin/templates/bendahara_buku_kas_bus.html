@@ -1,0 +1,278 @@
+{% extends "_admin_layout.html" %}
+{% block title %}Buku Kas Bus{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h2 mb-1">📊 Buku Kas Bus</h1>
+        <p class="text-muted mb-0">Dashboard keuangan operasional bus dengan ringkasan saldo dan riwayat transaksi lengkap</p>
+    </div>
+</div>
+
+<!-- Dashboard Saldo -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <div class="bg-primary bg-gradient rounded-circle mx-auto d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                        <i class="fas fa-bus text-white fs-4"></i>
+                    </div>
+                </div>
+                <h6 class="card-title text-muted mb-2">Saldo Bus Pulang</h6>
+                <h3 class="text-primary mb-0">Rp {{ "{:,.0f}".format(saldo_bus_pulang).replace(',', '.') }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <div class="bg-info bg-gradient rounded-circle mx-auto d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                        <i class="fas fa-undo text-white fs-4"></i>
+                    </div>
+                </div>
+                <h6 class="card-title text-muted mb-2">Saldo Bus Kembali</h6>
+                <h3 class="text-info mb-0">Rp {{ "{:,.0f}".format(saldo_bus_kembali).replace(',', '.') }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <div class="bg-success bg-gradient rounded-circle mx-auto d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                        <i class="fas fa-wallet text-white fs-4"></i>
+                    </div>
+                </div>
+                <h6 class="card-title text-muted mb-2">Total Saldo</h6>
+                <h3 class="text-success mb-0">Rp {{ "{:,.0f}".format(saldo_bus_pulang + saldo_bus_kembali).replace(',', '.') }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistik Ringkas -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card bg-light border-0">
+            <div class="card-body text-center py-3">
+                <div class="d-flex align-items-center justify-content-center">
+                    <i class="fas fa-arrow-up text-success me-2"></i>
+                    <div>
+                        <small class="text-muted d-block">Total Pemasukan</small>
+                        <strong class="text-success">
+                            {% set total_pemasukan = riwayat_transaksi_bus|selectattr("tipe", "equalto", "PEMASUKAN")|sum(attribute="jumlah") %}
+                            Rp {{ "{:,.0f}".format(total_pemasukan).replace(',', '.') }}
+                        </strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light border-0">
+            <div class="card-body text-center py-3">
+                <div class="d-flex align-items-center justify-content-center">
+                    <i class="fas fa-arrow-down text-danger me-2"></i>
+                    <div>
+                        <small class="text-muted d-block">Total Pengeluaran</small>
+                        <strong class="text-danger">
+                            {% set total_pengeluaran = riwayat_transaksi_bus|selectattr("tipe", "equalto", "PENGELUARAN")|sum(attribute="jumlah") %}
+                            Rp {{ "{:,.0f}".format(total_pengeluaran).replace(',', '.') }}
+                        </strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light border-0">
+            <div class="card-body text-center py-3">
+                <div class="d-flex align-items-center justify-content-center">
+                    <i class="fas fa-exchange-alt text-info me-2"></i>
+                    <div>
+                        <small class="text-muted d-block">Total Transaksi</small>
+                        <strong class="text-info">{{ riwayat_transaksi_bus|length }} Transaksi</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light border-0">
+            <div class="card-body text-center py-3">
+                <div class="d-flex align-items-center justify-content-center">
+                    <i class="fas fa-chart-line text-warning me-2"></i>
+                    <div>
+                        <small class="text-muted d-block">Selisih</small>
+                        <strong class="text-warning">
+                            {% set selisih = total_pemasukan - total_pengeluaran %}
+                            {% if selisih >= 0 %}
+                                <span class="text-success">+ Rp {{ "{:,.0f}".format(selisih).replace(',', '.') }}</span>
+                            {% else %}
+                                <span class="text-danger">- Rp {{ "{:,.0f}".format(selisih|abs).replace(',', '.') }}</span>
+                            {% endif %}
+                        </strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabel Riwayat Transaksi -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-0 py-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-1">📋 Riwayat Transaksi Bus</h5>
+                <small class="text-muted">Catatan lengkap pemasukan dan pengeluaran kas bus</small>
+            </div>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="fw-semibold">Tanggal</th>
+                    <th class="fw-semibold">Rekening</th>
+                    <th class="fw-semibold">Deskripsi</th>
+                    <th class="fw-semibold text-center">Debit</th>
+                    <th class="fw-semibold text-center">Kredit</th>
+                    <!-- <th class="fw-semibold text-center">Saldo</th> -->
+                    <th class="fw-semibold">Pencatat</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set running_saldo_pulang = 0 %}
+                {% set running_saldo_kembali = 0 %}
+                {% for trx in riwayat_transaksi_bus %}
+                    {% if trx.rekening == 'REKENING_BUS_PULANG' %}
+                        {% if trx.tipe == 'PEMASUKAN' %}
+                            {% set running_saldo_pulang = running_saldo_pulang + trx.jumlah %}
+                        {% else %}
+                            {% set running_saldo_pulang = running_saldo_pulang - trx.jumlah %}
+                        {% endif %}
+                        {% set current_saldo = running_saldo_pulang %}
+                    {% else %}
+                        {% if trx.tipe == 'PEMASUKAN' %}
+                            {% set running_saldo_kembali = running_saldo_kembali + trx.jumlah %}
+                        {% else %}
+                            {% set running_saldo_kembali = running_saldo_kembali - trx.jumlah %}
+                        {% endif %}
+                        {% set current_saldo = running_saldo_kembali %}
+                    {% endif %}
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-calendar-day text-muted me-2"></i>
+                            <small>{{ trx.tanggal|datetime_wib }}</small>
+                        </div>
+                    </td>
+                    <td>
+                        {% if trx.rekening == 'REKENING_BUS_PULANG' %}
+                            <span class="badge bg-primary bg-gradient">
+                                <i class="fas fa-bus me-1"></i>Bus Pulang
+                            </span>
+                        {% else %}
+                            <span class="badge bg-info bg-gradient">
+                                <i class="fas fa-undo me-1"></i>Bus Kembali
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="fw-medium">{{ trx.deskripsi }}</div>
+                    </td>
+                    <td class="text-center">
+                        {% if trx.tipe == 'PEMASUKAN' %}
+                            <span class="fw-semibold text-success">
+                                <i class="fas fa-arrow-up me-1"></i>
+                                Rp {{ "{:,.0f}".format(trx.jumlah).replace(',', '.') }}
+                            </span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if trx.tipe == 'PENGELUARAN' %}
+                            <span class="fw-semibold text-danger">
+                                <i class="fas fa-arrow-down me-1"></i>
+                                Rp {{ "{:,.0f}".format(trx.jumlah).replace(',', '.') }}
+                            </span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <!-- <td class="text-center">
+                        <span class="fw-bold {% if current_saldo >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            Rp {{ "{:,.0f}".format(current_saldo).replace(',', '.') }}
+                        </span>
+                    </td> -->
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="bg-secondary rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
+                                <i class="fas fa-user text-white" style="font-size: 10px;"></i>
+                            </div>
+                            <small class="text-muted">{{ trx.user.username }}</small>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center py-5">
+                        <div class="text-muted">
+                            <i class="fas fa-inbox fa-3x mb-3 opacity-25"></i>
+                            <div class="h5">Belum ada transaksi</div>
+                            <p class="mb-0">Belum ada transaksi yang dicatat untuk kas bus.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Footer Info -->
+<div class="mt-4">
+    <div class="card bg-light border-0">
+        <div class="card-body py-3">
+            <div class="row text-center">
+                <div class="col-md-4">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Debit menunjukkan pemasukan kas
+                    </small>
+                </div>
+                <div class="col-md-4">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Kredit menunjukkan pengeluaran kas
+                    </small>
+                </div>
+                <div class="col-md-4">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Saldo merupakan saldo berjalan per rekening
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+.card:hover {
+    transform: translateY(-2px);
+}
+.table-responsive {
+    border-radius: 0.5rem;
+}
+.badge {
+    font-size: 0.75rem;
+}
+</style>
+{% endblock %}

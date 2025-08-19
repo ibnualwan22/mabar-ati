@@ -663,46 +663,425 @@
         }
     }
     
-    @media (max-width: 768px) {
-        .page-header {
-            padding: 1.5rem;
-        }
-        
-        .page-title {
-            font-size: 1.5rem;
-        }
-        
-        .stats-grid {
-            padding: 1.5rem;
-        }
-        
-        .filter-grid {
-            grid-template-columns: 1fr;
-        }
-        
-        .filter-actions {
-            justify-content: stretch;
-        }
-        
-        .filter-actions .btn {
-            flex: 1;
-        }
-        
-        .enhanced-table th,
-        .enhanced-table td {
-            padding: 0.75rem 0.5rem;
-            font-size: 0.8rem;
-        }
-        
-        .export-buttons {
-            flex-direction: column;
-        }
-        
-        .btn-export {
-            width: 100%;
-            justify-content: center;
-        }
+    /* Responsive improvements for mobile devices */
+
+/* Stats container responsive improvements */
+@media (max-width: 992px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+        padding: 1.5rem;
     }
+    
+    .stat-section::after {
+        display: none;
+    }
+    
+    .filter-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .card-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .export-buttons {
+        justify-content: center;
+    }
+}
+
+/* Mobile specific styles - under 800px */
+@media (max-width: 800px) {
+    /* Container padding adjustments */
+    .container-fluid {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+    
+    /* Page header responsive */
+    .page-header {
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .page-title {
+        font-size: 1.25rem;
+    }
+    
+    .page-description {
+        font-size: 0.875rem;
+    }
+    
+    /* Stats container adjustments */
+    .stats-container {
+        margin-bottom: 1rem;
+        border-radius: 8px;
+    }
+    
+    .stats-grid {
+        padding: 1rem;
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    /* Total stats responsive */
+    .total-stats {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    
+    .total-stat-item {
+        padding: 0.75rem;
+    }
+    
+    .total-stat-number {
+        font-size: 1.25rem;
+    }
+    
+    /* Journey stats responsive */
+    .journey-stats {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .journey-stat-registered,
+    .journey-stat-unregistered {
+        padding: 0.75rem;
+    }
+    
+    /* Filter section responsive */
+    .filter-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .filter-actions {
+        justify-content: stretch;
+        flex-direction: column;
+    }
+    
+    .filter-actions .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Export buttons responsive */
+    .export-buttons {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-export {
+        width: 100%;
+        justify-content: center;
+        margin-bottom: 0.5rem;
+        padding: 0.875rem 1rem;
+    }
+    
+    /* Table responsive improvements */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -15px; /* Extend to screen edges */
+        padding: 0 15px;
+    }
+    
+    .enhanced-table {
+        min-width: 800px; /* Minimum width to prevent cramping */
+        font-size: 0.75rem;
+    }
+    
+    .enhanced-table th,
+    .enhanced-table td {
+        padding: 0.5rem 0.375rem;
+        white-space: nowrap; /* Prevent text wrapping */
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* Specific column width adjustments for mobile */
+    .enhanced-table th:nth-child(1),
+    .enhanced-table td:nth-child(1) {
+        width: 50px;
+        min-width: 50px;
+    }
+    
+    .enhanced-table th:nth-child(2),
+    .enhanced-table td:nth-child(2) {
+        width: 180px;
+        min-width: 180px;
+    }
+    
+    .enhanced-table th:nth-child(3),
+    .enhanced-table td:nth-child(3) {
+        width: 120px;
+        min-width: 120px;
+    }
+    
+    .enhanced-table th:nth-child(4),
+    .enhanced-table td:nth-child(4) {
+        width: 100px;
+        min-width: 100px;
+    }
+    
+    .enhanced-table th:nth-child(5),
+    .enhanced-table td:nth-child(5) {
+        width: 150px;
+        min-width: 150px;
+    }
+    
+    .enhanced-table th:nth-child(6),
+    .enhanced-table td:nth-child(6) {
+        width: 100px;
+        min-width: 100px;
+    }
+    
+    .enhanced-table th:nth-child(7),
+    .enhanced-table td:nth-child(7) {
+        width: 140px;
+        min-width: 140px;
+    }
+    
+    .enhanced-table th:nth-child(8),
+    .enhanced-table td:nth-child(8) {
+        width: 120px;
+        min-width: 120px;
+    }
+    
+    /* Student info adjustments */
+    .student-info {
+        max-width: 170px;
+    }
+    
+    .student-name {
+        font-size: 0.75rem;
+        line-height: 1.2;
+        max-width: 170px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .badge-container {
+        flex-wrap: wrap;
+        gap: 0.125rem;
+    }
+    
+    .role-badge {
+        font-size: 0.55rem;
+        padding: 0.125rem 0.25rem;
+    }
+    
+    /* Status container adjustments */
+    .status-container {
+        max-width: 140px;
+    }
+    
+    .status-badge {
+        font-size: 0.625rem;
+        padding: 0.125rem 0.25rem;
+    }
+    
+    .payment-method {
+        font-size: 0.55rem;
+        line-height: 1.1;
+    }
+    
+    /* Bus info adjustments */
+    .bus-info {
+        max-width: 130px;
+        font-size: 0.625rem;
+    }
+    
+    .bus-name {
+        font-size: 0.625rem;
+        line-height: 1.1;
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    /* Action buttons responsive */
+    .action-btn {
+        font-size: 0.625rem;
+        padding: 0.375rem 0.5rem;
+        min-width: 80px;
+        margin-bottom: 0.25rem;
+    }
+    
+    /* Pagination responsive improvements */
+    .pagination-container {
+        padding: 1rem 15px;
+        flex-direction: column;
+        gap: 0.75rem;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .pagination {
+        flex-wrap: nowrap;
+        justify-content: center;
+        min-width: max-content;
+        margin: 0;
+    }
+    
+    .pagination .page-item {
+        flex-shrink: 0;
+    }
+    
+    .pagination .page-link {
+        padding: 0.5rem 0.75rem;
+        margin: 0 0.125rem;
+        font-size: 0.75rem;
+        border-radius: 4px;
+        white-space: nowrap;
+    }
+    
+    /* Hide some pagination text on mobile */
+    .pagination .page-link i + span,
+    .pagination .page-link span + i {
+        display: none;
+    }
+    
+    /* Pagination info responsive */
+    .pagination-info {
+        font-size: 0.75rem;
+        text-align: center;
+        color: var(--text-secondary);
+        padding: 0 1rem;
+        line-height: 1.4;
+    }
+    
+    /* Modal responsive */
+    .modal-dialog {
+        margin: 1rem;
+        max-width: calc(100vw - 2rem);
+    }
+    
+    .modal-body {
+        padding: 1rem;
+    }
+    
+    .modal-footer {
+        padding: 0.75rem 1rem;
+        flex-direction: column;
+    }
+    
+    .modal-footer .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .modal-footer .btn:last-child {
+        margin-bottom: 0;
+    }
+    
+    /* Empty state responsive */
+    .empty-state {
+        padding: 2rem 1rem;
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+    
+    .empty-state h4 {
+        font-size: 1.125rem;
+    }
+    
+    .empty-state p {
+        font-size: 0.875rem;
+    }
+}
+
+/* Extra small devices - under 576px */
+@media (max-width: 576px) {
+    .page-header {
+        padding: 0.75rem;
+    }
+    
+    .page-title {
+        font-size: 1.125rem;
+    }
+    
+    .stats-grid {
+        padding: 0.75rem;
+    }
+    
+    .enhanced-table {
+        font-size: 0.7rem;
+    }
+    
+    .enhanced-table th,
+    .enhanced-table td {
+        padding: 0.375rem 0.25rem;
+    }
+    
+    .student-name {
+        font-size: 0.7rem;
+        max-width: 140px;
+    }
+    
+    .pagination .page-link {
+        padding: 0.375rem 0.5rem;
+        font-size: 0.7rem;
+    }
+    
+    /* Hide pagination text, show only icons and numbers */
+    .pagination .page-link span:not(.page-number) {
+        display: none;
+    }
+    
+    .pagination-info {
+        font-size: 0.7rem;
+    }
+}
+
+/* Horizontal scroll indicator for tables */
+.table-responsive::after {
+    content: '← Geser untuk melihat lebih →';
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+@media (max-width: 800px) {
+    .table-responsive {
+        position: relative;
+        margin-bottom: 30px;
+    }
+}
+
+/* Ensure proper scrolling behavior */
+.table-responsive {
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) #f1f5f9;
+}
+
+.table-responsive::-webkit-scrollbar {
+    height: 6px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 3px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-dark);
+}
 </style>
 
 <div class="page-header">

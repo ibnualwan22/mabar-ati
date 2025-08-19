@@ -1,79 +1,441 @@
 {% extends "_admin_layout.html" %}
 {% block title %}Dashboard Bendahara{% endblock %}
 {% block content %}
-<h1 class="h2">Dashboard Bendahara</h1>
+<div class="container-fluid py-4">
+    <h1 class="h2 mb-4 text-primary fw-bold">Dashboard Bendahara</h1>
 
-<div class="row g-3 mb-4">
-    <div class="col-md-6">
-        <div class="card text-center text-white bg-success">
-            <div class="card-body">
-                <h5 class="card-title">Saldo Rekening Saya (Fee)</h5>
-                <p class="card-text h3">Rp {{ "{:,.0f}".format(saldo_rekening_saya).replace(',', '.') }}</p>
+    <!-- Summary Cards -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);">
+                <div class="card-body text-center text-white p-4">
+                    <div class="mb-2">
+                        <i class="fas fa-wallet fs-2 opacity-75"></i>
+                    </div>
+                    <h6 class="card-title fw-semibold mb-3">Saldo Rekening Saya (Fee)</h6>
+                    <p class="card-text h3 fw-bold mb-0">Rp {{ "{:,.0f}".format(saldo_rekening_saya).replace(',', '.') }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);">
+                <div class="card-body text-center text-white p-4">
+                    <div class="mb-2">
+                        <i class="fas fa-bus fs-2 opacity-75"></i>
+                    </div>
+                    <h6 class="card-title fw-semibold mb-3">Saldo Rekening Bus Pulang</h6>
+                    <p class="card-text h3 fw-bold mb-0">Rp {{ "{:,.0f}".format(saldo_bus_pulang).replace(',', '.') }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);">
+                <div class="card-body text-center text-white p-4">
+                    <div class="mb-2">
+                        <i class="fas fa-bus-alt fs-2 opacity-75"></i>
+                    </div>
+                    <h6 class="card-title fw-semibold mb-3">Saldo Rekening Bus Kembali</h6>
+                    <p class="card-text h3 fw-bold mb-0">Rp {{ "{:,.0f}".format(saldo_bus_kembali).replace(',', '.') }}</p>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="card text-center text-white bg-primary">
-            <div class="card-body">
-                <h5 class="card-title">Saldo Rekening Bus</h5>
-                <p class="card-text h3">Rp {{ "{:,.0f}".format(saldo_rekening_bus).replace(',', '.') }}</p>
-            </div>
-        </div>
-    </div>
-</div>
 
-<div class="card">
-    <div class="card-header"><h5>Status Setoran per Rombongan</h5></div>
-    <div class="table-responsive">
-        <table class="table table-striped table-hover">
-            <thead>
-                <tr>
-                    <th>Nama Rombongan</th>
-                    <th>Setoran Bus (Siap)</th>
-                    <th>Setoran Lain (Siap)</th>
-                    <th>Peserta Belum Lunas</th>
-                    <th>Aksi Setoran Bus</th>
-                    <th>Aksi Setoran Lain</th>
-                </tr>
-            </thead>
-            <tbody>
+    <!-- Main Accordion Table -->
+    <div class="card border-0 shadow-lg">
+        <div class="card-header bg-gradient text-white py-3" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);">
+            <h5 class="mb-0 fw-semibold">
+                <i class="fas fa-chart-line me-2"></i>
+                Status Setoran per Rombongan
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="accordion accordion-flush" id="rombonganAccordion">
                 {% for item in rombongan_data_list %}
                 {% set rombongan = item.rombongan %}
-                <tr>
-                    <td>{{ rombongan.nama_rombongan }}</td>
-                    <td>Rp {{ "{:,.0f}".format(item.setoran_bus).replace(',', '.') }}</td>
-                    <td>Rp {{ "{:,.0f}".format(item.setoran_lain).replace(',', '.') }}</td>
-                    <td>
-                        {% if item.sisa_tagihan > 0 %}
-                            <span class="badge bg-danger">{{ item.sisa_tagihan }} orang</span>
-                        {% else %}
-                            <span class="badge bg-success">Semua Lunas</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if rombongan.status_setoran_bus == 'Sudah Setor' %}
-                            <span class="badge bg-success">Disetor {{ rombongan.tanggal_setoran_bus|datetime_wib }}</span>
-                        {% else %}
-                            <form method="POST" action="{{ url_for('admin.konfirmasi_setor', rombongan_id=rombongan.id, tipe='bus') }}"
-                                  {% if item.sisa_tagihan > 0 %} onsubmit="return confirm('PERINGATAN: Masih ada {{ item.sisa_tagihan }} peserta belum lunas. Yakin lanjut?');" {% endif %}>
-                                <button type="submit" class="btn btn-sm {{ 'btn-warning' if item.sisa_tagihan > 0 else 'btn-primary' }}">Konfirmasi</button>
-                            </form>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if rombongan.status_setoran_lain == 'Sudah Setor' %}
-                             <span class="badge bg-success">Disetor {{ rombongan.tanggal_setoran_lain|datetime_wib }}</span>
-                        {% else %}
-                            <form method="POST" action="{{ url_for('admin.konfirmasi_setor', rombongan_id=rombongan.id, tipe='lain') }}"
-                                  {% if item.sisa_tagihan > 0 %} onsubmit="return confirm('PERINGATAN: Masih ada {{ item.sisa_tagihan }} peserta belum lunas. Yakin lanjut?');" {% endif %}>
-                                <button type="submit" class="btn btn-sm {{ 'btn-warning' if item.sisa_tagihan > 0 else 'btn-primary' }}">Konfirmasi</button>
-                            </form>
-                        {% endif %}
-                    </td>
-                </tr>
+                {% set loop_index = loop.index %}
+                
+                <!-- Calculate progress percentages -->
+                {% set bus_total_target = item.total_bus_pulang_seharusnya + item.total_bus_kembali_seharusnya %}
+                {% set bus_total_collected = bus_total_target - item.sisa_setoran_bus_pulang - item.sisa_setoran_bus_kembali %}
+                {% set bus_progress = ((bus_total_collected / bus_total_target) * 100) if bus_total_target > 0 else 0 %}
+                
+                {% set fee_total_target = item.total_pondok_pulang_seharusnya + item.total_pondok_kembali_seharusnya %}
+                {% set fee_total_collected = fee_total_target - item.sisa_setoran_pondok_pulang - item.sisa_setoran_pondok_kembali %}
+                {% set fee_progress = ((fee_total_collected / fee_total_target) * 100) if fee_total_target > 0 else 0 %}
+                
+                <div class="accordion-item border-0 border-bottom">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed shadow-none px-4 py-3 border-0" 
+                                type="button" 
+                                data-bs-toggle="collapse" 
+                                data-bs-target="#collapse{{ loop_index }}" 
+                                aria-expanded="false" 
+                                aria-controls="collapse{{ loop_index }}"
+                                style="background-color: #f8fafc;">
+                            
+                            <div class="container-fluid p-0">
+                                <div class="row align-items-center">
+                                    <!-- Nama Rombongan -->
+                                    <div class="col-lg-3 col-md-3">
+                                        <div class="fw-bold text-primary mb-1">{{ rombongan.nama_rombongan }}</div>
+                                        <small class="text-muted">Rombongan</small>
+                                    </div>
+                                    
+                                    <!-- Outstanding Bus -->
+                                    <div class="col-lg-3 col-md-4 col-6 mb-2 mb-md-0">
+                                        <div class="fw-semibold text-dark mb-2" style="font-size: 0.85rem;">Biaya Bus Yang Sudah Disetor</div>
+                                        <div class="progress mb-1" style="height: 8px;">
+                                            <div class="progress-bar {% if bus_progress == 100 %}bg-success{% elif bus_progress > 0 %}bg-primary{% else %}bg-danger{% endif %}" 
+                                                 style="width: {{ bus_progress }}%"></div>
+                                        </div>
+                                        <small class="text-muted">
+                                            Rp {{ "{:,.0f}".format(bus_total_collected).replace(',', '.') }} / 
+                                            Rp {{ "{:,.0f}".format(bus_total_target).replace(',', '.') }}
+                                        </small>
+                                    </div>
+                                    
+                                    <!-- Outstanding Fee -->
+                                    <div class="col-lg-3 col-md-4 col-6 mb-2 mb-md-0">
+                                        <div class="fw-semibold text-dark mb-2" style="font-size: 0.85rem;">Biaya Fee Pondok Yang Sudah Disetor</div>
+                                        <div class="progress mb-1" style="height: 8px;">
+                                            <div class="progress-bar {% if fee_progress == 100 %}bg-success{% elif fee_progress > 0 %}bg-primary{% else %}bg-danger{% endif %}" 
+                                                 style="width: {{ fee_progress }}%"></div>
+                                        </div>
+                                        <small class="text-muted">
+                                            Rp {{ "{:,.0f}".format(fee_total_collected).replace(',', '.') }} / 
+                                            Rp {{ "{:,.0f}".format(fee_total_target).replace(',', '.') }}
+                                        </small>
+                                    </div>
+                                    
+                                    <!-- Status Peserta -->
+                                    <div class="col-lg-2 col-md-1 col-12 text-center">
+                                        {% if item.peserta_belum_lunas > 0 %}
+                                            <span class="badge bg-danger rounded-pill px-3 py-2">{{ item.peserta_belum_lunas }} belum lunas</span>
+                                        {% else %}
+                                            <span class="badge bg-success rounded-pill px-3 py-2">Semua Lunas</span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Expand Icon -->
+                                    <div class="col-lg-1 text-end">
+                                        <i class="fas fa-chevron-down text-primary accordion-icon"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </button>
+                    </h2>
+                    
+                    <div id="collapse{{ loop_index }}" class="accordion-collapse collapse" data-bs-parent="#rombonganAccordion">
+                        <div class="accordion-body px-4 py-4" style="background-color: #f8fafc;">
+                            <div class="row">
+                                <!-- Bus Section -->
+                                <div class="col-lg-6 mb-4 mb-lg-0">
+                                    <div class="card border-0 shadow-sm h-100" style="background-color: #dbeafe;">
+                                        <div class="card-header bg-primary text-white py-3">
+                                            <h6 class="mb-0 fw-semibold">
+                                                <i class="fas fa-bus me-2"></i>Setoran Bus
+                                            </h6>
+                                        </div>
+                                        <div class="card-body p-4">
+                                            <div class="row mb-3">
+                                                <div class="col-6">
+                                                    <div class="text-muted mb-1" style="font-size: 0.85rem;">Bus Pulang</div>
+                                                    <div class="fw-bold">Rp {{ "{:,.0f}".format(item.total_bus_pulang_seharusnya - item.sisa_setoran_bus_pulang).replace(',', '.') }}</div>
+                                                    <small class="text-muted">/ Rp {{ "{:,.0f}".format(item.total_bus_pulang_seharusnya).replace(',', '.') }}</small>
+                                                </div>
+                                                <div class="col-6">
+                                                    <div class="text-muted mb-1" style="font-size: 0.85rem;">Bus Kembali</div>
+                                                    <div class="fw-bold">Rp {{ "{:,.0f}".format(item.total_bus_kembali_seharusnya - item.sisa_setoran_bus_kembali).replace(',', '.') }}</div>
+                                                    <small class="text-muted">/ Rp {{ "{:,.0f}".format(item.total_bus_kembali_seharusnya).replace(',', '.') }}</small>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-primary btn-sm flex-fill" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#konfirmasiModal" 
+                                                        data-rombongan-id="{{ rombongan.id }}" 
+                                                        data-tipe="bus_pulang" 
+                                                        data-sisa="{{ item.sisa_setoran_bus_pulang }}">
+                                                    <i class="fas fa-bus me-1"></i>Pulang
+                                                </button>
+                                                <button class="btn btn-info btn-sm flex-fill" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#konfirmasiModal" 
+                                                        data-rombongan-id="{{ rombongan.id }}" 
+                                                        data-tipe="bus_kembali" 
+                                                        data-sisa="{{ item.sisa_setoran_bus_kembali }}">
+                                                    <i class="fas fa-bus-alt me-1"></i>Kembali
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Fee Section -->
+                                <div class="col-lg-6">
+                                    <div class="card border-0 shadow-sm h-100" style="background-color: #dcfce7;">
+                                        <div class="card-header bg-success text-white py-3">
+                                            <h6 class="mb-0 fw-semibold">
+                                                <i class="fas fa-coins me-2"></i>Setoran Fee
+                                            </h6>
+                                        </div>
+                                        <div class="card-body p-4">
+                                            <div class="row mb-3">
+                                                <div class="col-6">
+                                                    <div class="text-muted mb-1" style="font-size: 0.85rem;">Fee Pulang</div>
+                                                    <div class="fw-bold">Rp {{ "{:,.0f}".format(item.total_pondok_pulang_seharusnya - item.sisa_setoran_pondok_pulang).replace(',', '.') }}</div>
+                                                    <small class="text-muted">/ Rp {{ "{:,.0f}".format(item.total_pondok_pulang_seharusnya).replace(',', '.') }}</small>
+                                                </div>
+                                                <div class="col-6">
+                                                    <div class="text-muted mb-1" style="font-size: 0.85rem;">Fee Kembali</div>
+                                                    <div class="fw-bold">Rp {{ "{:,.0f}".format(item.total_pondok_kembali_seharusnya - item.sisa_setoran_pondok_kembali).replace(',', '.') }}</div>
+                                                    <small class="text-muted">/ Rp {{ "{:,.0f}".format(item.total_pondok_kembali_seharusnya).replace(',', '.') }}</small>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-success btn-sm flex-fill" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#konfirmasiModal" 
+                                                        data-rombongan-id="{{ rombongan.id }}" 
+                                                        data-tipe="pondok_pulang" 
+                                                        data-sisa="{{ item.sisa_setoran_pondok_pulang }}">
+                                                    <i class="fas fa-coins me-1"></i>Pulang
+                                                </button>
+                                                <button class="btn btn-secondary btn-sm flex-fill" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#konfirmasiModal" 
+                                                        data-rombongan-id="{{ rombongan.id }}" 
+                                                        data-tipe="pondok_kembali" 
+                                                        data-sisa="{{ item.sisa_setoran_pondok_kembali }}">
+                                                    <i class="fas fa-coins me-1"></i>Kembali
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 {% endfor %}
-            </tbody>
-        </table>
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- Modal -->
+<div class="modal fade" id="konfirmasiModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <form method="POST" id="formSetoran">
+                <div class="modal-header border-0 pb-0" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);">
+                    <h5 class="modal-title text-white fw-semibold" id="konfirmasiModalLabel">
+                        <i class="fas fa-money-check-alt me-2"></i>Konfirmasi Setoran
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    {{ form_setoran.hidden_tag() }}
+                    <div class="alert alert-info border-0 shadow-sm mb-3" style="background-color: #f0f9ff; border-left: 4px solid #3b82f6 !important;">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-info-circle text-primary me-2"></i>
+                            <span>Sisa setoran yang harus diterima: <strong class="text-primary" id="sisaSetoranText"></strong></span>
+                        </div>
+                    </div>
+                    <div id="warningBelumLunas" class="alert alert-warning border-0 shadow-sm" style="display: none; background-color: #fefce8; border-left: 4px solid #f59e0b !important;">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                            <div>
+                                <strong>Peringatan!</strong> Masih ada peserta di rombongan ini yang belum lunas.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        {{ form_setoran.jumlah_disetor.label(class="form-label fw-semibold text-dark") }}
+                        <div class="input-group">
+                            <span class="input-group-text bg-primary text-white border-0">Rp</span>
+                            {{ form_setoran.jumlah_disetor(class="form-control form-control-lg border-0 shadow-sm", type="text", style="background-color: #f8fafc;", placeholder="0") }}
+                        </div>
+                        <small class="text-muted mt-1">Masukkan jumlah tanpa "Rp" - format otomatis akan diterapkan</small>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light px-4 py-2 shadow-sm" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Batal
+                    </button>
+                    {{ form_setoran.submit(class="btn btn-primary px-4 py-2 shadow-sm fw-semibold") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Accordion Customizations */
+.accordion-button {
+    transition: all 0.3s ease;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: #e0f2fe !important;
+    color: #0369a1;
+    border-bottom: 2px solid #3b82f6;
+}
+
+.accordion-button:not(.collapsed) .accordion-icon {
+    transform: rotate(180deg);
+}
+
+.accordion-button:focus {
+    box-shadow: none;
+    border-color: transparent;
+}
+
+.accordion-icon {
+    transition: transform 0.3s ease;
+}
+
+.accordion-collapse {
+    transition: all 0.3s ease;
+}
+
+/* Progress Bar Enhancements */
+.progress {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+}
+
+.progress-bar {
+    border-radius: 10px;
+    transition: width 0.6s ease;
+}
+
+/* Card Hover Effects */
+.card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+/* Button Enhancements */
+.btn {
+    transition: all 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+/* Modal Enhancements */
+.modal-content {
+    border-radius: 1rem;
+}
+
+.modal-header {
+    border-radius: 1rem 1rem 0 0;
+}
+
+.form-control:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .accordion-button .container-fluid .row > div {
+        margin-bottom: 0.5rem;
+    }
+    
+    .card-body .row .col-6 {
+        margin-bottom: 1rem;
+    }
+    
+    .btn-sm {
+        font-size: 0.75rem;
+        padding: 0.5rem 0.75rem;
+    }
+}
+
+/* Loading Animation for Progress Bars */
+@keyframes progressLoad {
+    0% { width: 0; }
+    100% { width: var(--progress-width); }
+}
+
+.progress-bar {
+    animation: progressLoad 1s ease-out;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Modal functionality
+    var konfirmasiModal = document.getElementById('konfirmasiModal');
+    konfirmasiModal.addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        var rombonganId = button.getAttribute('data-rombongan-id');
+        var tipe = button.getAttribute('data-tipe');
+        var sisa = parseInt(button.getAttribute('data-sisa'));
+        
+        var form = document.getElementById('formSetoran');
+        form.action = `/admin/bendahara/konfirmasi-setor/${rombonganId}?tipe=${tipe}`;
+        
+        var sisaText = document.getElementById('sisaSetoranText');
+        sisaText.textContent = `Rp ${sisa.toLocaleString('id-ID')}`;
+        
+        // Check warning for unpaid participants
+        var accordionItem = button.closest('.accordion-item');
+        var warningBadge = accordionItem.querySelector('.badge.bg-danger');
+        var warningDiv = document.getElementById('warningBelumLunas');
+        warningDiv.style.display = warningBadge ? 'block' : 'none';
+        
+        var jumlahInput = document.getElementById('jumlah_disetor');
+        jumlahInput.value = sisa > 0 ? sisa : '';
+        jumlahInput.max = sisa;
+    });
+    
+    // Accordion smooth animations
+    var accordionButtons = document.querySelectorAll('.accordion-button');
+    accordionButtons.forEach(function(button) {
+        button.addEventListener('click', function() {
+            var icon = this.querySelector('.accordion-icon');
+            setTimeout(function() {
+                if (button.classList.contains('collapsed')) {
+                    icon.style.transform = 'rotate(0deg)';
+                } else {
+                    icon.style.transform = 'rotate(180deg)';
+                }
+            }, 10);
+        });
+    });
+    
+    // Auto-close other accordions (optional - remove if you want multiple open)
+    var accordionElement = document.getElementById('rombonganAccordion');
+    accordionElement.addEventListener('show.bs.collapse', function (event) {
+        var openAccordions = accordionElement.querySelectorAll('.accordion-collapse.show');
+        openAccordions.forEach(function(openAccordion) {
+            if (openAccordion !== event.target) {
+                var bsCollapse = new bootstrap.Collapse(openAccordion, {
+                    toggle: false
+                });
+                bsCollapse.hide();
+            }
+        });
+    });
+    
+    // Add loading animation to progress bars
+    var progressBars = document.querySelectorAll('.progress-bar');
+    progressBars.forEach(function(bar) {
+        var width = bar.style.width;
+        bar.style.setProperty('--progress-width', width);
+        bar.style.width = '0';
+        setTimeout(function() {
+            bar.style.width = width;
+        }, 300);
+    });
+});
+</script>
 {% endblock %}

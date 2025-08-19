@@ -1,7 +1,7 @@
 from . import admin_bp
 from flask import render_template, redirect, url_for, flash, request, jsonify, abort, Response, send_file, current_app
 from app.models import ActivityLog, Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, Transaksi, User, Edisi, Bus, Role, Wisuda
-from app.admin.forms import ImportWisudaForm, RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, TransaksiForm, UserForm, UserEditForm, EdisiForm, BusForm, KorlapdaForm, WisudaForm
+from app.admin.forms import ImportWisudaForm, KonfirmasiSetoranForm, RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, TransaksiForm, UserForm, UserEditForm, EdisiForm, BusForm, KorlapdaForm, WisudaForm
 from app import db, login_manager
 import json, requests
 from collections import defaultdict
@@ -3295,109 +3295,159 @@ def update_nomor_wali(santri_id):
 
     return jsonify({'success': True, 'message': 'Nomor HP wali berhasil diperbarui dan disinkronkan.'})
 
+# Ganti fungsi bendahara_dashboard dan konfirmasi_setor dengan ini
+
 @admin_bp.route('/bendahara')
 @login_required
 @role_required('Bendahara Pusat', 'Korpus')
 def bendahara_dashboard():
     active_edisi = get_active_edisi()
     if not active_edisi:
-        flash("Tidak ada edisi aktif.", "warning")
-        return render_template('bendahara_dashboard.html', active_edisi=None, rombongan_data_list=[])
+        return render_template('bendahara_dashboard.html', active_edisi=None)
 
-    # Hitung saldo rekening virtual (tidak berubah)
-    pemasukan_saya = db.session.query(func.sum(Transaksi.jumlah)).filter_by(edisi_id=active_edisi.id, tipe='PEMASUKAN', rekening='REKENING_SAYA').scalar() or 0
-    pengeluaran_saya = db.session.query(func.sum(Transaksi.jumlah)).filter_by(edisi_id=active_edisi.id, tipe='PENGELUARAN', rekening='REKENING_SAYA').scalar() or 0
-    saldo_rekening_saya = pemasukan_saya - pengeluaran_saya
-    saldo_rekening_bus = db.session.query(func.sum(Transaksi.jumlah)).filter_by(edisi_id=active_edisi.id, tipe='PEMASUKAN', rekening='REKENING_BUS').scalar() or 0
+    # Hitung saldo rekening virtual dari tabel Transaksi
+    def get_saldo(rekening):
+        pemasukan = db.session.query(func.sum(Transaksi.jumlah)).filter_by(edisi_id=active_edisi.id, tipe='PEMASUKAN', rekening=rekening).scalar() or 0
+        pengeluaran = db.session.query(func.sum(Transaksi.jumlah)).filter_by(edisi_id=active_edisi.id, tipe='PENGELUARAN', rekening=rekening).scalar() or 0
+        return pemasukan - pengeluaran
 
+    saldo_rekening_saya = get_saldo('REKENING_SAYA')
+    saldo_bus_pulang = get_saldo('REKENING_BUS_PULANG')
+    saldo_bus_kembali = get_saldo('REKENING_BUS_KEMBALI')
+
+    # Siapkan data untuk setiap rombongan
     all_rombongan = Rombongan.query.filter_by(edisi_id=active_edisi.id).all()
     rombongan_data_list = []
-    
     for rombongan in all_rombongan:
-        # --- BLOK PERHITUNGAN BARU YANG LEBIH AKURAT DAN EFISIEN ---
-        # Hitung sisa tagihan (peserta yang belum lunas di salah satu perjalanan)
-        sisa_tagihan = Pendaftaran.query.filter(
-            or_(
-                Pendaftaran.rombongan_pulang_id == rombongan.id,
-                Pendaftaran.rombongan_kembali_id == rombongan.id
-            ),
-            or_(
-                Pendaftaran.status_pulang == 'Belum Bayar',
-                Pendaftaran.status_kembali == 'Belum Bayar'
+        # --- BLOK PERHITUNGAN BARU: Menghitung dari SEMUA PENDAFTAR ---
+
+        # 1. Hitung Total Biaya Bus Seharusnya (dari semua yang statusnya bukan 'Tidak Ikut')
+        total_bus_pulang_seharusnya = db.session.query(func.sum(Tarif.harga_bus)).select_from(Pendaftaran).join(
+            Tarif, and_(
+                Pendaftaran.rombongan_pulang_id == Tarif.rombongan_id,
+                Pendaftaran.titik_turun == Tarif.titik_turun
             )
+        ).filter(Pendaftaran.rombongan_pulang_id == rombongan.id, Pendaftaran.status_pulang != 'Tidak Ikut').scalar() or 0
+        
+        total_bus_kembali_seharusnya = db.session.query(func.sum(Tarif.harga_bus)).select_from(Pendaftaran).join(
+            Tarif, and_(
+                (Pendaftaran.rombongan_kembali_id == Tarif.rombongan_id),
+                (Pendaftaran.titik_jemput_kembali == Tarif.titik_turun)
+            )
+        ).filter(Pendaftaran.rombongan_kembali_id == rombongan.id, Pendaftaran.status_kembali != 'Tidak Ikut').scalar() or 0
+        
+        # 2. Hitung Total Fee Pondok Seharusnya (dari semua yang statusnya bukan 'Tidak Ikut')
+        total_pondok_pulang_seharusnya = Pendaftaran.query.filter_by(rombongan_pulang_id=rombongan.id).filter(Pendaftaran.status_pulang != 'Tidak Ikut').count() * 10000
+        total_pondok_kembali_seharusnya = Pendaftaran.query.filter_by(rombongan_kembali_id=rombongan.id).filter(Pendaftaran.status_kembali != 'Tidak Ikut').count() * 10000
+        
+        # 3. Hitung Sisa Setoran berdasarkan total yang seharusnya
+        sisa_setoran_bus_pulang = total_bus_pulang_seharusnya - (rombongan.total_setoran_bus_pulang or 0)
+        sisa_setoran_bus_kembali = total_bus_kembali_seharusnya - (rombongan.total_setoran_bus_kembali or 0)
+        sisa_setoran_pondok_pulang = total_pondok_pulang_seharusnya - (rombongan.total_setoran_pondok_pulang or 0)
+        sisa_setoran_pondok_kembali = total_pondok_kembali_seharusnya - (rombongan.total_setoran_pondok_kembali or 0)
+        
+        # 4. Hitung peserta belum lunas (logika ini tetap sama)
+        peserta_belum_lunas = Pendaftaran.query.filter(
+            or_(Pendaftaran.rombongan_pulang_id == rombongan.id, Pendaftaran.rombongan_kembali_id == rombongan.id),
+            or_(Pendaftaran.status_pulang == 'Belum Bayar', Pendaftaran.status_kembali == 'Belum Bayar')
         ).count()
 
-        # Kalkulasi setoran bus yang siap (Lunas)
-        setoran_bus_pulang = db.session.query(func.sum(Tarif.harga_bus)).join(Pendaftaran, Pendaftaran.titik_turun == Tarif.titik_turun).filter(Pendaftaran.rombongan_pulang_id == rombongan.id, Pendaftaran.status_pulang == 'Lunas', Tarif.rombongan_id == rombongan.id).scalar() or 0
-        setoran_bus_kembali = db.session.query(func.sum(Tarif.harga_bus)).join(Pendaftaran, Pendaftaran.titik_jemput_kembali == Tarif.titik_turun).filter(Pendaftaran.rombongan_kembali_id == rombongan.id, Pendaftaran.status_kembali == 'Lunas', Tarif.rombongan_id == rombongan.id).scalar() or 0
-        setoran_bus_total = setoran_bus_pulang + setoran_bus_kembali
-        
-        # Kalkulasi setoran lain (Fee Korda + Fee Pondok) yang siap (Lunas)
-        setoran_lain_pulang = db.session.query(func.sum(Tarif.fee_korda + 10000)).join(Pendaftaran, Pendaftaran.titik_turun == Tarif.titik_turun).filter(Pendaftaran.rombongan_pulang_id == rombongan.id, Pendaftaran.status_pulang == 'Lunas', Tarif.rombongan_id == rombongan.id).scalar() or 0
-        setoran_lain_kembali = db.session.query(func.sum(Tarif.fee_korda + 10000)).join(Pendaftaran, Pendaftaran.titik_jemput_kembali == Tarif.titik_turun).filter(Pendaftaran.rombongan_kembali_id == rombongan.id, Pendaftaran.status_kembali == 'Lunas', Tarif.rombongan_id == rombongan.id).scalar() or 0
-        setoran_lain_total = setoran_lain_pulang + setoran_lain_kembali
-        
         rombongan_data_list.append({
             'rombongan': rombongan,
-            'sisa_tagihan': sisa_tagihan,
-            'setoran_bus': setoran_bus_total,
-            'setoran_lain': setoran_lain_total
+            'total_bus_pulang_seharusnya': total_bus_pulang_seharusnya,
+            'total_bus_kembali_seharusnya': total_bus_kembali_seharusnya,
+            'total_pondok_pulang_seharusnya': total_pondok_pulang_seharusnya,
+            'total_pondok_kembali_seharusnya': total_pondok_kembali_seharusnya,
+            'sisa_setoran_bus_pulang': sisa_setoran_bus_pulang,
+            'sisa_setoran_bus_kembali': sisa_setoran_bus_kembali,
+            'sisa_setoran_pondok_pulang': sisa_setoran_pondok_pulang,
+            'sisa_setoran_pondok_kembali': sisa_setoran_pondok_kembali,
+            'peserta_belum_lunas': peserta_belum_lunas
         })
-        # --- AKHIR BLOK PERBAIKAN ---
 
+    form_setoran = KonfirmasiSetoranForm()
     return render_template('bendahara_dashboard.html', 
                            saldo_rekening_saya=saldo_rekening_saya,
-                           saldo_rekening_bus=saldo_rekening_bus,
+                           saldo_bus_pulang=saldo_bus_pulang,
+                           saldo_bus_kembali=saldo_bus_kembali,
                            rombongan_data_list=rombongan_data_list,
-                           active_edisi=active_edisi)
+                           active_edisi=active_edisi,
+                           form_setoran=form_setoran)
 
-# 2. Rute Konfirmasi Setoran
 @admin_bp.route('/bendahara/konfirmasi-setor/<int:rombongan_id>', methods=['POST'])
 @login_required
 @role_required('Bendahara Pusat', 'Korpus')
 def konfirmasi_setor(rombongan_id):
     tipe = request.args.get('tipe')
-    nominal = request.form.get('nominal')
     rombongan = Rombongan.query.get_or_404(rombongan_id)
-    active_edisi = get_active_edisi()
-    
-    if not tipe or not nominal:
-        flash("Tipe setoran dan nominal harus diisi.", "danger")
-        return redirect(url_for('admin.bendahara_dashboard'))
+    form = KonfirmasiSetoranForm()
 
-    try:
-        nominal = float(nominal)
-        if nominal <= 0:
-            flash("Nominal harus lebih dari 0.", "danger")
-            return redirect(url_for('admin.bendahara_dashboard'))
-    except ValueError:
-        flash("Nominal tidak valid.", "danger")
-        return redirect(url_for('admin.bendahara_dashboard'))
-
-    if tipe == 'bus':
-        if nominal > 0:
-            transaksi = Transaksi(edisi_id=active_edisi.id, deskripsi=f"Setoran Biaya Bus dari {rombongan.nama_rombongan}", jumlah=nominal, tipe='PEMASUKAN', rekening='REKENING_BUS', user_id=current_user.id)
-            db.session.add(transaksi)
-            rombongan.status_setoran_bus = 'Sudah Setor'
-            rombongan.tanggal_setoran_bus = datetime.utcnow()
-            flash(f'Setoran biaya bus Rp {"{:,.0f}".format(nominal).replace(",", ".")} berhasil dikonfirmasi.', 'success')
-
-    elif tipe == 'fee_pondok':
-        if nominal > 0:
-            transaksi = Transaksi(edisi_id=active_edisi.id, deskripsi=f"Setoran Fee Pondok dari {rombongan.nama_rombongan}", jumlah=nominal, tipe='PEMASUKAN', rekening='REKENING_SAYA', user_id=current_user.id)
-            db.session.add(transaksi)
-            rombongan.status_setoran_fee_pondok = 'Sudah Setor'
-            rombongan.tanggal_setoran_fee_pondok = datetime.utcnow()
-            flash(f'Setoran fee pondok Rp {"{:,.0f}".format(nominal).replace(",", ".")} berhasil dikonfirmasi.', 'success')
+    if form.validate_on_submit():
+        jumlah = form.jumlah_disetor.data
+        
+        rekening_map = {
+            'bus_pulang': ('REKENING_BUS_PULANG', 'Biaya Bus Pulang'),
+            'bus_kembali': ('REKENING_BUS_KEMBALI', 'Biaya Bus Kembali'),
+            'pondok_pulang': ('REKENING_SAYA', 'Fee Pondok Pulang'),
+            'pondok_kembali': ('REKENING_SAYA', 'Fee Pondok Kembali')
+        }
+        
+        if tipe in rekening_map:
+            rekening, deskripsi_prefix = rekening_map[tipe]
             
-    db.session.commit()
+            # --- BLOK KODE BARU UNTUK MENCATAT PEMASUKAN ---
+            # 1. Buat record transaksi baru
+            transaksi = Transaksi(
+                edisi_id=get_active_edisi().id,
+                deskripsi=f"Setoran {deskripsi_prefix} dari {rombongan.nama_rombongan}",
+                jumlah=jumlah,
+                tipe='PEMASUKAN', # Menandakan ini adalah uang masuk
+                rekening=rekening,
+                user_id=current_user.id,
+                rombongan_id=rombongan.id
+            )
+            db.session.add(transaksi)
+            # --- AKHIR BLOK KODE BARU ---
+            
+            # 2. Update total setoran di rombongan (logika ini tetap sama)
+            if tipe == 'bus_pulang':
+                if rombongan.total_setoran_bus_pulang is None:
+                    rombongan.total_setoran_bus_pulang = 0
+                rombongan.total_setoran_bus_pulang += jumlah
+    
+            elif tipe == 'bus_kembali':
+                if rombongan.total_setoran_bus_kembali is None:
+                    rombongan.total_setoran_bus_kembali = 0
+                rombongan.total_setoran_bus_kembali += jumlah
+    
+            elif tipe == 'pondok_pulang':
+                if rombongan.total_setoran_pondok_pulang is None:
+                    rombongan.total_setoran_pondok_pulang = 0
+                rombongan.total_setoran_pondok_pulang += jumlah
+    
+            elif tipe == 'pondok_kembali':
+                if rombongan.total_setoran_pondok_kembali is None:
+                    rombongan.total_setoran_pondok_kembali = 0
+                rombongan.total_setoran_pondok_kembali += jumlah
+            
+            db.session.commit()
+            flash(f"Setoran sebesar Rp {jumlah:,} berhasil dikonfirmasi dan dicatat sebagai pemasukan.", 'success')
+        else:
+            flash("Tipe setoran tidak valid.", "danger")
+    else:
+        # Menampilkan error validasi form jika ada
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f"Error pada input '{getattr(form, field).label.text}': {error}", 'danger')
+
     return redirect(url_for('admin.bendahara_dashboard'))
 
 # 3. Rute Halaman Pengeluaran
-@admin_bp.route('/bendahara/pengeluaran', methods=['GET', 'POST'])
+# Ganti fungsi bendahara_pengeluaran dengan ini
+@admin_bp.route('/bendahara/buku-kas', methods=['GET', 'POST'])
 @login_required
 @role_required('Bendahara Pusat', 'Korpus')
-def bendahara_pengeluaran():
+def bendahara_buku_kas():
     active_edisi = get_active_edisi()
     form = TransaksiForm()
     
@@ -3413,17 +3463,51 @@ def bendahara_pengeluaran():
         db.session.add(pengeluaran)
         db.session.commit()
         flash('Data pengeluaran berhasil dicatat.', 'success')
-        return redirect(url_for('admin.bendahara_pengeluaran'))
+        return redirect(url_for('admin.bendahara_buku_kas'))
 
     # Hitung saldo untuk ditampilkan
     pemasukan_saya = db.session.query(func.sum(Transaksi.jumlah)).filter_by(edisi_id=active_edisi.id, tipe='PEMASUKAN', rekening='REKENING_SAYA').scalar() or 0
     pengeluaran_saya = db.session.query(func.sum(Transaksi.jumlah)).filter_by(edisi_id=active_edisi.id, tipe='PENGELUARAN', rekening='REKENING_SAYA').scalar() or 0
     saldo_rekening_saya = pemasukan_saya - pengeluaran_saya
     
-    # Ambil riwayat pengeluaran
-    riwayat_pengeluaran = Transaksi.query.filter_by(edisi_id=active_edisi.id, tipe='PENGELUARAN').order_by(Transaksi.tanggal.desc()).all()
+    # --- PERUBAHAN DI SINI ---
+    # Ambil riwayat SEMUA transaksi (Pemasukan dan Pengeluaran)
+    riwayat_transaksi = Transaksi.query.filter(
+        Transaksi.edisi_id == active_edisi.id,
+        Transaksi.rekening == 'REKENING_SAYA' # Hanya dari Rekening Saya
+    ).order_by(Transaksi.tanggal.desc()).all()
 
-    return render_template('bendahara_pengeluaran.html', 
+    return render_template('bendahara_buku_kas.html', 
                            form=form, 
                            saldo_rekening_saya=saldo_rekening_saya,
-                           riwayat_pengeluaran=riwayat_pengeluaran)
+                           riwayat_transaksi=riwayat_transaksi)
+
+
+@admin_bp.route('/bendahara/buku-kas-bus')
+@login_required
+@role_required('Bendahara Pusat', 'Korpus')
+def bendahara_buku_kas_bus():
+    active_edisi = get_active_edisi()
+    if not active_edisi:
+        flash("Tidak ada edisi aktif.", "warning")
+        return render_template('bendahara_buku_kas_bus.html', active_edisi=None)
+
+    # Hitung saldo untuk setiap rekening bus
+    def get_saldo(rekening):
+        pemasukan = db.session.query(func.sum(Transaksi.jumlah)).filter_by(edisi_id=active_edisi.id, tipe='PEMASUKAN', rekening=rekening).scalar() or 0
+        pengeluaran = db.session.query(func.sum(Transaksi.jumlah)).filter_by(edisi_id=active_edisi.id, tipe='PENGELUARAN', rekening=rekening).scalar() or 0
+        return pemasukan - pengeluaran
+
+    saldo_bus_pulang = get_saldo('REKENING_BUS_PULANG')
+    saldo_bus_kembali = get_saldo('REKENING_BUS_KEMBALI')
+
+    # Ambil riwayat SEMUA transaksi yang berkaitan dengan rekening bus
+    riwayat_transaksi_bus = Transaksi.query.filter(
+        Transaksi.edisi_id == active_edisi.id,
+        Transaksi.rekening.in_(['REKENING_BUS_PULANG', 'REKENING_BUS_KEMBALI'])
+    ).order_by(Transaksi.tanggal.desc()).all()
+
+    return render_template('bendahara_buku_kas_bus.html', 
+                           saldo_bus_pulang=saldo_bus_pulang,
+                           saldo_bus_kembali=saldo_bus_kembali,
+                           riwayat_transaksi_bus=riwayat_transaksi_bus)
