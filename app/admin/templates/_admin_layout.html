@@ -689,7 +689,7 @@
         </li>
         
         <li class="nav-heading">Manajemen Event</li>
-        {% if current_user.role.name in ['Korpus', 'Korda', 'Korwil'] %}
+        {% if current_user.role.name in ['Korpus', 'Korda', 'Korwil', 'Bendahara Pusat'] %}
         <li class="nav-item">
             <a href="{{ url_for('admin.manajemen_rombongan') }}" 
                class="nav-link {{ 'active' if 'manajemen_rombongan' in request.endpoint else '' }}">
@@ -723,7 +723,7 @@
             </a>
         </li>
         {% endif %}
-        {% if current_user.role.name in ['Korpus', 'Korwil', 'Korda'] %}
+        {% if current_user.role.name in ['Korpus', 'Korwil', 'Korda', 'Bendahara Pusat'] %}
         <li class="nav-item">
             <a href="{{ url_for('admin.manajemen_santri_wilayah') }}" 
                class="nav-link {{ 'active' if 'manajemen_santri_wilayah' in request.endpoint else '' }}">
@@ -751,7 +751,7 @@
             </a>
         </li>
         {% endif %}
-        {% if current_user.role.name in ['Korpus', 'Korda', 'Korwil'] %}
+        {% if current_user.role.name in ['Korpus', 'Korda', 'Korwil', 'Bendahara Pusat'] %}
         <li class="nav-heading">Manajemen Keuangan</li>
         <li class="nav-item">
             <a href="{{ url_for('admin.manajemen_keuangan') }}" 
