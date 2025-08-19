@@ -246,6 +246,28 @@
         --bs-pagination-active-bg: var(--primary-color);
         --bs-pagination-active-border-color: var(--primary-color);
     }
+    @media (max-width: 800px) {
+  .enhanced-table td, 
+  .enhanced-table th {
+    font-size: 0.75rem;       /* kecilkan teks */
+    white-space: nowrap;      /* jangan bungkus teks ke bawah */
+  }
+
+  /* beri lebar minimum untuk kolom tertentu */
+  .enhanced-table th:nth-child(2),
+  .enhanced-table td:nth-child(2) {
+    min-width: 140px; /* Data Santri */
+  }
+  .enhanced-table th:nth-child(3),
+  .enhanced-table td:nth-child(3) {
+    min-width: 120px; /* Rombongan */
+  }
+  .enhanced-table th:nth-child(4),
+  .enhanced-table td:nth-child(4) {
+    min-width: 150px; /* Titik Turun/Jemput */
+  }
+}
+
 </style>
 
 <div class="page-header">

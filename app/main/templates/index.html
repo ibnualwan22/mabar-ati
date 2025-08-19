@@ -4,7 +4,12 @@
 
 {% block content %}
 <header id="header-masthead" class="masthead" style="background-image: url('{{ url_for("static", filename="assets/img/header-bg.jpg") }}');">
-        <div class="container">
+    <div class="hero-slider" aria-hidden="true">
+    <div class="hero-track" id="heroTrack">
+        </div>
+  </div>
+        !-- KONTEN HEADER KAMU
+  <div class="container position-relative">
             <div class="masthead-subheading">Selamat Datang di Platform Koordinasi Perpulangan</div>
             <div class="masthead-heading text-uppercase">Mabar Ati</div>
             {% if active_edisi and active_edisi.countdown_target_date %}
@@ -618,8 +623,8 @@
     <style>
         
     </style>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-        <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+        <!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="{{ url_for('static', filename='js/scripts.js') }}"></script> -->
 <script>
 const countdownElement = document.getElementById('countdown');
     // Ambil tanggal target dari data yang dikirim Flask/Jinja2
@@ -659,28 +664,63 @@ const countdownElement = document.getElementById('countdown');
     });
 }
 document.addEventListener('DOMContentLoaded', function () {
-        const header = document.getElementById('header-masthead');
+  // 1) Daftar gambar
+  const images = [
+    "{{ url_for('static', filename='assets/img/header-bg.jpg') }}",
+    "{{ url_for('static', filename='assets/img/header-bg-2.jpg') }}",
+    "{{ url_for('static', filename='assets/img/header-bg-3.jpg') }}"
+  ];
 
-        // Daftar URL gambar (kamu bisa tambahkan sesuai kebutuhan)
-        const images = [
-            "{{ url_for('static', filename='assets/img/header-bg.jpg') }}",
-            "{{ url_for('static', filename='assets/img/header-bg-2.jpg') }}",
-            "{{ url_for('static', filename='assets/img/header-bg-3.jpg') }}"
-        ];
+  // 2) Bangun slide
+  const track = document.getElementById('heroTrack');
+  images.forEach(src => {
+    const slide = document.createElement('div');
+    slide.className = 'hero-slide';
+    slide.style.backgroundImage = `url('${src}')`;
+    track.appendChild(slide);
+  });
 
-        let index = 0;
-        const changeInterval = 5000; // 5 detik
-        const transitionDuration = 1000; // 1 detik
+  // 3) State & helper
+  let index = 0;
+  const total = images.length;
+  const delay = 5000; // 5 dtk
+  let timer;
 
-        // Tambahkan style transition agar transisinya smooth
-        header.style.transition = `background-image ${transitionDuration}ms ease-in-out`;
+  function go(i){
+    index = (i + total) % total;
+    track.style.transform = `translateX(${ -index * 100 }%)`;
+  }
 
-        setInterval(() => {
-            index = (index + 1) % images.length;
-            // Ganti background image
-            header.style.backgroundImage = `url('${images[index]}')`;
-        }, changeInterval);
-    });
+  function start(){
+    stop();
+    timer = setInterval(() => go(index + 1), delay);
+  }
+  function stop(){ if (timer) clearInterval(timer); }
+
+  // 4) Mulai
+  go(0);
+  start();
+
+  // Pause saat tab tidak terlihat (hemat & hindari loncat)
+  document.addEventListener('visibilitychange', () => {
+    document.hidden ? stop() : start();
+  });
+
+  // (Opsional) dukungan swipe di header
+  let sx = null;
+  const header = document.getElementById('header-masthead');
+  header.addEventListener('touchstart', e => sx = e.touches[0].clientX, {passive:true});
+  header.addEventListener('touchend', e => {
+    if (sx == null) return;
+    const dx = e.changedTouches[0].clientX - sx;
+    if (Math.abs(dx) > 50){
+      stop();
+      go(index + (dx < 0 ? 1 : -1));
+      start();
+    }
+    sx = null;
+  });
+});
 
 class PhotoSlider {
             constructor() {

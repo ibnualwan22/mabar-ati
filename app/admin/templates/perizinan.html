@@ -240,6 +240,51 @@
     .empty-state { text-align: center; padding: 2rem; color: var(--text-secondary); }
     .empty-state i { font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.6; }
 
+    /* === Responsive table: < 800px === */
+@media (max-width: 800px) {
+  /* Kecilkan font & cegah teks numpuk ke bawah */
+  .table thead th,
+  .table tbody td {
+    font-size: 0.8rem;
+    white-space: nowrap;          /* teks tidak membungkus (biar tabel melebar) */
+  }
+
+  /* Tetapkan min-width agar kolom penting tidak mengecil parah */
+  .table thead th:nth-child(2),
+  .table tbody td:nth-child(2) {  /* Nama Santri */
+    min-width: 160px;
+  }
+  .table thead th:nth-child(4),
+  .table tbody td:nth-child(4) {  /* Asrama */
+    min-width: 120px;
+  }
+  .table thead th:nth-child(5),
+  .table tbody td:nth-child(5) {  /* Alamat */
+    min-width: 180px;
+  }
+  .table thead th:nth-child(6),
+  .table tbody td:nth-child(6) {  /* Izin Sampai */
+    min-width: 140px;
+  }
+  /* Jika role Korpus/Keamanan, kolom 7=Keterangan, 8=Aksi */
+  .table thead th:nth-child(7),
+  .table tbody td:nth-child(7) {  /* Keterangan */
+    min-width: 200px;
+    /* kalau mau tetap bisa baris-baru di kolom keterangan saja, hapus komentar di bawah */
+    /* white-space: normal; */
+  }
+  .table thead th:nth-child(8),
+  .table tbody td:nth-child(8) {  /* Aksi */
+    min-width: 130px;
+  }
+
+  /* Pastikan wrapper bisa scroll horizontal */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 </style>
 
 <div class="perizinan-container">
@@ -356,51 +401,56 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for izin in semua_izin %}
-                    <td><strong>{{ loop.index }}</strong></td>
-                        <td>
-                           
-                                <strong>{{ izin.santri.nama }}</strong>
-                            </div>
-                        </td>
-                        <td>
-                            {% if izin.santri.jenis_kelamin == 'PUTRA' %}
-                            <span class="badge badge-putra"><i class="fas fa-mars me-1"></i>Putra</span>
-                            {% elif izin.santri.jenis_kelamin == 'PUTRI' %}
-                            <span class="badge badge-putri"><i class="fas fa-venus me-1"></i>Putri</span>
-                            {% else %}
-                            <span class="badge" style="background: var(--text-secondary); color: white;">{{ izin.santri.jenis_kelamin }}</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ izin.santri.asrama }}</td>
-                        <td>{{ izin.santri.kabupaten }}</td>
-                        <td>{{ izin.tanggal_berakhir|date_wib }}</td>
-                        {% if current_user.role.name in ['Korpus', 'Keamanan'] %}
-                        <td>
-                            <div style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ izin.keterangan }}">
-                                {{ izin.keterangan }}
-                            </div>
-                        </td>
-                        <td>
-                            <div class="d-flex gap-2">
-                                <a href="{{ url_for('admin.edit_izin', izin_id=izin.id) }}" class="btn btn-action btn-edit">Edit</a>
-                                <form method="POST" action="{{ url_for('admin.cabut_izin', izin_id=izin.id) }}" style="display:inline;" onsubmit="return confirm('⚠️ Anda yakin ingin mencabut izin ini?');">
-                                    <button type="submit" class="btn btn-action btn-danger">Cabut</button>
-                                </form>
-                            </div>
-                        </td>
-                        {% endif %}
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="{% if current_user.role.name in ['Korpus', 'Keamanan'] %}8{% else %}6{% endif %}" class="empty-state">
-                            <i class="fas fa-inbox"></i>
-                            <h5>Tidak ada data izin</h5>
-                            <p class="text-muted">{% if view_mode == 'aktif' %}Belum ada izin aktif saat ini{% else %}Belum ada riwayat izin yang tersimpan{% endif %}</p>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
+  {% for izin in semua_izin %}
+  <tr>
+    <td><strong>{{ loop.index }}</strong></td>
+    <td><strong>{{ izin.santri.nama }}</strong></td>
+    <td>
+      {% if izin.santri.jenis_kelamin == 'PUTRA' %}
+        <span class="badge badge-putra"><i class="fas fa-mars me-1"></i>Putra</span>
+      {% elif izin.santri.jenis_kelamin == 'PUTRI' %}
+        <span class="badge badge-putri"><i class="fas fa-venus me-1"></i>Putri</span>
+      {% else %}
+        <span class="badge" style="background: var(--text-secondary); color: #fff;">
+          {{ izin.santri.jenis_kelamin }}
+        </span>
+      {% endif %}
+    </td>
+    <td>{{ izin.santri.asrama }}</td>
+    <td>{{ izin.santri.kabupaten }}</td>
+    <td>{{ izin.tanggal_berakhir|date_wib }}</td>
+
+    {% if current_user.role.name in ['Korpus', 'Keamanan'] %}
+    <td>
+      <div style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+           title="{{ izin.keterangan }}">
+        {{ izin.keterangan }}
+      </div>
+    </td>
+    <td>
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('admin.edit_izin', izin_id=izin.id) }}" class="btn btn-action btn-edit">Edit</a>
+        <form method="POST" action="{{ url_for('admin.cabut_izin', izin_id=izin.id) }}"
+              onsubmit="return confirm('⚠️ Anda yakin ingin mencabut izin ini?');">
+          <button type="submit" class="btn btn-action btn-danger">Cabut</button>
+        </form>
+      </div>
+    </td>
+    {% endif %}
+  </tr>
+  {% else %}
+  <tr>
+    <td colspan="{% if current_user.role.name in ['Korpus', 'Keamanan'] %}8{% else %}6{% endif %}" class="empty-state">
+      <i class="fas fa-inbox"></i>
+      <h5>Tidak ada data izin</h5>
+      <p class="text-muted">
+        {% if view_mode == 'aktif' %}Belum ada izin aktif saat ini{% else %}Belum ada riwayat izin yang tersimpan{% endif %}
+      </p>
+    </td>
+  </tr>
+  {% endfor %}
+</tbody>
+
             </table>
         </div>
         

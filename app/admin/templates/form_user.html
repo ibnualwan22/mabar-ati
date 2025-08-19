@@ -1,59 +1,549 @@
 {% extends "_admin_layout.html" %}
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
-    <h1>{{ title }}</h1>
-    <a href="{{ url_for('admin.manajemen_user') }}">&larr; Kembali ke Manajemen User</a>
-    <form method="POST" style="margin-top: 2rem;">
-        {{ form.hidden_tag() }}
+<div class="user-form-container">
+    <!-- Breadcrumb & Header -->
+    <div class="page-breadcrumb">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{{ url_for('admin.manajemen_user') }}">
+                        <i class="icon-users"></i>
+                        Manajemen User
+                    </a>
+                </li>
+                <li class="breadcrumb-item active">{{ title }}</li>
+            </ol>
+        </nav>
+    </div>
 
-        <div class="form-group form-grid">
-            {{ form.username.label }}
-            {{ form.username() }}
+    <div class="form-header">
+        <div class="form-header-content">
+            <div class="form-icon">
+                {% if 'Tambah' in title %}
+                    <i class="icon-user-plus"></i>
+                {% else %}
+                    <i class="icon-user-edit"></i>
+                {% endif %}
+            </div>
+            <div class="form-title-group">
+                <h1 class="form-title">{{ title }}</h1>
+                <p class="form-subtitle">
+                    {% if 'Tambah' in title %}
+                        Buat akun pengguna baru untuk sistem
+                    {% else %}
+                        Perbarui informasi pengguna yang ada
+                    {% endif %}
+                </p>
+            </div>
         </div>
-        <div class="form-group form-grid">
-            {{ form.password.label }}
-            {{ form.password() }}
-        </div>
-        <div class="form-group form-grid">
-            {{ form.confirm_password.label }}
-            {{ form.confirm_password() }}
-        </div>
-        <div class="form-group form-grid">
-            {{ form.role.label }}
-            {{ form.role() }}
-        </div>
-        
-        <div class="form-group form-grid" id="field-korwil" style="display: none;">
-            {{ form.managed_rombongan_multi.label }}
-            {{ form.managed_rombongan_multi() }}
-        </div>
-        
-        <div class="form-group form-grid" id="field-korda" style="display: none;">
-            {{ form.managed_rombongan_single.label }}
-            {{ form.managed_rombongan_single() }}
+    </div>
+
+    <!-- Form Card -->
+    <div class="form-card">
+        <div class="form-card-header">
+            <h3>Informasi Akun</h3>
+            <span class="form-step">Langkah 1 dari 1</span>
         </div>
 
-        <div class="form-group" style="padding-left: 165px;">
-            {{ form.submit(class="btn btn-primary") }}
+        <div class="form-card-body">
+            <form method="POST" id="userForm">
+                {{ form.hidden_tag() }}
+
+                <!-- Basic Information Section -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h4>Informasi Dasar</h4>
+                        <p>Masukkan detail akun pengguna</p>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="username" class="form-label">
+                                <i class="icon-user"></i>
+                                {{ form.username.label.text }}
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.username(class="form-control", placeholder="Masukkan username") }}
+                            <div class="form-help">Username harus unik dan mudah diingat</div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="password" class="form-label">
+                                <i class="icon-lock"></i>
+                                {{ form.password.label.text }}
+                                <span class="required">*</span>
+                            </label>
+                            <div class="password-input-group">
+                                {{ form.password(class="form-control", placeholder="Masukkan password") }}
+                                <button type="button" class="password-toggle" onclick="togglePassword('password')">
+                                    <i class="icon-eye" id="password-eye"></i>
+                                </button>
+                            </div>
+                            <div class="form-help">Minimal 8 karakter, kombinasi huruf dan angka</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="confirm_password" class="form-label">
+                                <i class="icon-lock"></i>
+                                {{ form.confirm_password.label.text }}
+                                <span class="required">*</span>
+                            </label>
+                            <div class="password-input-group">
+                                {{ form.confirm_password(class="form-control", placeholder="Konfirmasi password") }}
+                                <button type="button" class="password-toggle" onclick="togglePassword('confirm_password')">
+                                    <i class="icon-eye" id="confirm_password-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Role Section -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h4>Peran & Akses</h4>
+                        <p>Tentukan tingkat akses pengguna</p>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="role" class="form-label">
+                                <i class="icon-shield"></i>
+                                {{ form.role.label.text }}
+                                <span class="required">*</span>
+                            </label>
+                            {{ form.role(class="form-select") }}
+                            <div class="form-help">Pilih peran yang sesuai dengan tanggung jawab pengguna</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rombongan Management Section -->
+                <div class="form-section" id="rombongan-section" style="display: none;">
+                    <div class="section-header">
+                        <h4>Manajemen Rombongan</h4>
+                        <p>Tentukan rombongan yang akan dikelola</p>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group" id="field-korwil" style="display: none;">
+                            <label for="managed_rombongan_multi" class="form-label">
+                                <i class="icon-users"></i>
+                                {{ form.managed_rombongan_multi.label.text }}
+                            </label>
+                            {{ form.managed_rombongan_multi(class="form-select", multiple=true) }}
+                            <div class="form-help">Pilih beberapa rombongan untuk dikelola (tahan Ctrl untuk memilih lebih dari satu)</div>
+                        </div>
+
+                        <div class="form-group" id="field-korda" style="display: none;">
+                            <label for="managed_rombongan_single" class="form-label">
+                                <i class="icon-user-group"></i>
+                                {{ form.managed_rombongan_single.label.text }}
+                            </label>
+                            {{ form.managed_rombongan_single(class="form-select") }}
+                            <div class="form-help">Pilih satu rombongan untuk dikelola</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Section -->
+                <div class="form-actions">
+                    <div class="form-actions-left">
+                        <a href="{{ url_for('admin.manajemen_user') }}" class="btn btn-secondary">
+                            <i class="icon-arrow-left"></i>
+                            Batal
+                        </a>
+                    </div>
+                    <div class="form-actions-right">
+                        {{ form.submit(class="btn btn-primary btn-submit") }}
+                        <i class="icon-check"></i>
+                    </div>
+                </div>
+            </form>
         </div>
-    </form>
+    </div>
+</div>
+
+<style>
+.user-form-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+/* Breadcrumb */
+.page-breadcrumb {
+    margin-bottom: 24px;
+}
+
+.breadcrumb {
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+.breadcrumb-item {
+    color: #6c757d;
+}
+
+.breadcrumb-item a {
+    color: #6c757d;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.breadcrumb-item a:hover {
+    color: #495057;
+}
+
+.breadcrumb-item.active {
+    color: #495057;
+    font-weight: 500;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    content: "›";
+    color: #adb5bd;
+    font-weight: bold;
+}
+
+/* Form Header */
+.form-header {
+    margin-bottom: 32px;
+}
+
+.form-header-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.form-icon {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 24px;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.form-title {
+    margin: 0 0 8px 0;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.form-subtitle {
+    margin: 0;
+    color: #6c757d;
+    font-size: 1.1rem;
+}
+
+/* Form Card */
+.form-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    border: 1px solid #e9ecef;
+}
+
+.form-card-header {
+    background: #f8f9fa;
+    padding: 24px;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.form-card-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #212529;
+}
+
+.form-step {
+    background: #e7f3ff;
+    color: #0066cc;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.form-card-body {
+    padding: 32px;
+}
+
+/* Form Sections */
+.form-section {
+    margin-bottom: 40px;
+}
+
+.form-section:last-child {
+    margin-bottom: 0;
+}
+
+.section-header {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #f8f9fa;
+}
+
+.section-header h4 {
+    margin: 0 0 8px 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #212529;
+}
+
+.section-header p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+/* Form Elements */
+.form-row {
+    display: grid;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.form-row:has(.form-group:nth-child(2)) {
+    grid-template-columns: 1fr 1fr;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.875rem;
+}
+
+.form-label i {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.required {
+    color: #ef4444;
+    font-size: 0.875rem;
+}
+
+.form-control, .form-select {
+    padding: 12px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.form-control:focus, .form-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.form-select[multiple] {
+    min-height: 120px;
+}
+
+.password-input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.password-toggle:hover {
+    color: #374151;
+    background: #f9fafb;
+}
+
+.form-help {
+    margin-top: 6px;
+    font-size: 0.75rem;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
+/* Form Actions */
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 2px solid #f8f9fa;
+}
+
+.form-actions-right {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+    background: #f8f9fa;
+    color: #6c757d;
+    border: 1px solid #e9ecef;
+}
+
+.btn-secondary:hover {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.btn-submit {
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-submit i {
+    margin-left: 4px;
+}
+
+/* Icons */
+.icon-users::before { content: "👥"; }
+.icon-user-plus::before { content: "👤➕"; }
+.icon-user-edit::before { content: "👤✏️"; }
+.icon-user::before { content: "👤"; }
+.icon-lock::before { content: "🔒"; }
+.icon-shield::before { content: "🛡️"; }
+.icon-user-group::before { content: "👨‍👩‍👧‍👦"; }
+.icon-arrow-left::before { content: "←"; }
+.icon-check::before { content: "✓"; }
+.icon-eye::before { content: "👁️"; }
+.icon-eye-slash::before { content: "🙈"; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .user-form-container {
+        padding: 16px;
+    }
+    
+    .form-header-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 16px;
+    }
+    
+    .form-card-body {
+        padding: 24px 20px;
+    }
+    
+    .form-row:has(.form-group:nth-child(2)) {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .form-actions-left,
+    .form-actions-right {
+        width: 100%;
+    }
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Animation for showing sections */
+.form-section {
+    opacity: 1;
+    transition: opacity 0.3s ease, max-height 0.3s ease;
+}
+
+.form-section[style*="display: none"] {
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+}
+</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const roleSelect = document.getElementById('role');
     const fieldKorwil = document.getElementById('field-korwil');
     const fieldKorda = document.getElementById('field-korda');
+    const rombonganSection = document.getElementById('rombongan-section');
 
     function toggleRombonganFields() {
         const selectedRoleText = roleSelect.options[roleSelect.selectedIndex].text;
         
         if (selectedRoleText === 'Korwil') {
-            fieldKorwil.style.display = 'grid';
+            rombonganSection.style.display = 'block';
+            fieldKorwil.style.display = 'flex';
             fieldKorda.style.display = 'none';
         } else if (selectedRoleText === 'Korda') {
+            rombonganSection.style.display = 'block';
             fieldKorwil.style.display = 'none';
-            fieldKorda.style.display = 'grid';
+            fieldKorda.style.display = 'flex';
         } else {
+            rombonganSection.style.display = 'none';
             fieldKorwil.style.display = 'none';
             fieldKorda.style.display = 'none';
         }
@@ -63,6 +553,33 @@ document.addEventListener('DOMContentLoaded', function() {
     toggleRombonganFields();
     // Panggil saat role diganti
     roleSelect.addEventListener('change', toggleRombonganFields);
+
+    // Form validation
+    const form = document.getElementById('userForm');
+    form.addEventListener('submit', function(e) {
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirm_password').value;
+        
+        if (password !== confirmPassword) {
+            e.preventDefault();
+            alert('Password dan konfirmasi password tidak cocok!');
+            return false;
+        }
+    });
 });
+
+// Password toggle function
+function togglePassword(fieldId) {
+    const field = document.getElementById(fieldId);
+    const eyeIcon = document.getElementById(fieldId + '-eye');
+    
+    if (field.type === 'password') {
+        field.type = 'text';
+        eyeIcon.className = 'icon-eye-slash';
+    } else {
+        field.type = 'password';
+        eyeIcon.className = 'icon-eye';
+    }
+}
 </script>
 {% endblock %}

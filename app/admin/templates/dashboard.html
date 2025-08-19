@@ -140,8 +140,8 @@
                         {% for rombongan in semua_rombongan %}
                         <tr>
                             <td><strong>{{ rombongan.nama_rombongan }}</strong></td>
-                            <td>{{ rombongan.jumlah_peserta_pulang }}</td>
-                            <td>{{ rombongan.jumlah_peserta_kembali }}</td>
+                            <td>{{ rombongan.pendaftar_pulang|length }}</td>
+                            <td>{{ rombongan.pendaftar_kembali|length }}</td>
                             <td>{{ (rombongan.pendaftar_pulang|selectattr('status_pulang', 'equalto', 'Lunas')|list|length) + (rombongan.pendaftar_kembali|selectattr('status_kembali', 'equalto', 'Lunas')|list|length) }}</td>
                             <td>{{ (rombongan.pendaftar_pulang|selectattr('status_pulang', 'equalto', 'Belum Bayar')|list|length) + (rombongan.pendaftar_kembali|selectattr('status_kembali', 'equalto', 'Belum Bayar')|list|length) }}</td>
                             <td>{{ rombongan.pendaftar_pulang|length + rombongan.pendaftar_kembali|length }} / {{ (rombongan.buses|sum(attribute='kuota') or 0) * 2 }}</td>
