@@ -10963,7 +10963,32 @@ header.masthead .masthead-heading {
   margin-bottom: 2rem;
   font-family: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
+.masthead-heading .subtitle {
+  display: block;       /* biar pindah baris */
+  font-size: 3rem;      /* lebih kecil dari judul */
+  font-weight: normal;  /* tidak tebal */
+  margin-top: 0.3em;    /* beri jarak sedikit */
+}
+@media (max-width: 800px) {
+  .masthead-heading {
+    font-size: 1.6rem;   /* judul mengecil */
+  }
 
+  .masthead-heading .subtitle {
+    font-size: 1rem;  /* subtitle lebih kecil */
+  }
+}
+
+/* Lebih kecil lagi (contoh HP di bawah 500px) */
+@media (max-width: 500px) {
+  .masthead-heading {
+    font-size: 1.3rem;
+  }
+
+  .masthead-heading .subtitle {
+    font-size: 1rem;
+  }
+}
 @media (min-width: 768px) {
   header.masthead {
     padding-top: 17rem;
@@ -10981,6 +11006,7 @@ header.masthead .masthead-heading {
     line-height: 4.5rem;
     margin-bottom: 4rem;
   }
+  
 }
 #portfolio .portfolio-item {
   max-width: 26rem;
@@ -12232,4 +12258,26 @@ section#contact form#contactForm :-ms-input-placeholder {
 /* Opsional: responsif tinggi */
 @media (min-width: 992px){
   .masthead{ min-height: 80vh; }
+}
+/* Countdown di hero */
+#countdown{
+  /* ukuran responsif: min 20px, ideal skala 5vw, max 64px */
+  font-size: clamp(1.25rem, 5vw, 4rem);
+  font-weight: 800;
+  color: #FFC107;                     /* kuning seperti contohmu */
+  line-height: 1.1;
+  margin-bottom: 1rem;
+  letter-spacing: .5px;
+  font-variant-numeric: tabular-nums; /* angka rata, tidak goyang */
+  text-shadow: 0 2px 6px rgba(0,0,0,.45); /* biar kontras di atas foto */
+  /* opsional: beri jarak antar “blok” angka+huruf */
+  word-spacing: .25rem;
+}
+
+/* Jika mau beda ukuran di HP kecil */
+@media (max-width: 480px){
+  #countdown{
+    font-size: clamp(1rem, 7vw, 2.25rem);
+    word-spacing: .15rem;
+  }
 }
