@@ -917,6 +917,17 @@
                 <i class="fas fa-clipboard-list"></i> Log Aktivitas
             </a>
         </li>
+        <li class="nav-heading">Pengaturan Akun</li>
+        <li class="nav-item">
+    <a href="{{ url_for('admin.profil_saya') }}" class="nav-link {{ 'active' if 'profil_saya' in request.endpoint else '' }}">
+        <i class="fas fa-user-circle"></i> Profil Saya
+    </a>
+</li>
+<li class="nav-item">
+    <a href="{{ url_for('admin.ganti_password') }}" class="nav-link {{ 'active' if 'ganti_password' in request.endpoint else '' }}">
+        <i class="fas fa-key"></i> Ganti Password
+    </a>
+</li>
     </ul>
 </nav>
 
@@ -926,7 +937,7 @@
     {% if active_edisi %}
     <div class="alert alert-primary text-center mb-0" role="alert">
         <i class="fas fa-info-circle me-2"></i>
-        Irrashaimasi Irasshaimase, {{ current_user.username }} <span class="badge bg-primary-subtle text-primary fw-semibold small"> {{ current_user.role.name }} </span>, Anda sedang berada di Perpulangan Edisi: <strong>{{ active_edisi.nama }}</strong>
+        Irasshaimase, {{ current_user.username }} <span class="badge bg-primary-subtle text-primary fw-semibold small"> {{ current_user.role.name }} </span>, Anda sedang berada di Perpulangan Edisi: <strong>{{ active_edisi.nama }}</strong>
     </div>
     {% endif %}
     

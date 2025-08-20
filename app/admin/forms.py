@@ -265,8 +265,31 @@ class TransaksiForm(FlaskForm):
     jumlah = IntegerField('Jumlah (Rp)', validators=[DataRequired()])
     submit = SubmitField('Catat Pengeluaran')
 
+class PengeluaranBusForm(FlaskForm):
+    deskripsi = StringField('Deskripsi Pengeluaran', validators=[DataRequired()])
+    jumlah = IntegerField('Jumlah (Rp)', validators=[DataRequired()])
+    # Dropdown untuk memilih sumber dana bus
+    rekening = SelectField('Ambil Dana dari Rekening', choices=[
+        ('REKENING_BUS_PULANG', 'Rekening Bus Pulang'),
+        ('REKENING_BUS_KEMBALI', 'Rekening Bus Kembali')
+    ], validators=[DataRequired()])
+    submit = SubmitField('Catat Pengeluaran Bus')
+
 class KonfirmasiSetoranForm(FlaskForm):
     jumlah_disetor = IntegerField('Nominal yang Disetor', 
                                   validators=[DataRequired(), NumberRange(min=1, message="Jumlah harus lebih dari 0")])
     submit = SubmitField('Konfirmasi')
+
+class ChangePasswordForm(FlaskForm):
+    current_password = PasswordField('Password Saat Ini', validators=[DataRequired()])
+    new_password = PasswordField('Password Baru', validators=[
+        DataRequired(),
+        Length(min=6, message='Password minimal harus 6 karakter.')
+    ])
+    confirm_password = PasswordField('Konfirmasi Password Baru', validators=[
+        DataRequired(),
+        EqualTo('new_password', message='Konfirmasi password tidak cocok dengan password baru.')
+    ])
+    submit = SubmitField('Ganti Password')
+
 

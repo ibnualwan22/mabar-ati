@@ -1,0 +1,236 @@
+{% extends "_admin_layout.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-user-circle me-2"></i>{{ title }}</h4>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Username</label>
+                    <p class="form-control-plaintext">{{ current_user.username }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Peran (Role)</label>
+                    <p class="form-control-plaintext">
+                        <span class="badge bg-success fs-6">{{ current_user.role.name }}</span>
+                    </p>
+                </div>
+                
+                <hr>
+                
+                <h5 class="mt-4">Panduan Penggunaan</h5>
+                <div class="accordion" id="panduanAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingOne">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                                Panduan untuk Peran: <strong>{{ current_user.role.name }}</strong>
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse show" data-bs-parent="#panduanAccordion">
+                            <div class="accordion-body">
+                                {# --- AWAL KONTEN PANDUAN --- #}
+
+                                {% if current_user.role.name == 'Korda' %}
+                                    <p>Selamat datang, para Koordinator Daerah! 👋</p>
+                                    <p>Panduan ini akan memandu Anda langkah demi langkah dalam menggunakan sistem Mabar-Ati untuk mengelola rombongan dan mendaftarkan santri di wilayah Anda.</p>
+                                    <hr>
+
+                                    <h4>1. Login ke Sistem 🔑</h4>
+                                    <ul>
+                                        <li>Buka browser Anda dan kunjungi alamat URL admin panel berikut: <a href="https://mabarati.amtsilatipusat.com/admin" target="_blank">https://mabarati.amtsilatipusat.com/admin</a></li>
+                                        <li>Masukkan <strong>Username</strong> dan <strong>Password</strong> yang sudah didaftarkan oleh Korpus.</li>
+                                        <li>Klik tombol <strong>Login</strong>.</li>
+                                    </ul>
+
+                                    <h4>2. Mengenal Dashboard Anda 🖥️</h4>
+                                    <ul>
+                                        <li><strong>Statistik:</strong> Angka-angka di dashboard adalah rangkuman data yang relevan **hanya untuk rombongan yang Anda kelola**.</li>
+                                        <li><strong>Sidebar:</strong> Menu navigasi di sebelah kiri hanya menampilkan menu yang sesuai dengan hak akses Anda.</li>
+                                    </ul>
+                                    
+                                    <h4>3. Langkah Awal: Mengelola Rombongan & Bus 🚌</h4>
+                                    <p>Sebelum mendaftarkan santri, pastikan data rombongan dan bus Anda sudah benar dan lengkap.</p>
+                                    <h5>3.1. Periksa Detail Rombongan</h5>
+                                    <ul>
+                                        <li>Klik menu <strong>Manajemen Rombongan</strong>.</li>
+                                        <li>Cari kartu rombongan Anda dan klik tombol <strong>Edit</strong> untuk memperbarui detail PJ, kontak, dan jadwal.</li>
+                                    </ul>
+                                    <h5>3.2. Mengisi Detail Tarif (Wajib)</h5>
+                                    <ul>
+                                        <li>Di halaman Edit Rombongan, gulir ke bawah ke bagian <strong>Detail Harga Titik Turun / Jemput</strong>.</li>
+                                        <li>Pastikan Anda sudah mengisi semua kemungkinan titik turun beserta harganya, karena ini akan menjadi dasar perhitungan biaya.</li>
+                                    </ul>
+                                    <h5>3.3. Menambahkan Bus</h5>
+                                    <ul>
+                                        <li>Masih di halaman Edit Rombongan, gulir ke bawah ke <strong>Kelola Bus</strong>.</li>
+                                        <li>Klik <strong>"+ Tambah Bus Baru"</strong> dan isi detail bus, terutama <strong>Nama Armada</strong> dan <strong>Kuota</strong>.</li>
+                                    </ul>
+
+                                    <h4>4. Mendaftarkan Peserta (Alur Utama) 📝</h4>
+                                    <h5>4.1. Buka Form Pendaftaran</h5>
+                                    <ul>
+                                        <li>Klik menu <strong>Form Pendaftaran</strong> di sidebar (atau tombol pendaftaran di navigasi bawah pada tampilan mobile).</li>
+                                    </ul>
+                                    <h5>4.2. Pilih Rombongan & Santri</h5>
+                                    <ul>
+                                        <li><strong>Pilih Rombongan:</strong> Pilih dari daftar rombongan yang Anda kelola.</li>
+                                        <li><strong>Pilih Santri:</strong> Ketik nama atau NIS untuk mencari santri di wilayah Anda.</li>
+                                    </ul>
+                                    <h5>4.3. Isi Detail Perjalanan & Pembayaran</h5>
+                                    <ul>
+                                        <li><strong>Status Perjalanan:</strong> Pilih antara 'Tidak Ikut', 'Belum Bayar', atau 'Lunas'.</li>
+                                        <li><strong>Metode Pembayaran, Titik Turun/Jemput, dan Bus:</strong> Sesuaikan dengan data pendaftar.</li>
+                                    </ul>
+                                    <h5>4.4. Konfirmasi dan Simpan ✅</h5>
+                                    <ul>
+                                        <li>Periksa kembali semua data. Total biaya akan terhitung otomatis.</li>
+                                        <li>Klik <strong>"Daftarkan Santri"</strong> untuk menyimpan.</li>
+                                    </ul>
+
+                                    <h4>5. Memantau Data</h4>
+                                    <ul>
+                                        <li><strong>Data Peserta Global:</strong> Melihat daftar semua peserta di rombongan Anda dalam satu tabel.</li>
+                                        <li><strong>Santri per Korda:</strong> Alat terbaik untuk melihat siapa saja santri di wilayah Anda yang sudah atau belum terdaftar.</li>
+                                        <li><strong>Manajemen Keuangan:</strong> Memantau rekapitulasi keuangan khusus untuk rombongan yang Anda kelola.</li>
+                                    </ul>
+
+                                {% elif current_user.role.name == 'Korwil' %}
+                                    <p>Selamat datang, para Koordinator Wilayah! 🔭</p>
+                                    <p>Peran Anda sebagai Korwil adalah untuk mengawasi dan memantau progres beberapa rombongan yang berada di bawah koordinasi Anda. Panduan ini akan menunjukkan cara menggunakan sistem untuk melihat laporan data secara efektif.</p>
+                                    <hr>
+
+                                    <h4>1. Login ke Sistem 🔑</h4>
+                                    <ul>
+                                        <li>Buka alamat URL admin panel yang telah diberikan.</li>
+                                        <li>Masukkan **Username** dan **Password** khusus Korwil Anda, lalu klik **Login**.</li>
+                                    </ul>
+
+                                    <h4>2. Mengenal Dashboard Korwil 🖥️</h4>
+                                    <ul>
+                                        <li>Halaman **Dashboard** Anda adalah pusat pemantauan.</li>
+                                        <li>Berbeda dengan Korda, Anda akan melihat **akumulasi data** dari **semua rombongan** yang Anda awasi.</li>
+                                    </ul>
+
+                                    <h4>3. Memantau Progres Rombongan 👀</h4>
+                                    <ul>
+                                        <li>Klik menu <strong>Manajemen Rombongan</strong>.</li>
+                                        <li>Di sini Anda dapat melihat detail setiap rombongan yang Anda kelola. Anda memiliki akses **lihat (read-only)**; tugas pengeditan dan pendaftaran dilakukan oleh Korda.</li>
+                                    </ul>
+                                    
+                                    <h4>4. Memantau Laporan Peserta & Keuangan 📈</h4>
+                                    <p>Ini adalah tugas utama Anda. Anda dilengkapi dengan alat yang kuat untuk memantau data.</p>
+                                    <h5>4.1. Melihat Semua Peserta</h5>
+                                    <ul>
+                                        <li>Buka halaman <strong>Data Peserta Global</strong>. Halaman ini akan menampilkan semua peserta dari semua rombongan yang Anda kelola dalam satu tabel besar.</li>
+                                        <li>Gunakan **Filter** di bagian atas untuk menyaring data jika diperlukan.</li>
+                                    </ul>
+                                    <h5>4.2. Memantau Santri di Wilayah Anda</h5>
+                                    <ul>
+                                        <li>Buka halaman <strong>Santri per Korda</strong>. Halaman ini adalah alat bantu terbaik untuk melihat santri mana saja di wilayah Anda yang **sudah** dan **belum** didaftarkan oleh Korda di bawah Anda.</li>
+                                    </ul>
+                                    <h5>4.3. Menganalisis Laporan Keuangan</h5>
+                                    <ul>
+                                        <li>Buka halaman <strong>Manajemen Keuangan</strong>. Secara default, halaman ini akan menampilkan **akumulasi total keuangan** dari semua rombongan yang Anda kelola.</li>
+                                        <li>Gunakan **Filter Laporan Keuangan** untuk melihat laporan gabungan atau memilih satu rombongan spesifik untuk dianalisis.</li>
+                                    </ul>
+                                    
+                                    <hr>
+                                    <p><strong>Kesimpulan:</strong> Peran Anda adalah untuk **mengawasi dari level yang lebih tinggi**. Anda tidak melakukan entri data, tetapi Anda dilengkapi dengan dasbor dan filter yang kuat untuk memantau kinerja setiap Korda dan rombongan di bawah Anda.</p>
+                                {% elif current_user.role.name == 'Keamanan' %}
+                        <p>Selamat datang, Tim Keamanan! 🛡️</p>
+                        <p>Peran Anda sangat penting dalam menjaga ketertiban dan mengelola perizinan santri selama periode perpulangan.</p>
+                        <hr>
+
+                        <h4>1. Mengelola Perizinan Santri 📝</h4>
+                        <ul>
+                            <li>Menu utama Anda adalah <strong>Manajemen Perizinan</strong>.</li>
+                            <li>Di halaman ini, Anda dapat <strong>menambahkan data santri yang izin</strong> dengan mengisi form yang tersedia.</li>
+                            <li>Gunakan tab <strong>"Izin Aktif"</strong> untuk memantau siapa saja yang saat ini sedang dalam masa izin.</li>
+                            <li>Tab <strong>"Riwayat Izin"</strong> berisi arsip dari izin yang telah selesai.</li>
+                            <li>Anda juga memiliki wewenang untuk <strong>Mengedit</strong> atau <strong>Mencabut</strong> izin jika diperlukan.</li>
+                        </ul>
+
+                        <h4>2. Memantau Daftar Peserta 📋</h4>
+                        <ul>
+                            <li>Anda memiliki akses ke menu <strong>Data Peserta Global</strong>.</li>
+                            <li>Gunakan halaman ini untuk melihat daftar lengkap semua santri yang terdaftar sebagai peserta perpulangan di semua rombongan.</li>
+                        </ul>
+
+                    {% elif current_user.role.name == 'PJ Acara' %}
+                        <p>Selamat datang, Penanggung Jawab Acara! 🎤</p>
+                        <p>Peran Anda adalah mengelola data santri dengan status khusus yang terlibat dalam kegiatan-kegiatan selama periode perpulangan, seperti panitia atau wisudawan.</p>
+                        <hr>
+
+                        <h4>1. Mengelola Partisipan 👥</h4>
+                        <ul>
+                            <li>Menu utama Anda adalah <strong>Data Partisipan</strong>.</li>
+                            <li>Gunakan tombol <strong>"+ Tambah Partisipan"</strong> untuk menambahkan santri ke dalam kategori tertentu (contoh: Panitia, Peserta Lomba, dll).</li>
+                            <li>Halaman ini akan mengelompokkan semua partisipan berdasarkan kategorinya agar mudah dipantau.</li>
+                        </ul>
+
+                        <h4>2. Mengelola Wisudawan 🎓</h4>
+                        <ul>
+                            <li>Buka menu <strong>Manajemen Wisuda</strong> untuk mengelola data santri yang akan diwisuda.</li>
+                            <li>Anda dapat menambahkan wisudawan satu per satu melalui tombol <strong>"+ Tambah Wisudawan Manual"</strong>.</li>
+                            <li>Anda juga dapat mengimpor data wisudawan secara massal dengan mengunggah file Excel yang berisi kolom **NIS**.</li>
+                        </ul>
+                        {% elif current_user.role.name == 'Bendahara Pusat' %}
+                        <p>Selamat datang, Bendahara Pusat! 💰</p>
+                        <p>Peran Anda adalah pusat dari seluruh manajemen keuangan. Anda bertugas memastikan semua dana yang terkumpul dari Korda tercatat dengan benar dan mengelola pengeluaran operasional.</p>
+                        <hr>
+
+                        <h4>1. Mengenal Dashboard Bendahara 📊</h4>
+                        <p>Menu utama Anda adalah <strong>Dashboard Bendahara</strong>. Di halaman ini Anda akan melihat:</p>
+                        <ul>
+                            <li><strong>Tiga Saldo Rekening Virtual:</strong>
+                                <ul>
+                                    <li><strong>Rekening Saya (Fee):</strong> Akumulasi dari semua <em>Fee Pondok</em> yang disetorkan. Dana ini digunakan untuk pengeluaran operasional.</li>
+                                    <li><strong>Rekening Bus Pulang:</strong> Akumulasi dari semua <em>Biaya Bus</em> untuk perjalanan pulang.</li>
+                                    <li><strong>Rekening Bus Kembali:</strong> Akumulasi dari semua <em>Biaya Bus</em> untuk perjalanan kembali.</li>
+                                </ul>
+                            </li>
+                            <li><strong>Tabel Status Setoran:</strong> Menampilkan rincian dana yang harus disetorkan oleh setiap rombongan.
+                                <ul>
+                                    <li><strong>Total Seharusnya:</strong> Potensi pemasukan dari <em>semua peserta terdaftar</em> (lunas maupun belum).</li>
+                                    <li><strong>Sisa Setoran:</strong> Jumlah yang masih harus disetorkan Korda kepada Anda.</li>
+                                    <li><strong>Peserta Belum Lunas:</strong> Indikator untuk Anda, menunjukkan masih ada pembayaran yang belum diterima oleh Korda.</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                        <h4>2. Alur Kerja Konfirmasi Setoran 🏦</h4>
+                        <p>Ini adalah tugas inti Anda. Saat seorang Korda menyetorkan uang (secara tunai atau transfer), Anda harus mencatatnya di sistem.</p>
+                        <ol>
+                            <li>Cari baris <strong>Rombongan</strong> yang sesuai di tabel.</li>
+                            <li>Tentukan jenis setoran yang Anda terima, lalu klik tombol konfirmasi yang sesuai (misal: "Bus Pulang", "Fee Kembali", dll).</li>
+                            <li>Sebuah <strong>modal</strong> akan muncul. Akan ada peringatan jika rombongan tersebut masih memiliki peserta yang belum lunas. Anda tetap bisa melanjutkan.</li>
+                            <li>Masukkan **nominal yang disetorkan** oleh Korda ke dalam form, lalu klik "Konfirmasi".</li>
+                            <li>Setelah berhasil, saldo rekening yang sesuai akan bertambah, dan "Sisa Setoran" untuk rombongan tersebut akan berkurang.</li>
+                        </ol>
+
+                        <h4>3. Mengelola Buku Kas 📖</h4>
+                        <ul>
+                            <li><strong>Buku Kas:</strong> Buka menu ini untuk melihat seluruh riwayat transaksi (Pemasukan & Pengeluaran) yang masuk ke <strong>Rekening Saya</strong>. Setiap konfirmasi setoran <em>Fee Pondok</em> akan otomatis tercatat di sini sebagai Pemasukan.</li>
+                            <li><strong>Catat Pengeluaran:</strong> Di halaman "Buku Kas", Anda bisa menggunakan form untuk mencatat pengeluaran. Dana akan otomatis dipotong dari saldo <strong>Rekening Saya</strong>.</li>
+                            <li><strong>Buku Kas Bus:</strong> Buka menu ini untuk melihat riwayat transaksi khusus untuk <strong>Rekening Bus Pulang</strong> dan <strong>Rekening Bus Kembali</strong>.</li>
+                        </ul>
+                        
+                    {% else %}
+                                    <p>Panduan spesifik untuk peran Anda akan segera ditambahkan di sini.</p>
+            {% endif %}
+
+                                {# --- AKHIR KONTEN PANDUAN --- #}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

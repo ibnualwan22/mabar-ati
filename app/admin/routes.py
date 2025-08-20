@@ -1,7 +1,7 @@
 from . import admin_bp
 from flask import render_template, redirect, url_for, flash, request, jsonify, abort, Response, send_file, current_app
 from app.models import ActivityLog, Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, Transaksi, User, Edisi, Bus, Role, Wisuda
-from app.admin.forms import ImportWisudaForm, KonfirmasiSetoranForm, RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, TransaksiForm, UserForm, UserEditForm, EdisiForm, BusForm, KorlapdaForm, WisudaForm
+from app.admin.forms import ChangePasswordForm, ImportWisudaForm, KonfirmasiSetoranForm, PengeluaranBusForm, RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, TransaksiForm, UserForm, UserEditForm, EdisiForm, BusForm, KorlapdaForm, WisudaForm
 from app import db, login_manager
 import json, requests
 from collections import defaultdict
@@ -3483,16 +3483,29 @@ def bendahara_buku_kas():
                            riwayat_transaksi=riwayat_transaksi)
 
 
-@admin_bp.route('/bendahara/buku-kas-bus')
+# Ganti fungsi bendahara_buku_kas_bus dengan ini
+@admin_bp.route('/bendahara/buku-kas-bus', methods=['GET', 'POST'])
 @login_required
-@role_required('Bendahara Pusat', 'Korpus')
+@role_required('Bendahara Pusat')
 def bendahara_buku_kas_bus():
     active_edisi = get_active_edisi()
-    if not active_edisi:
-        flash("Tidak ada edisi aktif.", "warning")
-        return render_template('bendahara_buku_kas_bus.html', active_edisi=None)
+    form = PengeluaranBusForm() # Gunakan form baru
 
-    # Hitung saldo untuk setiap rekening bus
+    if form.validate_on_submit():
+        pengeluaran = Transaksi(
+            edisi_id=active_edisi.id,
+            deskripsi=form.deskripsi.data,
+            jumlah=form.jumlah.data,
+            tipe='PENGELUARAN', # Tandai sebagai pengeluaran
+            rekening=form.rekening.data, # Ambil rekening dari pilihan dropdown
+            user_id=current_user.id
+        )
+        db.session.add(pengeluaran)
+        db.session.commit()
+        flash('Data pengeluaran bus berhasil dicatat.', 'success')
+        return redirect(url_for('admin.bendahara_buku_kas_bus'))
+
+    # Logika untuk menghitung saldo dan mengambil riwayat (tidak berubah)
     def get_saldo(rekening):
         pemasukan = db.session.query(func.sum(Transaksi.jumlah)).filter_by(edisi_id=active_edisi.id, tipe='PEMASUKAN', rekening=rekening).scalar() or 0
         pengeluaran = db.session.query(func.sum(Transaksi.jumlah)).filter_by(edisi_id=active_edisi.id, tipe='PENGELUARAN', rekening=rekening).scalar() or 0
@@ -3501,13 +3514,54 @@ def bendahara_buku_kas_bus():
     saldo_bus_pulang = get_saldo('REKENING_BUS_PULANG')
     saldo_bus_kembali = get_saldo('REKENING_BUS_KEMBALI')
 
-    # Ambil riwayat SEMUA transaksi yang berkaitan dengan rekening bus
     riwayat_transaksi_bus = Transaksi.query.filter(
         Transaksi.edisi_id == active_edisi.id,
         Transaksi.rekening.in_(['REKENING_BUS_PULANG', 'REKENING_BUS_KEMBALI'])
     ).order_by(Transaksi.tanggal.desc()).all()
+    total_saldo_bus = saldo_bus_pulang + saldo_bus_kembali
 
     return render_template('bendahara_buku_kas_bus.html', 
                            saldo_bus_pulang=saldo_bus_pulang,
                            saldo_bus_kembali=saldo_bus_kembali,
-                           riwayat_transaksi_bus=riwayat_transaksi_bus)
+                           riwayat_transaksi_bus=riwayat_transaksi_bus,
+                           form=form,
+                           total_saldo_bus=total_saldo_bus) # Kirim form ke template
+
+
+# Di dalam file app/admin/routes.py
+
+@admin_bp.route('/ganti-password', methods=['GET', 'POST'])
+@login_required # Hanya untuk user yang sudah login
+def ganti_password():
+    form = ChangePasswordForm()
+    if form.validate_on_submit():
+        user = current_user # Ambil data user yang sedang login
+
+        # 1. Verifikasi password saat ini
+        if not user.check_password(form.current_password.data):
+            flash('Password saat ini yang Anda masukkan salah.', 'danger')
+            return redirect(url_for('admin.ganti_password'))
+
+        # 2. Pastikan password baru tidak sama dengan password lama
+        if user.check_password(form.new_password.data):
+            flash('Password baru tidak boleh sama dengan password lama.', 'warning')
+            return redirect(url_for('admin.ganti_password'))
+
+        # 3. Jika semua valid, ganti password
+        user.set_password(form.new_password.data)
+        db.session.commit()
+        
+        log_activity('Keamanan', 'Akun', f"User '{user.username}' berhasil mengganti passwordnya sendiri.")
+        flash('Password Anda telah berhasil diperbarui!', 'success')
+        return redirect(url_for('admin.dashboard'))
+
+    return render_template('ganti_password.html', title="Ganti Password", form=form)
+
+# Di dalam file app/admin/routes.py
+
+@admin_bp.route('/profil-saya')
+@login_required
+def profil_saya():
+    # Logika untuk panduan akan ditambahkan di sini nanti
+    # Untuk sekarang, kita hanya menampilkan data user
+    return render_template('profil_saya.html', title="Profil Saya")

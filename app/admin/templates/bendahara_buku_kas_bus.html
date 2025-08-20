@@ -50,7 +50,35 @@
         </div>
     </div>
 </div>
-
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-light border-0 py-3">
+        <h5 class="mb-0">
+            <i class="fas fa-minus-circle text-danger me-2"></i>Catat Pengeluaran Kas Bus
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <div class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    {{ form.deskripsi.label(class="form-label") }}
+                    {{ form.deskripsi(class="form-control", placeholder="Contoh: Biaya tol, konsumsi kru, dll.") }}
+                </div>
+                <div class="col-md-3">
+                    {{ form.jumlah.label(class="form-label") }}
+                    {{ form.jumlah(class="form-control", type="number", placeholder="Contoh: 50000") }}
+                </div>
+                <div class="col-md-3">
+                    {{ form.rekening.label(class="form-label") }}
+                    {{ form.rekening(class="form-select") }}
+                </div>
+                <div class="col-md-1">
+                    {{ form.submit(class="btn btn-danger w-100") }}
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
 <!-- Statistik Ringkas -->
 <div class="row g-3 mb-4">
     <div class="col-md-3">
@@ -139,92 +167,60 @@
                     <th class="fw-semibold">Deskripsi</th>
                     <th class="fw-semibold text-center">Debit</th>
                     <th class="fw-semibold text-center">Kredit</th>
-                    <!-- <th class="fw-semibold text-center">Saldo</th> -->
+                    <th class="fw-semibold text-end">Saldo Akhir</th> {# <-- 2. TAMBAH KOLOM BARU DI HEADER #}
                     <th class="fw-semibold">Pencatat</th>
                 </tr>
             </thead>
             <tbody>
-                {% set running_saldo_pulang = 0 %}
-                {% set running_saldo_kembali = 0 %}
+                {# 1. GANTI INISIALISASI: Gunakan namespace untuk saldo berjalan #}
+                {% set saldo = namespace(current=total_saldo_bus) %}
+
                 {% for trx in riwayat_transaksi_bus %}
-                    {% if trx.rekening == 'REKENING_BUS_PULANG' %}
-                        {% if trx.tipe == 'PEMASUKAN' %}
-                            {% set running_saldo_pulang = running_saldo_pulang + trx.jumlah %}
-                        {% else %}
-                            {% set running_saldo_pulang = running_saldo_pulang - trx.jumlah %}
-                        {% endif %}
-                        {% set current_saldo = running_saldo_pulang %}
-                    {% else %}
-                        {% if trx.tipe == 'PEMASUKAN' %}
-                            {% set running_saldo_kembali = running_saldo_kembali + trx.jumlah %}
-                        {% else %}
-                            {% set running_saldo_kembali = running_saldo_kembali - trx.jumlah %}
-                        {% endif %}
-                        {% set current_saldo = running_saldo_kembali %}
-                    {% endif %}
                 <tr>
-                    <td>
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-calendar-day text-muted me-2"></i>
-                            <small>{{ trx.tanggal|datetime_wib }}</small>
-                        </div>
-                    </td>
+                    <td><small>{{ trx.tanggal|datetime_wib }}</small></td>
                     <td>
                         {% if trx.rekening == 'REKENING_BUS_PULANG' %}
-                            <span class="badge bg-primary bg-gradient">
-                                <i class="fas fa-bus me-1"></i>Bus Pulang
-                            </span>
+                            <span class="badge bg-primary">Bus Pulang</span>
                         {% else %}
-                            <span class="badge bg-info bg-gradient">
-                                <i class="fas fa-undo me-1"></i>Bus Kembali
-                            </span>
+                            <span class="badge bg-info">Bus Kembali</span>
                         {% endif %}
                     </td>
-                    <td>
-                        <div class="fw-medium">{{ trx.deskripsi }}</div>
-                    </td>
+                    <td>{{ trx.deskripsi }}</td>
                     <td class="text-center">
                         {% if trx.tipe == 'PEMASUKAN' %}
-                            <span class="fw-semibold text-success">
-                                <i class="fas fa-arrow-up me-1"></i>
-                                Rp {{ "{:,.0f}".format(trx.jumlah).replace(',', '.') }}
-                            </span>
+                            <span class="fw-semibold text-success">+ Rp {{ "{:,.0f}".format(trx.jumlah).replace(',', '.') }}</span>
                         {% else %}
                             <span class="text-muted">-</span>
                         {% endif %}
                     </td>
                     <td class="text-center">
                         {% if trx.tipe == 'PENGELUARAN' %}
-                            <span class="fw-semibold text-danger">
-                                <i class="fas fa-arrow-down me-1"></i>
-                                Rp {{ "{:,.0f}".format(trx.jumlah).replace(',', '.') }}
-                            </span>
+                            <span class="fw-semibold text-danger">- Rp {{ "{:,.0f}".format(trx.jumlah).replace(',', '.') }}</span>
                         {% else %}
                             <span class="text-muted">-</span>
                         {% endif %}
                     </td>
-                    <!-- <td class="text-center">
-                        <span class="fw-bold {% if current_saldo >= 0 %}text-success{% else %}text-danger{% endif %}">
-                            Rp {{ "{:,.0f}".format(current_saldo).replace(',', '.') }}
-                        </span>
-                    </td> -->
-                    <td>
-                        <div class="d-flex align-items-center">
-                            <div class="bg-secondary rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
-                                <i class="fas fa-user text-white" style="font-size: 10px;"></i>
-                            </div>
-                            <small class="text-muted">{{ trx.user.username }}</small>
-                        </div>
+                    
+                    <td class="text-end">
+                        {# 2. GANTI CARA MENAMPILKAN: Gunakan saldo.current #}
+                        <strong class="text-dark">Rp {{ "{:,.0f}".format(saldo.current).replace(',', '.') }}</strong>
                     </td>
+                    
+                    <td><small class="text-muted">{{ trx.user.username }}</small></td>
                 </tr>
+                
+                {# 3. GANTI CARA UPDATE: Gunakan saldo.current #}
+                {% if trx.tipe == 'PEMASUKAN' %}
+                    {% set saldo.current = saldo.current - trx.jumlah %}
+                {% else %}
+                    {% set saldo.current = saldo.current + trx.jumlah %}
+                {% endif %}
+
                 {% else %}
                 <tr>
-                    <td colspan="7" class="text-center py-5">
-                        <div class="text-muted">
-                            <i class="fas fa-inbox fa-3x mb-3 opacity-25"></i>
-                            <div class="h5">Belum ada transaksi</div>
-                            <p class="mb-0">Belum ada transaksi yang dicatat untuk kas bus.</p>
-                        </div>
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <div>Belum ada transaksi yang dicatat untuk kas bus.</div>
                     </td>
                 </tr>
                 {% endfor %}

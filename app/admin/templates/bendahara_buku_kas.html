@@ -150,18 +150,15 @@
                     <th class="fw-semibold">Deskripsi</th>
                     <th class="fw-semibold text-center">Debit</th>
                     <th class="fw-semibold text-center">Kredit</th>
-                    <!-- <th class="fw-semibold text-center">Saldo</th> -->
+                    <th class="fw-semibold text-end">Saldo Akhir</th> {# <-- KOLOM BARU #}
                     <th class="fw-semibold">Pencatat</th>
                 </tr>
             </thead>
             <tbody>
-                {% set running_saldo = 0 %}
+                {# 1. INISIALISASI SALDO BERJALAN DENGAN NAMESPACE #}
+                {% set saldo = namespace(current=saldo_rekening_saya) %}
+
                 {% for trx in riwayat_transaksi %}
-                    {% if trx.tipe == 'PEMASUKAN' %}
-                        {% set running_saldo = running_saldo + trx.jumlah %}
-                    {% else %}
-                        {% set running_saldo = running_saldo - trx.jumlah %}
-                    {% endif %}
                 <tr>
                     <td>
                         <div class="d-flex align-items-center">
@@ -171,7 +168,7 @@
                     </td>
                     <td>
                         <div class="d-flex align-items-center">
-                            {% if trx.tipe == 'PEMASUKAN' %}
+                             {% if trx.tipe == 'PEMASUKAN' %}
                                 <div class="bg-success bg-gradient rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
                                     <i class="fas fa-arrow-up text-white" style="font-size: 10px;"></i>
                                 </div>
@@ -189,9 +186,7 @@
                                 <i class="fas fa-plus-circle me-1"></i>
                                 Rp {{ "{:,.0f}".format(trx.jumlah).replace(',', '.') }}
                             </span>
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
+                        {% else %}<span class="text-muted">-</span>{% endif %}
                     </td>
                     <td class="text-center">
                         {% if trx.tipe == 'PENGELUARAN' %}
@@ -199,15 +194,14 @@
                                 <i class="fas fa-minus-circle me-1"></i>
                                 Rp {{ "{:,.0f}".format(trx.jumlah).replace(',', '.') }}
                             </span>
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
+                        {% else %}<span class="text-muted">-</span>{% endif %}
                     </td>
-                    <!-- <td class="text-center">
-                        <span class="fw-bold {% if running_saldo >= 0 %}text-success{% else %}text-danger{% endif %}">
-                            Rp {{ "{:,.0f}".format(running_saldo).replace(',', '.') }}
-                        </span>
-                    </td> -->
+                    
+                    {# 2. TAMPILKAN SALDO BERJALAN #}
+                    <td class="text-end">
+                        <strong class="text-dark">Rp {{ "{:,.0f}".format(saldo.current).replace(',', '.') }}</strong>
+                    </td>
+                    
                     <td>
                         <div class="d-flex align-items-center">
                             <div class="bg-secondary rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
@@ -217,6 +211,14 @@
                         </div>
                     </td>
                 </tr>
+
+                {# 3. HITUNG MUNDUR SALDO UNTUK BARIS SELANJUTNYA #}
+                {% if trx.tipe == 'PEMASUKAN' %}
+                    {% set saldo.current = saldo.current - trx.jumlah %}
+                {% else %}
+                    {% set saldo.current = saldo.current + trx.jumlah %}
+                {% endif %}
+
                 {% else %}
                 <tr>
                     <td colspan="6" class="text-center py-5">
