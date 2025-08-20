@@ -1903,11 +1903,14 @@ def export_keuangan_pdf():
                     if tarif_pulang:
                         biaya_pulang = tarif_pulang.harga_bus + tarif_pulang.fee_korda + 10000
                         data['pulang_total'] += biaya_pulang
+                        
+                        # Alokasi fee dihitung untuk semua status (lunas dan belum lunas)
+                        data['alokasi_bus_pulang'] += tarif_pulang.harga_bus
+                        data['alokasi_korda_pulang'] += tarif_pulang.fee_korda
+                        data['alokasi_pondok_pulang'] += 10000
+                        
                         if p.status_pulang == 'Lunas':
                             data['pulang_lunas'] += biaya_pulang
-                            data['alokasi_bus_pulang'] += tarif_pulang.harga_bus
-                            data['alokasi_korda_pulang'] += tarif_pulang.fee_korda
-                            data['alokasi_pondok_pulang'] += 10000
                             if p.metode_pembayaran_pulang == 'Cash': 
                                 data['pulang_cash_lunas_rp'] += biaya_pulang
                             elif p.metode_pembayaran_pulang == 'Transfer': 
@@ -1927,11 +1930,14 @@ def export_keuangan_pdf():
                     if tarif_kembali:
                         biaya_kembali = tarif_kembali.harga_bus + tarif_kembali.fee_korda + 10000
                         data['kembali_total'] += biaya_kembali
+                        
+                        # Alokasi fee dihitung untuk semua status (lunas dan belum lunas)
+                        data['alokasi_bus_kembali'] += tarif_kembali.harga_bus
+                        data['alokasi_korda_kembali'] += tarif_kembali.fee_korda
+                        data['alokasi_pondok_kembali'] += 10000
+                        
                         if p.status_kembali == 'Lunas':
                             data['kembali_lunas'] += biaya_kembali
-                            data['alokasi_bus_kembali'] += tarif_kembali.harga_bus
-                            data['alokasi_korda_kembali'] += tarif_kembali.fee_korda
-                            data['alokasi_pondok_kembali'] += 10000
                             if p.metode_pembayaran_kembali == 'Cash': 
                                 data['kembali_cash_lunas_rp'] += biaya_kembali
                             elif p.metode_pembayaran_kembali == 'Transfer': 
