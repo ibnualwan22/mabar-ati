@@ -2602,7 +2602,7 @@ def manajemen_santri_wilayah():
 @login_required
 @role_required('Korpus', 'Korwil', 'Korda')
 def export_santri_wilayah():
-    """Export data santri wilayah ke Excel dengan filter yang sama"""
+    """Export data santri wilayah ke Excel dengan filter yang sama - SEMUA SANTRI AKAN TERMUAT"""
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
@@ -2636,22 +2636,28 @@ def export_santri_wilayah():
     else:
         santri_in_wilayah_ids = [s.id for s in Santri.query.with_entities(Santri.id).all()]
 
-    # Apply the same filters as the main view BUT with rombongan restriction
-    query = Santri.query.filter(Santri.id.in_(santri_in_wilayah_ids))
+    # MODIFIED: Get ALL santri in wilayah first (no registration filter)
+    base_query = Santri.query.filter(Santri.id.in_(santri_in_wilayah_ids))
     
+    # Apply basic filters (nama, gender, status_santri)
     nama_filter = request.args.get('nama')
     gender_filter = request.args.get('jenis_kelamin')
     status_santri_filter = request.args.get('status_santri')
     status_daftar_filter = request.args.get('status_daftar')
 
     if nama_filter:
-        query = query.filter(Santri.nama.ilike(f'%{nama_filter}%'))
+        base_query = base_query.filter(Santri.nama.ilike(f'%{nama_filter}%'))
     if gender_filter:
-        query = query.filter(Santri.jenis_kelamin == gender_filter)
+        base_query = base_query.filter(Santri.jenis_kelamin == gender_filter)
     if status_santri_filter:
-        query = query.filter(Santri.status_santri == status_santri_filter)
+        base_query = base_query.filter(Santri.status_santri == status_santri_filter)
     
-    # Apply registration status filter WITH ROMBONGAN RESTRICTION
+    # Get all santri matching basic filters
+    all_santri = base_query.order_by(Santri.nama).all()
+    
+    # MODIFIED: Apply registration status filter ONLY for filtering, but keep all santri for export
+    filtered_santri_ids = set([s.id for s in all_santri])  # Start with all santri
+    
     if status_daftar_filter and santri_in_wilayah_ids:
         rombongan_filter_pulang = db.true()
         rombongan_filter_kembali = db.true()
@@ -2664,21 +2670,25 @@ def export_santri_wilayah():
 
         if status_daftar_filter == 'sudah_pulang':
             santri_ids = [s_id for s_id, in db.session.query(Pendaftaran.santri_id).filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.santri_id.in_(santri_in_wilayah_ids), Pendaftaran.status_pulang != 'Tidak Ikut', rombongan_filter_pulang).distinct()]
-            query = query.filter(Santri.id.in_(santri_ids))
+            filtered_santri_ids = set(santri_ids)
         elif status_daftar_filter == 'belum_pulang':
             santri_ids_sudah = [s_id for s_id, in db.session.query(Pendaftaran.santri_id).filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.santri_id.in_(santri_in_wilayah_ids), Pendaftaran.status_pulang != 'Tidak Ikut', rombongan_filter_pulang).distinct()]
-            query = query.filter(Santri.id.notin_(santri_ids_sudah))
+            filtered_santri_ids = filtered_santri_ids - set(santri_ids_sudah)
         elif status_daftar_filter == 'sudah_kembali':
             santri_ids = [s_id for s_id, in db.session.query(Pendaftaran.santri_id).filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.santri_id.in_(santri_in_wilayah_ids), Pendaftaran.status_kembali != 'Tidak Ikut', rombongan_filter_kembali).distinct()]
-            query = query.filter(Santri.id.in_(santri_ids))
+            filtered_santri_ids = set(santri_ids)
         elif status_daftar_filter == 'belum_kembali':
             santri_ids_sudah = [s_id for s_id, in db.session.query(Pendaftaran.santri_id).filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.santri_id.in_(santri_in_wilayah_ids), Pendaftaran.status_kembali != 'Tidak Ikut', rombongan_filter_kembali).distinct()]
-            query = query.filter(Santri.id.notin_(santri_ids_sudah))
-
+            filtered_santri_ids = filtered_santri_ids - set(santri_ids_sudah)
+    
+    # MODIFIED: For export, show all santri but apply additional rombongan filter if needed
+    export_santri_ids = filtered_santri_ids.copy()
+    
     # ADDITIONAL FILTER: Only include santri registered in managed rombongan for specific export type
+    # BUT keep unregistered santri as well
     if current_user.role.name in ['Korwil', 'Korda'] and managed_rombongan_ids:
         if export_type == 'pulang':
-            # Only santri registered in managed rombongan for pulang
+            # Get santri registered in managed rombongan for pulang
             santri_ids_in_managed_rombongan = [
                 s_id for s_id, in db.session.query(Pendaftaran.santri_id).filter(
                     Pendaftaran.edisi_id == active_edisi.id,
@@ -2687,7 +2697,7 @@ def export_santri_wilayah():
                 ).distinct()
             ]
         else:  # kembali
-            # Only santri registered in managed rombongan for kembali (or pulang if kembali is null)
+            # Get santri registered in managed rombongan for kembali
             santri_ids_in_managed_rombongan = [
                 s_id for s_id, in db.session.query(Pendaftaran.santri_id).filter(
                     Pendaftaran.edisi_id == active_edisi.id,
@@ -2702,10 +2712,20 @@ def export_santri_wilayah():
                 ).distinct()
             ]
         
-        query = query.filter(Santri.id.in_(santri_ids_in_managed_rombongan))
-
-    # Get all santri (no pagination for export)
-    santri_list = query.order_by(Santri.nama).all()
+        # Get unregistered santri in the filtered list
+        all_registered_santri = [
+            s_id for s_id, in db.session.query(Pendaftaran.santri_id).filter(
+                Pendaftaran.edisi_id == active_edisi.id,
+                Pendaftaran.santri_id.in_(list(filtered_santri_ids))
+            ).distinct()
+        ]
+        unregistered_santri_ids = filtered_santri_ids - set(all_registered_santri)
+        
+        # Combine registered santri in managed rombongan + all unregistered santri
+        export_santri_ids = set(santri_ids_in_managed_rombongan) | unregistered_santri_ids
+    
+    # Get final santri list for export
+    santri_list = [s for s in all_santri if s.id in export_santri_ids]
     
     # Get pendaftaran data for all santri with tarif data
     santri_ids = [s.id for s in santri_list]
@@ -2751,9 +2771,13 @@ def export_santri_wilayah():
     border = Border(left=Side(style='thin'), right=Side(style='thin'), 
                    top=Side(style='thin'), bottom=Side(style='thin'))
     
-    # Style for unpaid santri (red background) - ENHANCED
+    # Style for unpaid santri (red background)
     unpaid_fill = PatternFill(start_color='FFCCCC', end_color='FFCCCC', fill_type='solid')
     unpaid_font = Font(name='Arial', size=10, bold=True, color='CC0000')
+    
+    # ADDED: Style for unregistered santri (yellow background)
+    unregistered_fill = PatternFill(start_color='FFFFCC', end_color='FFFFCC', fill_type='solid')
+    unregistered_font = Font(name='Arial', size=10, bold=False, color='CC6600')
 
     # Set headers based on export type
     if export_type == 'pulang':
@@ -2785,6 +2809,7 @@ def export_santri_wilayah():
     count_transfer = 0
     count_cash = 0
     count_belum_lunas = 0
+    count_belum_terdaftar = 0  # ADDED: Counter for unregistered santri
 
     # Write data
     for idx, santri in enumerate(santri_list, 2):
@@ -2800,8 +2825,13 @@ def export_santri_wilayah():
             santri.nama_jabatan or 'Santri'
         ]
         
-        # Determine if santri has unpaid status based on status pulang/kembali
+        # Determine santri status
         is_unpaid = False
+        is_unregistered = False
+        
+        if not pendaftaran:
+            is_unregistered = True
+            count_belum_terdaftar += 1
         
         # Add specific data based on export type
         if export_type == 'pulang':
@@ -2874,7 +2904,6 @@ def export_santri_wilayah():
                 if pendaftaran.status_kembali and pendaftaran.status_kembali != 'Tidak Ikut':
                     if not pendaftaran.metode_pembayaran_kembali:
                         is_unpaid = True
-                        status_kembali = 'Tidak'
                         count_belum_lunas += 1
                     else:
                         # Count payment methods for kembali
@@ -2894,7 +2923,7 @@ def export_santri_wilayah():
                     f"Rp {biaya_kembali:,.0f}".replace(',', '.') if biaya_kembali > 0 else 'Rp 0',
                 ])
             else:
-                row_data.extend(['Belum Terdaftar', '-', '-', '-', '-', 'Rp 0'])
+                row_data.extend(['Belum Terdaftar', '-', '-', '-', 'Rp 0'])
         
         # Write row data with conditional styling
         for col, value in enumerate(row_data, 1):
@@ -2902,8 +2931,11 @@ def export_santri_wilayah():
             cell.border = border
             cell.alignment = Alignment(vertical='center')
             
-            # Apply red styling for unpaid santri - ENHANCED
-            if is_unpaid:
+            # MODIFIED: Apply styling based on status
+            if is_unregistered:
+                cell.fill = unregistered_fill
+                cell.font = unregistered_font
+            elif is_unpaid:
                 cell.fill = unpaid_fill
                 cell.font = unpaid_font
 
@@ -2916,12 +2948,13 @@ def export_santri_wilayah():
     summary_value_font = Font(name='Arial', size=11, bold=True, color='000000')
     summary_label_font = Font(name='Arial', size=11, bold=False, color='000000')
     
-    # Summary data - ENHANCED with payment status
+    # MODIFIED: Enhanced summary data with unregistered count
     summary_data = [
         ('RINGKASAN PEMBAYARAN', '', True),
         ('Total Pembayaran Transfer:', f"{count_transfer} orang - Rp {total_transfer:,.0f}".replace(',', '.'), False),
         ('Total Pembayaran Cash:', f"{count_cash} orang - Rp {total_cash:,.0f}".replace(',', '.'), False),
         ('Total Belum Lunas:', f"{count_belum_lunas} orang", False),
+        ('Total Belum Terdaftar:', f"{count_belum_terdaftar} orang", False),  # ADDED
         ('', '', False),
         ('RINGKASAN BIAYA', '', True),
     ]
@@ -2930,6 +2963,15 @@ def export_santri_wilayah():
         summary_data.append(('Total Biaya Pulang:', f"Rp {total_biaya_pulang:,.0f}".replace(',', '.'), False))
     else:
         summary_data.append(('Total Biaya Kembali:', f"Rp {total_biaya_kembali:,.0f}".replace(',', '.'), False))
+    
+    # ADDED: Legend section
+    summary_data.extend([
+        ('', '', False),
+        ('KETERANGAN WARNA', '', True),
+        ('Kuning:', 'Santri Belum Terdaftar', False),
+        ('Merah:', 'Santri Belum Lunas Pembayaran', False),
+        ('Putih:', 'Santri Sudah Lunas', False),
+    ])
     
     # Write summary
     for i, (label, value, is_header) in enumerate(summary_data):
@@ -2975,7 +3017,7 @@ def export_santri_wilayah():
     response = make_response(output.read())
     
     # Generate filename
-    filename = f"Santri_Wilayah_{export_type.title()}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    filename = f"Santri_Wilayah_Lengkap_{export_type.title()}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     
     response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
     response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
