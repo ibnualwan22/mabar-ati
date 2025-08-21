@@ -922,7 +922,7 @@ def edit_pendaftaran(pendaftaran_id):
 
 @admin_bp.route('/pendaftaran/hapus/<int:pendaftaran_id>', methods=['POST'])
 @login_required
-@role_required('Korpus')
+@role_required('Korpus', 'Korda')
 def hapus_pendaftaran(pendaftaran_id):
     pendaftaran = Pendaftaran.query.get_or_404(pendaftaran_id)
     # Verifikasi Kepemilikan (menggunakan rombongan pulang sebagai acuan)

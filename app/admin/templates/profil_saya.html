@@ -20,6 +20,12 @@
                         <span class="badge bg-success fs-6">{{ current_user.role.name }}</span>
                     </p>
                 </div>
+                <div>
+    <a href="{{ url_for('admin.ganti_password') }}" 
+       class="btn btn-outline-primary btn-sm">
+       <i class="fas fa-key"></i> Ganti Password
+    </a>
+  </div>
                 
                 <hr>
                 
