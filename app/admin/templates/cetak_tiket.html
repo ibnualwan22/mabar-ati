@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cetak Tiket Santri</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
             --primary-color: #4facfe;
@@ -18,6 +19,56 @@
             padding: 15px;
         }
         
+        /* Filter Section */
+        .filter-section {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+        
+        .filter-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 15px;
+            align-items: end;
+        }
+        
+        .filter-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            display: block;
+        }
+        
+        .filter-group .form-control,
+        .filter-group .form-select {
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-group .form-control:focus,
+        .filter-group .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(79, 172, 254, 0.25);
+        }
+        
+        .btn-filter {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            border: none;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            height: fit-content;
+        }
+        
+        /* Color Selector */
         .color-selector {
             background: white;
             padding: 20px;
@@ -28,17 +79,17 @@
         
         .color-options {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
-            gap: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(30px, 1fr));
+            gap: 8px;
             max-width: 600px;
             margin: 0 auto;
         }
         
         .color-option {
-            width: 40px;
-            height: 40px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
-            border: 3px solid white;
+            border: 2px solid white;
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
@@ -50,47 +101,39 @@
             border-color: #333;
         }
         
+        /* Ticket Container */
         .print-container { 
-            max-width: 190mm;
+            max-width: 800px;
             margin: 0 auto;
         }
         
-        .ticket {
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-            border-radius: 15px;
-            margin-bottom: 10px;
-            overflow: hidden;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-            position: relative;
-            break-inside: avoid;
-            height: 6cm;
+        .tickets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
         }
         
-        .ticket::before {
-            content: '';
-            position: absolute;
-            left: 180px;
-            top: -3px;
-            bottom: -3px;
-            width: 1px;
-            background: repeating-linear-gradient(
-                to bottom,
-                #ddd 0px,
-                #ddd 6px,
-                transparent 6px,
-                transparent 12px
-            );
+        .ticket {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            position: relative;
+            break-inside: avoid;
+            height: 180px;
+            border: 2px solid #e9ecef;
         }
         
         .ticket-header {
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             color: white;
-            padding: 8px 20px;
+            padding: 8px 15px;
             text-align: center;
             position: relative;
         }
         
-        .ticket-header h5 {
+        .ticket-header h6 {
             margin: 0;
             font-weight: 700;
             font-size: 0.9rem;
@@ -98,59 +141,30 @@
         }
         
         .ticket-header small {
-            font-size: 0.65rem;
+            font-size: 0.7rem;
             opacity: 0.9;
         }
         
         .ticket-body {
+            padding: 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            height: calc(100% - 50px);
+        }
+        
+        .info-row {
             display: flex;
-            height: calc(6cm - 40px);
-        }
-        
-        .ticket-left {
-            width: 180px;
-            padding: 12px 10px;
-            background: white;
-            position: relative;
-        }
-        
-        .ticket-right {
-            flex: 1;
-            padding: 12px 10px;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        }
-        
-        .passenger-info h6 {
-            color: #2c3e50;
-            font-weight: 700;
-            margin-bottom: 2px;
-            font-size: 0.75rem;
-            line-height: 1.2;
-        }
-        
-        .passenger-subtitle {
-            color: #7f8c8d;
-            font-size: 0.6rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
-        }
-        
-        .route-info {
-            margin-bottom: 10px;
-        }
-        
-        .route-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 6px;
-            padding: 6px;
-            background: rgba(79, 172, 254, 0.1);
+            align-items: flex-start;
+            gap: 6px;
+            padding: 4px;
+            background: #f8f9fa;
             border-radius: 6px;
-            border-left: 2px solid var(--primary-color);
+            border-left: 3px solid var(--primary-color);
+            min-height: 50px;
         }
         
-        .route-icon {
+        .info-icon {
             width: 20px;
             height: 20px;
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
@@ -158,68 +172,38 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-right: 8px;
             color: white;
-            font-size: 0.65rem;
-            font-weight: bold;
+            font-size: 0.6rem;
+            flex-shrink: 0;
+            margin-top: 2px;
         }
         
-        .route-details h6 {
+        .info-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .info-label {
+            font-size: 0.55rem;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin: 0 0 2px 0;
+            line-height: 1;
+        }
+        
+        .info-value {
+            font-size: 0.68rem;
+            color: #2c3e50;
+            font-weight: 600;
             margin: 0;
-            color: #2c3e50;
-            font-weight: 600;
-            font-size: 0.65rem;
-            line-height: 1.1;
-        }
-        
-        .route-details small {
-            color: #7f8c8d;
-            font-size: 0.55rem;
-        }
-        
-        .flight-details {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
-        
-        .detail-item {
-            background: white;
-            padding: 8px;
-            border-radius: 8px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-            border-left: 2px solid var(--primary-color);
-        }
-        
-        .detail-label {
-            font-size: 0.55rem;
-            color: #7f8c8d;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            margin-bottom: 2px;
-            font-weight: 600;
-        }
-        
-        .detail-value {
-            color: #2c3e50;
-            font-weight: 600;
-            font-size: 0.65rem;
-            line-height: 1.2;
             word-wrap: break-word;
+            line-height: 1.1;
+            overflow-wrap: break-word;
+            hyphens: auto;
         }
         
-        .boarding-pass {
-            position: absolute;
-            right: 8px;
-            top: 50%;
-            transform: translateY(-50%) rotate(90deg);
-            font-size: 0.5rem;
-            color: #bdc3c7;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 600;
-        }
-        
+        /* Print Button */
         .print-button-container { 
             text-align: center; 
             margin-bottom: 25px; 
@@ -255,137 +239,184 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
         }
 
+        /* Print Styles */
         @media print {
-    * {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-        color-adjust: exact !important;
-    }
-    
-    @page {
-        size: A4 portrait;
-        margin: 15mm 10mm;
-    }
-    
-    body { 
-        background: white !important;
-        margin: 0;
-        padding: 0;
-        font-size: 12px;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-    
-    .print-button-container, 
-    .no-print, 
-    .color-selector { 
-        display: none !important; 
-    }
-    
-    .print-container { 
-        max-width: none;
-        width: 100%;
-        margin: 0;
-        padding: 0;
-    }
-    
-    .ticket {
-        margin-bottom: 8mm;
-        box-shadow: none;
-        border: 1px solid #ccc;
-        border-radius: 12px;
-        page-break-inside: avoid;
-        height: 6cm;
-        background: white !important;
-    }
-    
-    .ticket-header {
-        background: var(--primary-color) !important;
-        background-image: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%) !important;
-        color: white !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-        color-adjust: exact !important;
-        padding: 6px 15px;
-    }
-    
-    .ticket-body {
-        height: calc(6cm - 35px);
-    }
-    
-    .ticket-left {
-        width: 180px;
-        padding: 10px 8px;
-        background: white !important;
-    }
-    
-    .ticket-right {
-        padding: 10px 8px;
-        background: #f8f9fa !important;
-        background-image: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-    
-    .route-item {
-        background: rgba(79, 172, 254, 0.1) !important;
-        border-left-color: var(--primary-color) !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-    
-    .route-icon {
-        background: var(--primary-color) !important;
-        background-image: linear-gradient(135deg, var(--primary-color), var(--secondary-color)) !important;
-        color: white !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-    
-    .detail-item {
-        border-left-color: var(--primary-color) !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-    
-    .passenger-info h6 {
-        font-size: 0.7rem;
-    }
-    
-    .detail-value {
-        font-size: 0.6rem;
-    }
-    
-    .route-details h6 {
-        font-size: 0.6rem;
-    }
-}
-        
-        @media screen and (max-width: 768px) {
-            .ticket-body {
-                flex-direction: column;
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
             }
             
-            .ticket-left {
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+            
+            body { 
+                background: white !important;
+                margin: 0;
+                padding: 0;
+                font-size: 11px;
+            }
+            
+            .filter-section,
+            .print-button-container, 
+            .no-print, 
+            .color-selector { 
+                display: none !important; 
+            }
+            
+            .print-container { 
+                max-width: none;
                 width: 100%;
-                border-bottom: 1px dashed #ddd;
-                border-right: none;
+                margin: 0;
+                padding: 0;
             }
             
-            .ticket::before {
-                display: none;
+            .tickets-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+                margin: 0;
             }
             
-            .flight-details {
+            .ticket {
+                height: 140px;
+                margin: 0;
+                box-shadow: none;
+                border: 1px solid #ccc;
+                page-break-inside: avoid;
+                background: white !important;
+            }
+            
+            .ticket-header {
+                background: var(--primary-color) !important;
+                background-image: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%) !important;
+                color: white !important;
+                padding: 6px 12px;
+            }
+            
+            .ticket-body {
+                padding: 8px;
+                height: calc(100% - 35px);
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+            }
+            
+            .info-row {
+                background: rgba(79, 172, 254, 0.1) !important;
+                border-left-color: var(--primary-color) !important;
+                padding: 3px;
+                gap: 4px;
+                min-height: 40px;
+            }
+            
+            .info-icon {
+                width: 16px;
+                height: 16px;
+                background: var(--primary-color) !important;
+                background-image: linear-gradient(135deg, var(--primary-color), var(--secondary-color)) !important;
+                color: white !important;
+                font-size: 0.5rem;
+            }
+            
+            .info-label {
+                font-size: 0.45rem;
+            }
+            
+            .info-value {
+                font-size: 0.55rem;
+                line-height: 1;
+            }
+            
+            .ticket-header h6 {
+                font-size: 0.8rem;
+            }
+            
+            .ticket-header small {
+                font-size: 0.6rem;
+            }
+        }
+        
+        /* Responsive */
+        @media screen and (max-width: 768px) {
+            .filter-row {
                 grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .tickets-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .ticket-body {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+            
+            .info-row {
+                min-height: 35px;
+            }
+            
+            .color-options {
+                grid-template-columns: repeat(auto-fit, minmax(25px, 1fr));
+                gap: 6px;
+            }
+            
+            .color-option {
+                width: 25px;
+                height: 25px;
             }
         }
     </style>
 </head>
 <body>
     <div class="print-container">
+        <!-- Filter Section -->
+        <div class="filter-section no-print">
+            <h6 class="text-center mb-3"><i class="fas fa-filter me-2"></i>Filter Tiket Santri</h6>
+            <form method="GET" action="{{ url_for('admin.cetak_tiket') }}">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="nama">Nama Santri</label>
+                        <input type="text" class="form-control" id="nama" name="nama" 
+                               value="{{ request.args.get('nama', '') }}" placeholder="Cari nama santri...">
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="rombongan_id">Rombongan</label>
+                        <select class="form-select" id="rombongan_id" name="rombongan_id">
+                            <option value="">Semua Rombongan</option>
+                            {% for rombongan in rombongan_for_filter %}
+                                <option value="{{ rombongan.id }}" 
+                                    {% if request.args.get('rombongan_id')|int == rombongan.id %}selected{% endif %}>
+                                    {{ rombongan.nama_rombongan }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="perjalanan">Jenis Perjalanan</label>
+                        <select class="form-select" id="perjalanan" name="perjalanan">
+                            <option value="">Semua</option>
+                            <option value="pulang" {% if request.args.get('perjalanan') == 'pulang' %}selected{% endif %}>Pulang</option>
+                            <option value="kembali" {% if request.args.get('perjalanan') == 'kembali' %}selected{% endif %}>Kembali</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <button type="submit" class="btn btn-filter">
+                            <i class="fas fa-search me-1"></i> Filter
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Color Selector -->
         <div class="color-selector no-print">
-            <h6 class="text-center mb-3">🎨 Pilih Warna Tema Tiket</h6>
+            <h6 class="text-center mb-3"><i class="fas fa-palette me-2"></i>Pilih Warna Tema</h6>
             <div class="color-options">
                 <div class="color-option active" data-primary="#4facfe" data-secondary="#00f2fe" style="background: linear-gradient(45deg, #4facfe, #00f2fe)" title="Biru Default"></div>
                 <div class="color-option" data-primary="#667eea" data-secondary="#764ba2" style="background: linear-gradient(45deg, #667eea, #764ba2)" title="Ungu"></div>
@@ -415,115 +446,90 @@
             </div>
         </div>
         
+        <!-- Print Button -->
         <div class="print-button-container">
-            <button class="btn btn-print btn-lg" onclick="window.print()">🚌 Cetak Semua Tiket</button>
-            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-back btn-lg">↩️ Kembali</a>
+            <button class="btn btn-print btn-lg" onclick="window.print()">
+                <i class="fas fa-print me-2"></i>Cetak Tiket ({{ semua_pendaftar|length }})
+            </button>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-back btn-lg">
+                <i class="fas fa-arrow-left me-2"></i>Kembali
+            </a>
         </div>
 
-        {% for pendaftar in semua_pendaftar %}
-            <div class="ticket">
-                <div class="ticket-header">
-                    <h5>MABAR ATI</h5>
-                    <small>Tiket Perjalanan Santri</small>
-                </div>
-                
-                <div class="ticket-body">
-                    <div class="ticket-left">
-                        <div class="passenger-info">
-                            <h6>{{ pendaftar.santri.nama }}</h6>
-<div class="passenger-subtitle">
-    {% if pendaftar.santri.jenis_kelamin == 'PUTRA' %}
-        <span style="color: black;"><i class="fas fa-mars me-1"></i>Putra</span>
-    {% elif pendaftar.santri.jenis_kelamin == 'PUTRI' %}
-        <span style="color: black;"><i class="fas fa-venus me-1"></i>Putri</span>
-    {% else %}
-        <span style="color: black;">{{ pendaftar.santri.jenis_kelamin }}</span>
-    {% endif %}
-
-                        </div>
+        <!-- Tickets Grid -->
+        {% if semua_pendaftar %}
+            <div class="tickets-grid">
+                {% for pendaftar in semua_pendaftar %}
+                    <div class="ticket">
+                        <div class="ticket-header">
+                            <h6><i class="fas fa-bus me-2"></i>MABAR ATI</h6>
+                            <small>Tiket Perjalanan Santri</small>
                         </div>
                         
-                        <div class="route-info">
-                            <div class="route-item">
-                                <div class="route-icon">🏫</div>
-                                <div class="route-details">
-                                    <h6>Pondok Pesantren</h6>
-                                    <small>Keberangkatan</small>
-                                </div>
-                            </div>
-                            
-                            <div class="route-item">
-                                <div class="route-icon">🏠</div>
-                                <div class="route-details">
-                                    <h6>{{ pendaftar.santri.kabupaten }}</h6>
-                                    <small>Tujuan</small>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="boarding-pass">TIKET BUS</div>
-                    </div>
-                    
-                    <div class="ticket-right">
-                        <div class="flight-details">
-                            <div class="detail-item">
-                                <div class="detail-label">Rombongan</div>
-                                <div class="detail-value">{{ pendaftar.rombongan_pulang.nama_rombongan if pendaftar.rombongan_pulang else 'Belum Ditentukan' }}</div>
-                            </div>
-                            
-                            <div class="detail-item">
-                                <div class="detail-label">Titik Turun</div>
-                                <div class="detail-value">{{ pendaftar.titik_turun or 'Belum Ditentukan' }}</div>
-                            </div>
-                            
-                            <div class="detail-item">
-                                <div class="detail-label">Nama Bus</div>
-                                <div class="detail-value">{{ pendaftar.bus_pulang.nama_armada if pendaftar.bus_pulang else 'Belum Ditentukan' }}</div>
-                            </div>
-                            
-                            <div class="detail-item">
-                                <div class="detail-label">Nomor Bus</div>
-                                <div class="detail-value">
-                                    {% if pendaftar.bus_pulang %}
-                                        {{ pendaftar.bus_pulang.nomor_lambung or pendaftar.bus_pulang.plat_nomor or 'Belum Ditentukan' }}
+                        <div class="ticket-body">
+                            <div class="info-row">
+                                <div class="info-icon">
+                                    {% if pendaftar.santri.jenis_kelamin == 'PUTRA' %}
+                                        <i class="fas fa-mars"></i>
                                     {% else %}
-                                        Belum Ditentukan
+                                        <i class="fas fa-venus"></i>
                                     {% endif %}
                                 </div>
+                                <div class="info-content">
+                                    <p class="info-label">Nama Santri</p>
+                                    <p class="info-value">{{ pendaftar.santri.nama }}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="info-row">
+                                <div class="info-icon"><i class="fas fa-map-marker-alt"></i></div>
+                                <div class="info-content">
+                                    <p class="info-label">Alamat</p>
+                                    <p class="info-value">{{ pendaftar.santri.kabupaten }}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="info-row">
+                                <div class="info-icon"><i class="fas fa-users"></i></div>
+                                <div class="info-content">
+                                    <p class="info-label">Rombongan</p>
+                                    <p class="info-value">{{ pendaftar.rombongan_pulang.nama_rombongan if pendaftar.rombongan_pulang else 'Belum Ditentukan' }}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="info-row">
+                                <div class="info-icon"><i class="fas fa-flag-checkered"></i></div>
+                                <div class="info-content">
+                                    <p class="info-label">Titik Turun</p>
+                                    <p class="info-value">{{ pendaftar.titik_turun or 'Belum Ditentukan' }}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                {% endfor %}
             </div>
-        {% endfor %}
-
-        {% if not semua_pendaftar %}
+        {% else %}
             <div class="no-data">
-                <h5>⚠️ Tidak Ada Data</h5>
-                <p>Tidak ada data santri terdaftar untuk dicetak tiket.</p>
+                <h5><i class="fas fa-exclamation-triangle me-2"></i>Tidak Ada Data</h5>
+                <p>Tidak ada santri yang sesuai dengan filter yang dipilih.</p>
             </div>
         {% endif %}
     </div>
 
     <script>
-        // Color selector functionality
         document.addEventListener('DOMContentLoaded', function() {
+            // Color selector functionality
             const colorOptions = document.querySelectorAll('.color-option');
             const root = document.documentElement;
             
             colorOptions.forEach(option => {
                 option.addEventListener('click', function() {
-                    // Remove active class from all options
                     colorOptions.forEach(opt => opt.classList.remove('active'));
-                    
-                    // Add active class to clicked option
                     this.classList.add('active');
                     
-                    // Get colors from data attributes
                     const primaryColor = this.dataset.primary;
                     const secondaryColor = this.dataset.secondary;
                     
-                    // Update CSS variables
                     root.style.setProperty('--primary-color', primaryColor);
                     root.style.setProperty('--secondary-color', secondaryColor);
                 });

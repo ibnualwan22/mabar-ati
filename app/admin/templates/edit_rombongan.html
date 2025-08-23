@@ -284,6 +284,9 @@
                                 <a href="{{ url_for('admin.detail_bus', bus_id=bus.id) }}" class="btn btn-sm btn-outline-primary">
                                     <i class="fas fa-eye me-1"></i>Detail
                                 </a>
+                                <a href="{{ url_for('admin.edit_bus', bus_id=bus.id) }}" class="btn btn-outline-secondary">
+            <i class="fas fa-edit me-1"></i>Edit
+        </a>
                                 <form method="POST" 
                                           action="{{ url_for('admin.hapus_bus', bus_id=bus.id) }}" 
                                           style="display:inline;" 

@@ -145,6 +145,14 @@
             margin-bottom: 30px;
         }
         
+        .filter-container {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
         .color-selector {
             background: white;
             padding: 20px;
@@ -322,21 +330,64 @@
         @media print {
             body {
                 background-color: white;
+                margin: 0;
+                padding: 0;
             }
             .print-button-container {
-                display: none;
+                display: none !important;
+            }
+            .filter-container {
+                display: none !important;
             }
             .print-container {
                 box-shadow: none;
                 margin: 0;
-                padding: 10px;
+                padding: 0;
+                max-width: none;
+                width: 210mm; /* A4 width */
+                height: 297mm; /* A4 height */
             }
             .cards-wrapper {
-                gap: 2mm;
+                gap: 0;
+                justify-content: flex-start;
+                display: grid;
+                grid-template-columns: repeat(3, 1fr); /* 3 horizontal */
+                grid-template-rows: repeat(5, 1fr); /* 5 vertikal */
+                width: 210mm; /* Full A4 width */
+                height: 297mm; /* Full A4 height */
             }
             .card-barang {
-                box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-                border-width: 1.5px;
+                width: 70mm; /* 210mm ÷ 3 cards */
+                height: 59.4mm; /* 297mm ÷ 5 rows */
+                min-height: 59.4mm;
+                margin: 0;
+                border-radius: 0; /* No rounded corners for perfect fit */
+                padding: 4mm;
+                box-sizing: border-box;
+                box-shadow: none;
+                border: 1px solid #2c3e50;
+                page-break-inside: avoid;
+            }
+            .card-barang h5 {
+                font-size: 10pt;
+                margin-bottom: 6px;
+                padding: 3px 6px;
+                border-radius: 10px;
+            }
+            .card-grid {
+                gap: 3px;
+            }
+            .card-item {
+                padding: 2px 4px;
+                border-radius: 4px;
+            }
+            .card-grid strong {
+                font-size: 6pt;
+                margin-bottom: 1px;
+            }
+            .card-grid p {
+                font-size: 8pt;
+                line-height: 1.1;
             }
             /* Pastikan gradien tetap tercetak dengan baik */
             .card-barang {
@@ -344,7 +395,7 @@
                 print-color-adjust: exact;
             }
             .color-selector {
-                display: none;
+                display: none !important;
             }
         }
         
@@ -363,6 +414,39 @@
 <body>
 
     <div class="print-container">
+        <div class="filter-container">
+            <h5 class="mb-3 fw-bold text-center">Filter Kartu Peserta</h5>
+            <form method="GET" action="{{ url_for('admin.cetak_kartu') }}">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label for="nama" class="form-label">Nama Pendaftar</label>
+                        <input type="text" name="nama" id="nama" class="form-control" placeholder="Cari Nama..." value="{{ request.args.get('nama', '') }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="rombongan_id" class="form-label">Rombongan</label>
+                        <select name="rombongan_id" id="rombongan_id" class="form-select">
+                            <option value="">-- Semua --</option>
+                            {% for rombongan in rombongan_for_filter %}
+                                <option value="{{ rombongan.id }}" {% if request.args.get('rombongan_id')|int == rombongan.id %}selected{% endif %}>
+                                    {{ rombongan.nama_rombongan }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="perjalanan" class="form-label">Perjalanan</label>
+                        <select name="perjalanan" id="perjalanan" class="form-select">
+                            <option value="">-- Semua --</option>
+                            <option value="pulang" {% if request.args.get('perjalanan') == 'pulang' %}selected{% endif %}>Pulang</option>
+                            <option value="kembali" {% if request.args.get('perjalanan') == 'kembali' %}selected{% endif %}>Kembali</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">Terapkan</button>
+                    </div>
+                </div>
+            </form>
+        </div>
         <div class="print-button-container">
             <div class="color-selector">
                 <h6>Pilih Warna Sesuai dengan Rombongan masing-masing (25 Pilihan)</h6>
@@ -398,7 +482,7 @@
             
             <div>
                 <button class="btn-print" onclick="window.print()">
-                    🖨️ Cetak Semua Kartu
+                    <i class="fas fa-print"></i> Cetak Semua Kartu ({{ semua_pendaftar|length }})
                 </button>
                 <a href="{{ url_for('admin.dashboard') }}" class="btn-print btn-secondary-custom">
                     ← Kembali ke Dashboard

@@ -1,0 +1,52 @@
+{% extends "_admin_layout.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-secondary text-white">
+                <h4 class="mb-0"><i class="fas fa-edit me-2"></i>{{ title }}</h4>
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">{{ bus.nama_armada }} - {{ bus.nomor_lambung or bus.plat_nomor }}</h5>
+                <p class="card-subtitle mb-4 text-muted">Rombongan: {{ bus.rombongan.nama_rombongan }}</p>
+                
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            {{ form.nama_armada.label(class="form-label") }}
+                            {{ form.nama_armada(class="form-control") }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.kuota.label(class="form-label") }}
+                            {{ form.kuota(class="form-control") }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.nomor_lambung.label(class="form-label") }}
+                            {{ form.nomor_lambung(class="form-control") }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.plat_nomor.label(class="form-label") }}
+                            {{ form.plat_nomor(class="form-control") }}
+                        </div>
+                        <div class="col-12">
+                            {{ form.keterangan.label(class="form-label") }}
+                            {{ form.keterangan(class="form-control", rows=3) }}
+                        </div>
+                    </div>
+                    <hr class="my-4">
+                    <div class="d-flex gap-2">
+                        {{ form.submit(class="btn btn-primary") }}
+                        <a href="{{ url_for('admin.edit_rombongan', id=bus.rombongan_id) }}" class="btn btn-outline-secondary">
+                            Batal
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

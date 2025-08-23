@@ -1719,6 +1719,32 @@ def tambah_bus(rombongan_id):
     
     return redirect(url_for('admin.edit_rombongan', id=rombongan_id))
 
+@admin_bp.route('/bus/edit/<int:bus_id>', methods=['GET', 'POST'])
+@login_required
+@role_required('Korpus', 'Korda', 'Korpuspi')
+def edit_bus(bus_id):
+    bus = Bus.query.get_or_404(bus_id)
+    # Keamanan: Pastikan user yang login berhak mengedit bus ini
+    if current_user.role.name == 'Korda' and bus.rombongan not in current_user.managed_rombongan:
+        abort(403)
+
+    form = BusForm(obj=bus) # Isi form dengan data bus yang ada
+
+    if form.validate_on_submit():
+        # Simpan perubahan dari form ke objek bus
+        bus.nama_armada = form.nama_armada.data
+        bus.nomor_lambung = form.nomor_lambung.data
+        bus.plat_nomor = form.plat_nomor.data
+        bus.kuota = form.kuota.data
+        bus.keterangan = form.keterangan.data
+        
+        db.session.commit()
+        log_activity('Edit', 'Bus', f"Mengubah detail bus '{bus.nama_armada}' di rombongan '{bus.rombongan.nama_rombongan}'")
+        flash('Detail bus berhasil diperbarui!', 'success')
+        return redirect(url_for('admin.edit_rombongan', id=bus.rombongan_id))
+
+    return render_template('edit_bus.html', form=form, bus=bus, title="Edit Detail Bus")
+
 @admin_bp.route('/bus/hapus/<int:bus_id>', methods=['POST'])
 @login_required
 @role_required('Korpus', 'Korda', 'Sekretaris', 'Korpuspi')
@@ -3098,24 +3124,25 @@ def salin_rombongan():
 
 @admin_bp.route('/cetak-kartu')
 @login_required
-@role_required('Korpus', 'Korda', 'Korwil', 'Sekretaris', 'Korpuspi')
+@role_required('Korpus', 'Korda', 'Korpuspi')
 def cetak_kartu():
     active_edisi = get_active_edisi()
-    
-    # --- PERBAIKI QUERY DASAR DI SINI ---
-    # Mulai query dari Pendaftaran dan langsung JOIN ke Santri
-    query = Pendaftaran.query.join(Santri)
+    if not active_edisi:
+        flash("Tidak ada edisi aktif.", "warning")
+        return render_template('cetak_kartu.html', semua_pendaftar=[], rombongan_for_filter=[])
 
-    if active_edisi:
-        # Filter berdasarkan edisi aktif
-        query = query.join(Rombongan, or_(
-            Pendaftaran.rombongan_pulang_id == Rombongan.id,
-            Pendaftaran.rombongan_kembali_id == Rombongan.id
-        )).filter(Rombongan.edisi_id == active_edisi.id)
-    else:
-        query = query.filter(db.false())
+    # BARU: Ambil parameter filter dari URL
+    nama_filter = request.args.get('nama', '')
+    rombongan_id_filter = request.args.get('rombongan_id', type=int)
+    perjalanan_filter = request.args.get('perjalanan', '')
+
+    # Siapkan query dasar
+    query = Pendaftaran.query.join(Santri).filter(Pendaftaran.edisi_id == active_edisi.id)
 
     # Filter berdasarkan hak akses
+    managed_rombongan_ids = []
+    rombongan_for_filter = Rombongan.query.filter_by(edisi_id=active_edisi.id).order_by(Rombongan.nama_rombongan).all()
+
     if current_user.role.name in ['Korwil', 'Korda']:
         managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
         if not managed_rombongan_ids:
@@ -3127,60 +3154,107 @@ def cetak_kartu():
                     Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids)
                 )
             )
+        # Sesuaikan daftar rombongan untuk dropdown filter
+        rombongan_for_filter = [r for r in rombongan_for_filter if r.id in managed_rombongan_ids]
     
+    # BARU: Terapkan filter ke query
+    if nama_filter:
+        query = query.filter(Santri.nama.ilike(f'%{nama_filter}%'))
+    
+    if rombongan_id_filter:
+        query = query.filter(
+            or_(
+                Pendaftaran.rombongan_pulang_id == rombongan_id_filter,
+                Pendaftaran.rombongan_kembali_id == rombongan_id_filter
+            )
+        )
+    
+    if perjalanan_filter:
+        if perjalanan_filter == 'pulang':
+            query = query.filter(Pendaftaran.status_pulang != 'Tidak Ikut')
+        elif perjalanan_filter == 'kembali':
+            query = query.filter(Pendaftaran.status_kembali != 'Tidak Ikut')
+
     # Ambil semua pendaftar yang relevan dan urutkan
-    semua_pendaftar = query.options(
-        joinedload(Pendaftaran.santri),
-        joinedload(Pendaftaran.rombongan_pulang),
-        joinedload(Pendaftaran.bus_pulang)
-    ).order_by(Santri.nama).all() # Sekarang order_by akan berfungsi
-
-    # Hilangkan duplikat jika perlu
-    unique_pendaftar = list({p.santri_id: p for p in semua_pendaftar}.values())
-
-    return render_template('cetak_kartu.html', semua_pendaftar=unique_pendaftar)
-
-@admin_bp.route('/cetak-tiket')
-@login_required
-@role_required('Korpus', 'Korda', 'Korwil', 'Sekretaris', 'Korpuspi')
-def cetak_tiket():
-    active_edisi = get_active_edisi()
-    query = Pendaftaran.query.join(Santri)
-
-    if not active_edisi:
-        flash("Tidak ada edisi yang aktif untuk mencetak tiket.", "warning")
-        return redirect(url_for('admin.dashboard'))
-
-    # Filter berdasarkan edisi aktif
-    query = query.join(Rombongan, or_(
-        Pendaftaran.rombongan_pulang_id == Rombongan.id,
-        Pendaftaran.rombongan_kembali_id == Rombongan.id
-    )).filter(Rombongan.edisi_id == active_edisi.id)
-
-    # Filter berdasarkan hak akses Korda/Korwil
-    if current_user.role.name in ['Korwil', 'Korda']:
-        managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
-        if not managed_rombongan_ids:
-            query = query.filter(db.false())
-        else:
-            query = query.filter(
-                or_(
-                    Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids),
-                    Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids)
-                )
-            )
-    
-    # Ambil semua pendaftar yang relevan
     semua_pendaftar = query.options(
         joinedload(Pendaftaran.santri),
         joinedload(Pendaftaran.rombongan_pulang),
         joinedload(Pendaftaran.bus_pulang)
     ).order_by(Santri.nama).all()
 
-    # Hilangkan duplikat
+    # Hilangkan duplikat santri jika perlu
     unique_pendaftar = list({p.santri_id: p for p in semua_pendaftar}.values())
 
-    return render_template('cetak_tiket.html', semua_pendaftar=unique_pendaftar)
+    return render_template('cetak_kartu.html', 
+                           semua_pendaftar=unique_pendaftar,
+                           rombongan_for_filter=rombongan_for_filter) # Kirim daftar rombongan ke template
+
+@admin_bp.route('/cetak-tiket')
+@login_required
+@role_required('Korpus', 'Korda', 'Korpuspi') # Pastikan role sesuai
+def cetak_tiket():
+    active_edisi = get_active_edisi()
+    if not active_edisi:
+        flash("Tidak ada edisi aktif.", "warning")
+        return render_template('cetak_tiket.html', semua_pendaftar=[], rombongan_for_filter=[])
+
+    # BARU: Ambil parameter filter dari URL
+    nama_filter = request.args.get('nama', '')
+    rombongan_id_filter = request.args.get('rombongan_id', type=int)
+    perjalanan_filter = request.args.get('perjalanan', '')
+
+    # Siapkan query dasar
+    query = Pendaftaran.query.join(Santri).filter(Pendaftaran.edisi_id == active_edisi.id)
+
+    # Filter berdasarkan hak akses dan siapkan daftar rombongan untuk dropdown
+    managed_rombongan_ids = []
+    rombongan_for_filter = Rombongan.query.filter_by(edisi_id=active_edisi.id).order_by(Rombongan.nama_rombongan).all()
+
+    if current_user.role.name in ['Korwil', 'Korda']:
+        managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+        if not managed_rombongan_ids:
+            query = query.filter(db.false())
+        else:
+            query = query.filter(
+                or_(
+                    Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids),
+                    Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids)
+                )
+            )
+        rombongan_for_filter = [r for r in rombongan_for_filter if r.id in managed_rombongan_ids]
+    
+    # BARU: Terapkan filter dari form ke query
+    if nama_filter:
+        query = query.filter(Santri.nama.ilike(f'%{nama_filter}%'))
+    
+    if rombongan_id_filter:
+        query = query.filter(
+            or_(
+                Pendaftaran.rombongan_pulang_id == rombongan_id_filter,
+                Pendaftaran.rombongan_kembali_id == rombongan_id_filter
+            )
+        )
+    
+    if perjalanan_filter:
+        if perjalanan_filter == 'pulang':
+            query = query.filter(Pendaftaran.status_pulang != 'Tidak Ikut')
+        elif perjalanan_filter == 'kembali':
+            query = query.filter(Pendaftaran.status_kembali != 'Tidak Ikut')
+
+    # Ambil semua pendaftar yang relevan
+    semua_pendaftar = query.options(
+        joinedload(Pendaftaran.santri),
+        joinedload(Pendaftaran.rombongan_pulang),
+        joinedload(Pendaftaran.rombongan_kembali),
+        joinedload(Pendaftaran.bus_pulang),
+        joinedload(Pendaftaran.bus_kembali)
+    ).order_by(Santri.nama).all()
+
+    unique_pendaftar = list({p.santri_id: p for p in semua_pendaftar}.values())
+
+    return render_template('cetak_tiket.html', 
+                           semua_pendaftar=unique_pendaftar,
+                           rombongan_for_filter=rombongan_for_filter)
 
 # 1. Halaman Utama Manajemen Wisuda (termasuk logika impor)
 @admin_bp.route('/manajemen-wisuda', methods=['GET', 'POST'])
