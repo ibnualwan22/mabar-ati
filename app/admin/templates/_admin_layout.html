@@ -773,7 +773,7 @@
         </li>
         
         <li class="nav-heading">Manajemen Event</li>
-        {% if current_user.role.name in ['Korpus', 'Korda', 'Korwil', 'Bendahara Pusat'] %}
+        {% if current_user.role.name in ['Korpus', 'Korda', 'Korwil', 'Bendahara Pusat', 'Korpuspi', 'Sekretaris'] %}
         <li class="nav-item">
             <a href="{{ url_for('admin.manajemen_rombongan') }}" 
                class="nav-link {{ 'active' if 'manajemen_rombongan' in request.endpoint else '' }}">
@@ -781,7 +781,7 @@
             </a>
         </li>
         {% endif %}
-        {% if current_user.role.name in ['Korpus'] %}
+        {% if current_user.role.name in ['Korpus', 'korda', 'Korpuspi'] %}
         <li class="nav-item">
             <a href="{{ url_for('admin.pendaftaran_rombongan') }}" 
                class="nav-link {{ 'active' if 'pendaftaran_rombongan' in request.endpoint else '' }}">
@@ -789,7 +789,7 @@
             </a>
         </li>
         {% endif %}
-        {% if current_user.role.name in ['Korpus', 'Korwil'] %}
+        {% if current_user.role.name in ['Korpus', 'Korwil', 'Korpuspi', 'Sekretaris'] %}
         <li class="nav-item">
             <a href="{{ url_for('admin.daftar_peserta_global') }}" 
                class="nav-link {{ 'active' if 'daftar_peserta_global' in request.endpoint else '' }}">
@@ -799,7 +799,7 @@
         {% endif %}
         
         <li class="nav-heading">Manajemen Santri</li>
-        {% if current_user.role.name == 'Korpus' %}
+        {% if current_user.role.name in ['Korpus', 'Korpuspi', 'Sekretaris'] %}
         <li class="nav-item">
             <a href="{{ url_for('admin.manajemen_santri') }}" 
                class="nav-link {{ 'active' if 'manajemen_santri' in request.endpoint else '' }}">
@@ -807,7 +807,7 @@
             </a>
         </li>
         {% endif %}
-        {% if current_user.role.name in ['Korpus', 'Korwil', 'Korda', 'Bendahara Pusat'] %}
+        {% if current_user.role.name in ['Korpus', 'Korwil', 'Korda', 'Bendahara Pusat', 'Korpuspi', 'Sekretaris'] %}
         <li class="nav-item">
             <a href="{{ url_for('admin.manajemen_santri_wilayah') }}" 
                class="nav-link {{ 'active' if 'manajemen_santri_wilayah' in request.endpoint else '' }}">
@@ -827,7 +827,7 @@
                 <i class="fas fa-user-tag"></i> Data Partisipan
             </a>
         </li>
-        {% if current_user.role.name in ['Korpus', 'PJ Acara', 'Korda'] %}
+        {% if current_user.role.name in ['Korpus', 'PJ Acara', 'Korda', 'Korpuspi', 'Sekretaris'] %}
         <li class="nav-item">
             <a href="{{ url_for('admin.manajemen_wisuda') }}" 
                class="nav-link {{ 'active' if 'wisuda' in request.endpoint else '' }}">
@@ -835,7 +835,7 @@
             </a>
         </li>
         {% endif %}
-        {% if current_user.role.name in ['Korpus', 'Korda', 'Korwil', 'Bendahara Pusat'] %}
+        {% if current_user.role.name in ['Korpus', 'Korda', 'Korwil', 'Bendahara Pusat', 'Korpuspi', 'Sekretaris'] %}
         <li class="nav-heading">Manajemen Keuangan</li>
         <li class="nav-item">
             <a href="{{ url_for('admin.manajemen_keuangan') }}" 
@@ -844,7 +844,7 @@
             </a>
         </li>
         {% endif %}
-        {% if current_user.role.name in ['Bendahara Pusat', 'Korpus'] %}
+        {% if current_user.role.name in ['Bendahara Pusat'] %}
 
 <li class="nav-item">
     <a href="{{ url_for('admin.bendahara_dashboard') }}" class="nav-link {{ 'active' if 'bendahara_dashboard' in request.endpoint else '' }}">
@@ -894,7 +894,7 @@
         </li>
         {% endif %}
 
-        {% if current_user.role.name in ['Korpus', 'Korda'] %}
+        {% if current_user.role.name in ['Korpus', 'Korda', 'Korpuspi', 'Sekretaris'] %}
         <li class="nav-item">
             <a href="{{ url_for('admin.cetak_kartu') }}" 
                class="nav-link {{ 'active' if 'cetak_kartu' in request.endpoint else '' }}">
@@ -903,7 +903,7 @@
         </li>
         {% endif %}
 
-        {% if current_user.role.name in ['Korpus', 'Korda'] %}
+        {% if current_user.role.name in ['Korpus', 'Korda', 'Korpuspi', 'Sekretaris'] %}
 <li class="nav-item">
     <a href="{{ url_for('admin.cetak_tiket') }}" class="nav-link {{ 'active' if 'cetak_tiket' in request.endpoint else '' }}">
         <i class="fas fa-ticket-alt"></i> Cetak Tiket

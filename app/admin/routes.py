@@ -98,13 +98,13 @@ def role_required(*roles): # Terima beberapa nama peran
 
 @admin_bp.route('/users')
 @login_required
-@role_required('Korpus')
+@role_required('Korpus', 'Korpuspi')
 def manajemen_user():
     users = User.query.all()
     return render_template('manajemen_user.html', users=users)
 @admin_bp.route('/users/tambah', methods=['GET', 'POST'])
 @login_required
-@role_required('Korpus')
+@role_required('Korpus', 'Korpuspi')
 def tambah_user():
     form = UserForm()
     if form.validate_on_submit():
@@ -141,7 +141,7 @@ def tambah_user():
 
 @admin_bp.route('/users/edit/<int:user_id>', methods=['GET', 'POST'])
 @login_required
-@role_required('Korpus')
+@role_required('Korpus', 'Korpuspi')
 def edit_user(user_id):
     user = User.query.get_or_404(user_id)
     # Saat GET, form diisi dengan data awal dari 'user'
@@ -183,7 +183,7 @@ def edit_user(user_id):
 
 @admin_bp.route('/users/hapus/<int:user_id>', methods=['POST'])
 @login_required
-@role_required('Korpus')
+@role_required('Korpus', 'Korpuspi')
 def hapus_user(user_id):
     user = User.query.get_or_404(user_id)
     # Jangan biarkan korpus menghapus dirinya sendiri
@@ -200,7 +200,7 @@ def hapus_user(user_id):
 
 @admin_bp.route('/')
 @login_required
-@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara', 'Bendahara Pusat')
+@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
 def dashboard():
     check_and_update_expired_izin()
     active_edisi = get_active_edisi()
@@ -303,7 +303,7 @@ def dashboard():
 
 @admin_bp.route('/rombongan')
 @login_required
-@role_required('Korpus', 'Korwil', 'Korda', 'Bendahara Pusat')
+@role_required('Korpus', 'Korwil', 'Korda', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
 def manajemen_rombongan():
     active_edisi = get_active_edisi()
     semua_rombongan = []  # Inisialisasi daftar kosong di awal
@@ -335,7 +335,7 @@ def manajemen_rombongan():
 
 @admin_bp.route('/rombongan/tambah', methods=['GET', 'POST'])
 @login_required
-@role_required('Korpus')
+@role_required('Korpus', 'Sekretaris', 'Korpuspi')
 def tambah_rombongan():
     active_edisi = get_active_edisi()
     if not active_edisi:
@@ -377,7 +377,7 @@ def tambah_rombongan():
 
 @admin_bp.route('/rombongan/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
-@role_required('Korpus', 'Korda')
+@role_required('Korpus', 'Korda', 'Sekretaris', 'Korpuspi')
 def edit_rombongan(id):
     """Route untuk edit rombongan dengan manajemen bus"""
     active_edisi = get_active_edisi()
@@ -479,7 +479,7 @@ def edit_rombongan(id):
 
 @admin_bp.route('/rombongan/hapus/<int:id>', methods=['POST'])
 @login_required
-@role_required('Korpus') # Hanya Korpus yang bisa buat rombongan baru
+@role_required('Korpus', 'Sekretaris', 'Korpuspi') # Hanya Korpus yang bisa buat rombongan baru
 def hapus_rombongan(id):
     rombongan = Rombongan.query.get_or_404(id)
     nama_rombongan = rombongan.nama_rombongan
@@ -517,7 +517,7 @@ def forbidden(error):
 
 @admin_bp.route('/santri')
 @login_required
-@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara')
+@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara', 'Sekretaris', 'Korpuspi')
 def manajemen_santri():
     page = request.args.get('page', 1, type=int)
     active_edisi = get_active_edisi()
@@ -610,7 +610,7 @@ def search_student_proxy():
 # Route ini untuk memproses aksi "Impor"
 @admin_bp.route('/santri/impor', methods=['POST'])
 @login_required
-@role_required('Korpus') # Hanya Korpus yang bisa buat rombongan baru
+@role_required('Korpus', 'Sekretaris') # Hanya Korpus yang bisa buat rombongan baru
 def impor_santri():
     data = request.get_json()
     if not data:
@@ -642,7 +642,7 @@ def impor_santri():
 
 @admin_bp.route('/santri/impor-semua', methods=['POST'])
 @login_required
-@role_required('Korpus')
+@role_required('Korpus', 'Sekretaris')
 def impor_semua_santri():
     try:
         api_url = "https://sigap.amtsilatipusat.com/api/student?limit=2000"
@@ -728,7 +728,7 @@ def edit_santri(id):
 
 @admin_bp.route('/santri/hapus/<int:id>', methods=['POST'])
 @login_required
-@role_required('Korpus') # Hanya Korpus yang bisa buat rombongan baru
+@role_required('Korpus', 'Sekretaris') # Hanya Korpus yang bisa buat rombongan baru
 def hapus_santri(id):
     santri = Santri.query.get_or_404(id)
     nama_santri = santri.nama
@@ -740,7 +740,7 @@ def hapus_santri(id):
 
 @admin_bp.route('/pendaftaran', methods=['GET', 'POST'])
 @login_required
-@role_required('Korpus', 'Korda')
+@role_required('Korpus', 'Korda', 'Korpuspi')
 def pendaftaran_rombongan():
     form = PendaftaranForm()
     active_edisi = get_active_edisi()
@@ -813,7 +813,7 @@ def pendaftaran_rombongan():
 
 @admin_bp.route('/pendaftaran/edit/<int:pendaftaran_id>', methods=['GET', 'POST'])
 @login_required
-@role_required('Korpus', 'Korda')
+@role_required('Korpus', 'Korda', 'Korpuspi')
 def edit_pendaftaran(pendaftaran_id):
     pendaftaran = Pendaftaran.query.options(
         joinedload(Pendaftaran.santri),
@@ -922,7 +922,7 @@ def edit_pendaftaran(pendaftaran_id):
 
 @admin_bp.route('/pendaftaran/hapus/<int:pendaftaran_id>', methods=['POST'])
 @login_required
-@role_required('Korpus', 'Korda')
+@role_required('Korpus', 'Korda', 'Korpuspi')
 def hapus_pendaftaran(pendaftaran_id):
     pendaftaran = Pendaftaran.query.get_or_404(pendaftaran_id)
     # Verifikasi Kepemilikan (menggunakan rombongan pulang sebagai acuan)
@@ -1002,7 +1002,7 @@ def search_santri_api():
 
 @admin_bp.route('/rombongan/<int:rombongan_id>/peserta')
 @login_required
-@role_required('Korpus', 'Korda', 'Korwil', 'Bendahara Pusat')
+@role_required('Korpus', 'Korda', 'Korwil', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
 def daftar_peserta(rombongan_id):
     rombongan = Rombongan.query.get_or_404(rombongan_id)
     pendaftar = Pendaftaran.query.filter(
@@ -1062,7 +1062,7 @@ def daftar_peserta(rombongan_id):
 
 @admin_bp.route('/peserta-global')
 @login_required
-@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan')
+@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'Sekretaris', 'Korpuspi')
 def daftar_peserta_global():
     active_edisi = get_active_edisi()
     if not active_edisi:
@@ -1147,7 +1147,7 @@ def daftar_peserta_global():
 
 @admin_bp.route('/perizinan', methods=['GET', 'POST'])
 @login_required
-@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara', 'Bendahara Pusat')
+@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
 def perizinan():
     form = IzinForm()
     active_edisi = get_active_edisi()
@@ -1203,7 +1203,7 @@ def perizinan():
 
 @admin_bp.route('/export/perizinan/<jenis_kelamin>')
 @login_required
-@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara')
+@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara', 'Sekretaris', 'Korpuspi')
 def export_perizinan(jenis_kelamin):
     """Export data perizinan ke Excel berdasarkan jenis kelamin"""
     
@@ -1426,7 +1426,7 @@ def search_active_santri_api():
 
 
 @admin_bp.route('/partisipan')
-@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara', 'Bendahara Pusat')
+@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
 @login_required
 def data_partisipan():
     active_edisi = get_active_edisi()
@@ -1447,7 +1447,7 @@ def data_partisipan():
 # Buat route placeholder untuk form tambah agar link-nya tidak error
 @admin_bp.route('/partisipan/tambah', methods=['GET', 'POST'])
 @login_required
-@role_required('Korpus', 'PJ Acara')
+@role_required('Korpus', 'PJ Acara', 'Sekretaris', 'Korpuspi')
 def tambah_partisipan():
     form = PartisipanForm()
     active_edisi = get_active_edisi()
@@ -1508,7 +1508,7 @@ def search_santri_for_partisipan_api():
 
 @admin_bp.route('/partisipan/edit/<int:partisipan_id>', methods=['GET', 'POST'])
 @login_required
-@role_required('Korpus', 'PJ Acara')
+@role_required('Korpus', 'PJ Acara', 'Sekretaris', 'Korpuspi')
 def edit_partisipan(partisipan_id):
     partisipan = Partisipan.query.get_or_404(partisipan_id)
     form = PartisipanEditForm(obj=partisipan)
@@ -1525,7 +1525,7 @@ def edit_partisipan(partisipan_id):
 
 @admin_bp.route('/partisipan/hapus/<int:partisipan_id>', methods=['POST'])
 @login_required
-@role_required('Korpus', 'PJ Acara')
+@role_required('Korpus', 'PJ Acara', 'Sekretaris', 'Korpuspi')
 def hapus_partisipan(partisipan_id):
     partisipan = Partisipan.query.get_or_404(partisipan_id)
     santri = partisipan.santri
@@ -1693,7 +1693,7 @@ def detail_arsip(edisi_id):
 
 @admin_bp.route('/rombongan/<int:rombongan_id>/tambah-bus', methods=['POST'])
 @login_required
-@role_required('Korpus', 'Korda')
+@role_required('Korpus', 'Korda', 'Sekretaris', 'Korpuspi')
 def tambah_bus(rombongan_id):
     rombongan = Rombongan.query.get_or_404(rombongan_id)
     # Verifikasi kepemilikan untuk Korda
@@ -1721,7 +1721,7 @@ def tambah_bus(rombongan_id):
 
 @admin_bp.route('/bus/hapus/<int:bus_id>', methods=['POST'])
 @login_required
-@role_required('Korpus', 'Korda')
+@role_required('Korpus', 'Korda', 'Sekretaris', 'Korpuspi')
 def hapus_bus(bus_id):
     bus = Bus.query.get_or_404(bus_id)
     rombongan_id = bus.rombongan_id
@@ -1738,7 +1738,7 @@ def hapus_bus(bus_id):
 
 @admin_bp.route('/bus/<int:bus_id>/detail')
 @login_required
-@role_required('Korpus', 'Korwil', 'Korda', 'Bendahara Pusat')
+@role_required('Korpus', 'Korwil', 'Korda', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
 def detail_bus(bus_id):
     bus = Bus.query.get_or_404(bus_id)
     
@@ -1770,7 +1770,7 @@ def detail_bus(bus_id):
 
 @admin_bp.route('/keuangan')
 @login_required
-@role_required('Korpus', 'Korwil', 'Korda', 'Bendahara Pusat')
+@role_required('Korpus', 'Korwil', 'Korda', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
 def manajemen_keuangan():
     active_edisi = get_active_edisi()
     
@@ -1855,7 +1855,7 @@ def manajemen_keuangan():
 
 @admin_bp.route('/keuangan/export-pdf')
 @login_required
-@role_required('Korpus', 'Korwil', 'Korda')
+@role_required('Korpus', 'Korwil', 'Korda', 'Sekretaris', 'Korpuspi')
 def export_keuangan_pdf():
     active_edisi = get_active_edisi()
     
@@ -2373,7 +2373,7 @@ def log_activity(action_type, feature, description):
 
 @admin_bp.route('/log-aktivitas')
 @login_required
-@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara', 'Bendahara Pusat')
+@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
 def log_aktivitas():
     page = request.args.get('page', 1, type=int)
     
@@ -2422,7 +2422,7 @@ def log_aktivitas():
 
 @admin_bp.route('/santri-wilayah')
 @login_required
-@role_required('Korpus', 'Korwil', 'Korda', 'Bendahara Pusat')
+@role_required('Korpus', 'Korwil', 'Korda', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
 def manajemen_santri_wilayah():
     """Menampilkan daftar santri yang relevan dengan wilayah Korda/Korwil dengan statistik dan filter detail."""
     active_edisi = get_active_edisi()
@@ -2606,7 +2606,7 @@ def manajemen_santri_wilayah():
 
 @admin_bp.route('/export-santri-wilayah')
 @login_required
-@role_required('Korpus', 'Korwil', 'Korda')
+@role_required('Korpus', 'Korwil', 'Korda', 'Sekretaris', 'Korpuspi')
 def export_santri_wilayah():
     """Export data santri wilayah ke Excel dengan filter yang sama - SEMUA SANTRI AKAN TERMUAT"""
     from openpyxl import Workbook
@@ -3098,7 +3098,7 @@ def salin_rombongan():
 
 @admin_bp.route('/cetak-kartu')
 @login_required
-@role_required('Korpus', 'Korda', 'Korwil')
+@role_required('Korpus', 'Korda', 'Korwil', 'Sekretaris', 'Korpuspi')
 def cetak_kartu():
     active_edisi = get_active_edisi()
     
@@ -3142,7 +3142,7 @@ def cetak_kartu():
 
 @admin_bp.route('/cetak-tiket')
 @login_required
-@role_required('Korpus', 'Korda', 'Korwil')
+@role_required('Korpus', 'Korda', 'Korwil', 'Sekretaris', 'Korpuspi')
 def cetak_tiket():
     active_edisi = get_active_edisi()
     query = Pendaftaran.query.join(Santri)
@@ -3185,7 +3185,7 @@ def cetak_tiket():
 # 1. Halaman Utama Manajemen Wisuda (termasuk logika impor)
 @admin_bp.route('/manajemen-wisuda', methods=['GET', 'POST'])
 @login_required
-@role_required('Korpus', 'PJ Acara', 'Korwil', 'Korda', 'Bendahara Pusat')
+@role_required('Korpus', 'PJ Acara', 'Korwil', 'Korda', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
 def manajemen_wisuda():
     active_edisi = get_active_edisi()
     import_form = ImportWisudaForm()
@@ -3250,7 +3250,7 @@ def manajemen_wisuda():
 # 2. Halaman untuk menambah wisudawan manual
 @admin_bp.route('/tambah-wisudawan', methods=['GET', 'POST'])
 @login_required
-@role_required('Korpus', 'PJ Acara')
+@role_required('Korpus', 'Sekretaris', 'Korpuspi')
 def tambah_wisudawan():
     form = WisudaForm()
     if form.validate_on_submit():
@@ -3273,7 +3273,7 @@ def tambah_wisudawan():
 # 3. Route untuk menghapus status wisuda
 @admin_bp.route('/hapus-wisuda/<int:wisuda_id>', methods=['POST'])
 @login_required
-@role_required('Korpus', 'PJ Acara')
+@role_required('Korpus', 'Sekretaris', 'Korpuspi')
 def hapus_wisuda(wisuda_id):
     wisuda = Wisuda.query.get_or_404(wisuda_id)
     santri = wisuda.santri
@@ -3305,7 +3305,7 @@ def api_search_santri_for_wisuda():
 
 @admin_bp.route('/santri/update-wali/<int:santri_id>', methods=['POST'])
 @login_required
-@role_required('Korpus', 'Korda', 'Korwil')
+@role_required('Korpus', 'Korda', 'Korwil', 'Sekretaris', 'Korpuspi')
 def update_nomor_wali(santri_id):
     santri = Santri.query.get_or_404(santri_id)
     new_phone_number = request.json.get('no_hp_wali')
@@ -3534,7 +3534,7 @@ def bendahara_buku_kas():
 # Ganti fungsi bendahara_buku_kas_bus dengan ini
 @admin_bp.route('/bendahara/buku-kas-bus', methods=['GET', 'POST'])
 @login_required
-@role_required('Bendahara Pusat')
+@role_required('Bendahara Pusat', 'Korpus')
 def bendahara_buku_kas_bus():
     active_edisi = get_active_edisi()
     form = PengeluaranBusForm() # Gunakan form baru
