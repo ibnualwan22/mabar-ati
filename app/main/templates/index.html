@@ -312,7 +312,7 @@
                                                     <thead class="bg-secondary text-white">
                                                         <tr>
                                                             <th class="border-0 py-3"><i class="fas fa-map-pin me-2"></i>Titik Turun/Jemput</th>
-                                                            <th class="border-0 py-3"><i class="fas fa-money-bill-wave me-2"></i>Biaya per Perjalanan</th>
+                                                            <th class="border-0 py-3"><i class="fas fa-money-bill-wave me-2"></i>Biaya Pulang Pergi</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -326,8 +326,9 @@
                                                             </td>
                                                             <td class="py-3">
                                                                 <span class="badge bg-dark fs-6 px-3 py-2">
-                                                                    Rp {{ "{:,.0f}".format((tarif.harga_bus|default(0)) + (tarif.fee_korda|default(0)) + 10000).replace(',', '.') }}
-                                                                </span>
+    Rp {{ "{:,.0f}".format(((tarif.harga_bus|default(0)) + (tarif.fee_korda|default(0)) + 10000) * 2).replace(',', '.') }}
+</span>
+
                                                             </td>
                                                         </tr>
                                                         {% else %}

@@ -781,7 +781,7 @@
             </a>
         </li>
         {% endif %}
-        {% if current_user.role.name in ['Korpus', 'korda', 'Korpuspi'] %}
+        {% if current_user.role.name in ['Korpus', 'Korda', 'Korpuspi'] %}
         <li class="nav-item">
             <a href="{{ url_for('admin.pendaftaran_rombongan') }}" 
                class="nav-link {{ 'active' if 'pendaftaran_rombongan' in request.endpoint else '' }}">
