@@ -517,76 +517,77 @@ def forbidden(error):
 
 @admin_bp.route('/santri')
 @login_required
-@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara', 'Sekretaris', 'Korpuspi')
+@role_required('Korpus', 'Korwil', 'Korda', 'Keamanan', 'Sekretaris', 'Korpuspi')
 def manajemen_santri():
-    page = request.args.get('page', 1, type=int)
     active_edisi = get_active_edisi()
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+
+    # Ambil data untuk dropdown filter
+    all_rombongan = Rombongan.query.filter_by(edisi_id=active_edisi.id).order_by(Rombongan.nama_rombongan).all()
+    all_kabupaten = [k[0] for k in db.session.query(Santri.kabupaten).filter(Santri.kabupaten.isnot(None)).distinct().order_by(Santri.kabupaten)]
+    all_provinsi = [p[0] for p in db.session.query(Santri.provinsi).filter(Santri.provinsi.isnot(None)).distinct().order_by(Santri.provinsi)]
+
+    # Ambil parameter filter dari URL
+    nama_filter = request.args.get('nama', '')
+    alamat_filter = request.args.getlist('alamat')
+    keterangan_filter = request.args.get('keterangan', '')
+    status_filter = request.args.get('status', '')
+    rombongan_id_filter = request.args.get('rombongan_id', '')
+    provinsi_filter = request.args.get('provinsi', '')
+
+    # Query dasar
     query = Santri.query
 
-    # Ambil parameter filter
-    search_nama = request.args.get('nama')
-    search_alamat_list = request.args.getlist('alamat')
-    search_asrama = request.args.get('asrama')
-    search_status = request.args.get('status')
-    f_rombongan_id = request.args.get('rombongan_id')
-    f_keterangan = request.args.get('keterangan') # <-- Filter baru
-
-
     # Terapkan filter
-    if search_nama:
-        query = query.filter(Santri.nama.ilike(f'%{search_nama}%'))
-    if search_alamat_list:
-        query = query.filter(Santri.kabupaten.in_(search_alamat_list))
-    if search_asrama:
-        query = query.filter(Santri.asrama.ilike(f'%{search_asrama}%'))
-    if search_status:
-        query = query.filter(Santri.status_santri == search_status)
-
-    if f_rombongan_id:
-        if f_rombongan_id == 'belum_terdaftar':
-            if active_edisi:
-                subquery = db.session.query(Pendaftaran.santri_id).join(Rombongan, or_(
-                    Pendaftaran.rombongan_pulang_id == Rombongan.id,
-                    Pendaftaran.rombongan_kembali_id == Rombongan.id
-                )).filter(Rombongan.edisi_id == active_edisi.id)
-                query = query.filter(~Santri.id.in_(subquery))
+    if nama_filter:
+        query = query.filter(Santri.nama.ilike(f'%{nama_filter}%'))
+    if alamat_filter:
+        query = query.filter(Santri.kabupaten.in_(alamat_filter))
+    if provinsi_filter:
+        query = query.filter(Santri.provinsi == provinsi_filter)
+    if status_filter:
+        query = query.filter(Santri.status_santri == status_filter)
+    if keterangan_filter:
+        if keterangan_filter == 'Pengurus':
+            query = query.filter(Santri.nama_jabatan.isnot(None))
+        elif keterangan_filter == 'Santri':
+            query = query.filter(Santri.nama_jabatan.is_(None))
+    
+    if rombongan_id_filter:
+        if rombongan_id_filter == 'belum_terdaftar':
+            query = query.filter(~Santri.pendaftarans.any(Pendaftaran.edisi_id == active_edisi.id))
         else:
-            # Cari santri yang terdaftar di rombongan spesifik (baik pulang maupun kembali)
-            query = query.join(Pendaftaran).filter(
+            rombongan_id_int = int(rombongan_id_filter)
+            query = query.join(Santri.pendaftarans).filter(
+                Pendaftaran.edisi_id == active_edisi.id,
                 or_(
-                    Pendaftaran.rombongan_pulang_id == f_rombongan_id,
-                    Pendaftaran.rombongan_kembali_id == f_rombongan_id
+                    Pendaftaran.rombongan_pulang_id == rombongan_id_int,
+                    Pendaftaran.rombongan_kembali_id == rombongan_id_int
                 )
             )
-    if f_keterangan:
-        if f_keterangan == 'Pengurus':
-            # Tampilkan semua yang memiliki jabatan
-            query = query.filter(Santri.nama_jabatan != None, Santri.nama_jabatan != '')
-        elif f_keterangan == 'Santri':
-            # Tampilkan semua yang tidak memiliki jabatan
-            query = query.filter((Santri.nama_jabatan == None) | (Santri.nama_jabatan == ''))
 
-    pagination = query.order_by(Santri.nama).paginate(page=page, per_page=50, error_out=False)
+    # Lakukan paginasi
+    pagination = query.order_by(Santri.nama).paginate(page=page, per_page=per_page, error_out=False)
+    
+    # Ambil data pendaftaran yang relevan untuk halaman saat ini agar efisien
     santri_ids_on_page = [s.id for s in pagination.items]
     pendaftaran_terkait = {}
-    if active_edisi and santri_ids_on_page:
-        pendaftaran_objects = Pendaftaran.query.filter(
-            Pendaftaran.santri_id.in_(santri_ids_on_page),
-            or_(
-                Pendaftaran.rombongan_pulang.has(edisi_id=active_edisi.id),
-                Pendaftaran.rombongan_kembali.has(edisi_id=active_edisi.id)
-            )
+    if santri_ids_on_page:
+        pendaftarans = Pendaftaran.query.options(
+            joinedload(Pendaftaran.rombongan_pulang),
+            joinedload(Pendaftaran.rombongan_kembali)
+        ).filter(
+            Pendaftaran.edisi_id == active_edisi.id,
+            Pendaftaran.santri_id.in_(santri_ids_on_page)
         ).all()
-        pendaftaran_terkait = {p.santri_id: p for p in pendaftaran_objects}
+        pendaftaran_terkait = {p.santri_id: p for p in pendaftarans}
 
-    
-    all_rombongan = Rombongan.query.filter_by(edisi=active_edisi).order_by(Rombongan.nama_rombongan).all() if active_edisi else []
-    all_kabupaten = [k[0] for k in db.session.query(Santri.kabupaten).distinct().order_by(Santri.kabupaten).all() if k[0] is not None]
-    
-    return render_template('manajemen_santri.html', 
-                           pagination=pagination, 
+    return render_template('manajemen_santri.html',
+                           pagination=pagination,
                            all_rombongan=all_rombongan,
                            all_kabupaten=all_kabupaten,
+                           all_provinsi=all_provinsi,
                            pendaftaran_terkait=pendaftaran_terkait)
 
 @admin_bp.route('/api/search-student')
@@ -673,6 +674,7 @@ def impor_semua_santri():
                 santri_to_update.api_student_id = data.get('id') # Sinkronkan ulang ID API
                 santri_to_update.nama = data.get('name', 'Tanpa Nama')
                 santri_to_update.kabupaten = data.get('regency')
+                santri_to_update.provinsi = data.get('provinnce') # <-- Tambahkan baris ini
                 santri_to_update.asrama = data.get('activeDormitory')
                 santri_to_update.no_hp_wali = data.get('parrentPhone')
                 santri_to_update.jenis_kelamin = data.get('gender')
@@ -689,6 +691,7 @@ def impor_semua_santri():
                     'nis': api_nis,
                     'nama': data.get('name', 'Tanpa Nama'),
                     'kabupaten': data.get('regency'),
+                    'provinsi': data.get('provinnce'),
                     'asrama': data.get('activeDormitory'),
                     'no_hp_wali': data.get('parrentPhone'),
                     'jenis_kelamin': data.get('gender'),

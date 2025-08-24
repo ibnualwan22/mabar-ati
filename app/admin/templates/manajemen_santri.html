@@ -99,6 +99,17 @@
                     <button type="submit" class="btn btn-primary"><i class="fas fa-search me-2"></i>Filter</button>
                     <a href="{{ url_for('admin.manajemen_santri') }}" class="btn btn-secondary"><i class="fas fa-undo me-2"></i>Reset</a>
                 </div>
+                <div class="col-md-3">
+    <label for="provinsi" class="form-label">Provinsi</label>
+    <select name="provinsi" id="provinsi" class="form-select">
+        <option value="">-- Semua Provinsi --</option>
+        {% for prov in all_provinsi %}
+            <option value="{{ prov }}" {% if request.args.get('provinsi') == prov %}selected{% endif %}>
+                {{ prov }}
+            </option>
+        {% endfor %}
+    </select>
+</div>
             </div>
         </form>
         <hr>

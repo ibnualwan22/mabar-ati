@@ -71,6 +71,7 @@ class Santri(db.Model):
     nis = db.Column(db.String(30), unique=True, nullable=False)
     nama = db.Column(db.String(150), nullable=False)
     kabupaten = db.Column(db.String(100))
+    provinsi = db.Column(db.String(100), nullable=True)
     asrama = db.Column(db.String(50))
     no_hp_wali = db.Column(db.String(20))
     jenis_kelamin = db.Column(db.String(10), default='Putra')
