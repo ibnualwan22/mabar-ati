@@ -56,3 +56,25 @@ def clear_santri():
         except Exception as e:
             db.session.rollback()
             print(f"Error: Proses gagal dan semua perubahan dibatalkan. Detail: {e}")
+
+
+@app.cli.command("clear-pendaftaran")
+def clear_pendaftaran():
+    """Menghapus semua data peserta (pendaftaran) dan absensinya."""
+    if click.confirm('PERINGATAN: Anda akan menghapus SEMUA data peserta terdaftar dan riwayat absensinya. Lanjutkan?'):
+        try:
+            print("Menghapus data Absen...")
+            db.session.query(Absen).delete()
+
+            print("Menghapus data Pendaftaran...")
+            num_rows_deleted = db.session.query(Pendaftaran).delete()
+
+            db.session.commit()
+
+            print("-" * 30)
+            print(f"BERHASIL! Sebanyak {num_rows_deleted} data pendaftaran dan semua absensi terkait telah dihapus.")
+            print("-" * 30)
+
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error: Proses gagal. Detail: {e}")

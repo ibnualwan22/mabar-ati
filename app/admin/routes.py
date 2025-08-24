@@ -1800,84 +1800,158 @@ def detail_bus(bus_id):
 def manajemen_keuangan():
     active_edisi = get_active_edisi()
     
-    # Inisialisasi dictionary yang lengkap
-    financial_data = {
+    # Inisialisasi dictionary data yang lengkap dan benar
+    data = {
         'global_total': 0, 'global_lunas': 0, 'global_belum_lunas': 0,
         'pulang_total': 0, 'pulang_lunas': 0, 'pulang_belum_lunas': 0,
-        'pulang_cash_lunas': 0, 'pulang_transfer_lunas': 0,
-        'pulang_cash_belum': 0, 'pulang_transfer_belum': 0,
         'kembali_total': 0, 'kembali_lunas': 0, 'kembali_belum_lunas': 0,
-        'kembali_cash_lunas': 0, 'kembali_transfer_lunas': 0,
-        'kembali_cash_belum': 0, 'kembali_transfer_belum': 0,
         'alokasi_bus_pulang': 0, 'alokasi_korda_pulang': 0, 'alokasi_pondok_pulang': 0,
-        'alokasi_bus_kembali': 0, 'alokasi_korda_kembali': 0, 'alokasi_pondok_kembali': 0
+        'alokasi_bus_kembali': 0, 'alokasi_korda_kembali': 0, 'alokasi_pondok_kembali': 0,
+        'pulang_cash_count': 0, 'pulang_transfer_count': 0,
+        'pulang_cash_lunas': 0, 'pulang_cash_belum_lunas': 0,
+        'pulang_transfer_lunas': 0, 'pulang_transfer_belum_lunas': 0,
+        'kembali_cash_count': 0, 'kembali_transfer_count': 0,
+        'kembali_cash_lunas': 0, 'kembali_cash_belum_lunas': 0,
+        'kembali_transfer_lunas': 0, 'kembali_transfer_belum_lunas': 0,
+        'pulang_cash_lunas_rp': 0, 'pulang_cash_belum_lunas_rp': 0,
+        'pulang_transfer_lunas_rp': 0, 'pulang_transfer_belum_lunas_rp': 0,
+        'kembali_cash_lunas_rp': 0, 'kembali_cash_belum_lunas_rp': 0,
+        'kembali_transfer_lunas_rp': 0, 'kembali_transfer_belum_lunas_rp': 0,
     }
 
-    if active_edisi:
-        pendaftaran_query = Pendaftaran.query.join(
-            Rombongan, Pendaftaran.rombongan_pulang_id == Rombongan.id
-        ).filter(Rombongan.edisi_id == active_edisi.id)
+    if not active_edisi:
+        return render_template('manajemen_keuangan.html', data=data, active_edisi=None, rombongan_for_filter=[])
 
-        managed_rombongan_ids = set()
-        if current_user.role.name in ['Korwil', 'Korda']:
-            managed_rombongan_ids = {r.id for r in current_user.managed_rombongan}
-            if not managed_rombongan_ids:
-                pendaftaran_query = pendaftaran_query.filter(db.false())
-            else:
-                pendaftaran_query = pendaftaran_query.filter(
-                    or_(
-                        Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids),
-                        Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids)
-                    )
-                )
-        
-        all_pendaftaran = pendaftaran_query.all()
+    # Query yang efisien untuk mengambil semua data yang dibutuhkan sekaligus
+    pendaftaran_query = Pendaftaran.query.options(
+        selectinload(Pendaftaran.rombongan_pulang).selectinload(Rombongan.tarifs),
+        selectinload(Pendaftaran.rombongan_kembali).selectinload(Rombongan.tarifs)
+    ).filter(Pendaftaran.edisi_id == active_edisi.id)
 
-        for p in all_pendaftaran:
-            # Kalkulasi untuk perjalanan pulang
-            if p.status_pulang != 'Tidak Ikut' and p.rombongan_pulang_id:
-                if current_user.role.name == 'Korpus' or p.rombongan_pulang_id in managed_rombongan_ids:
-                    tarif_pulang = Tarif.query.filter_by(rombongan_id=p.rombongan_pulang_id, titik_turun=p.titik_turun).first()
-                    if tarif_pulang:
-                        biaya_pulang = tarif_pulang.harga_bus + tarif_pulang.fee_korda + 10000
-                        financial_data['pulang_total'] += biaya_pulang
-                        financial_data['alokasi_bus_pulang'] += tarif_pulang.harga_bus
-                        financial_data['alokasi_korda_pulang'] += tarif_pulang.fee_korda
-                        financial_data['alokasi_pondok_pulang'] += 10000
+    # Filter berdasarkan role dan managed rombongan
+    managed_rombongan_ids = {r.id for r in current_user.managed_rombongan}
+    if current_user.role.name in ['Korwil', 'Korda'] and managed_rombongan_ids:
+        pendaftaran_query = pendaftaran_query.filter(
+            or_(
+                Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids),
+                Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids)
+            )
+        )
+    
+    all_pendaftaran = pendaftaran_query.all()
+
+    for p in all_pendaftaran:
+        # --- LOGIKA KALKULASI PULANG YANG DIPERBAIKI ---
+        if p.status_pulang != 'Tidak Ikut' and p.rombongan_pulang:
+            # Cek apakah user berhak mengakses rombongan pulang
+            can_access_pulang = (
+                current_user.role.name in ['Korpus', 'Korpuspi', 'Bendahara Pusat', 'Sekretaris'] or
+                p.rombongan_pulang_id in managed_rombongan_ids
+            )
+            
+            if can_access_pulang:
+                tarif_pulang = next((t for t in p.rombongan_pulang.tarifs if t.titik_turun == p.titik_turun), None)
+                if tarif_pulang:
+                    biaya_pulang = tarif_pulang.harga_bus + tarif_pulang.fee_korda + 10000
+                    data['pulang_total'] += biaya_pulang
+
+                    # Proses pembayaran Cash
+                    if p.metode_pembayaran_pulang == 'Cash':
+                        data['pulang_cash_count'] += 1
                         if p.status_pulang == 'Lunas':
-                            financial_data['pulang_lunas'] += biaya_pulang
-                            if p.metode_pembayaran_pulang == 'Cash':
-                                financial_data['pulang_cash_lunas'] += biaya_pulang
-                            elif p.metode_pembayaran_pulang == 'Transfer':
-                                financial_data['pulang_transfer_lunas'] += biaya_pulang
+                            data['pulang_lunas'] += biaya_pulang
+                            data['pulang_cash_lunas'] += 1
+                            data['pulang_cash_lunas_rp'] += biaya_pulang
+                            # Alokasi fee untuk LUNAS
+                            data['alokasi_bus_pulang'] += tarif_pulang.harga_bus
+                            data['alokasi_korda_pulang'] += tarif_pulang.fee_korda
+                            data['alokasi_pondok_pulang'] += 10000
                         else: # Belum Bayar
-                            financial_data['pulang_belum_lunas'] += biaya_pulang
-
-            # Kalkulasi untuk perjalanan kembali
-            if p.status_kembali != 'Tidak Ikut' and p.rombongan_kembali_id and p.titik_jemput_kembali:
-                if current_user.role.name == 'Korpus' or p.rombongan_kembali_id in managed_rombongan_ids:
-                    tarif_kembali = Tarif.query.filter_by(rombongan_id=p.rombongan_kembali_id, titik_turun=p.titik_jemput_kembali).first()
-                    if tarif_kembali:
-                        biaya_kembali = tarif_kembali.harga_bus + tarif_kembali.fee_korda + 10000
-                        financial_data['kembali_total'] += biaya_kembali
-                        financial_data['alokasi_bus_kembali'] += tarif_kembali.harga_bus
-                        financial_data['alokasi_korda_kembali'] += tarif_kembali.fee_korda
-                        financial_data['alokasi_pondok_kembali'] += 10000
-                        if p.status_kembali == 'Lunas':
-                            financial_data['kembali_lunas'] += biaya_kembali
-                            if p.metode_pembayaran_kembali == 'Cash':
-                                financial_data['kembali_cash_lunas'] += biaya_kembali
-                            elif p.metode_pembayaran_kembali == 'Transfer':
-                                financial_data['kembali_transfer_lunas'] += biaya_kembali
+                            data['pulang_belum_lunas'] += biaya_pulang
+                            data['pulang_cash_belum_lunas'] += 1
+                            data['pulang_cash_belum_lunas_rp'] += biaya_pulang
+                    
+                    # Proses pembayaran Transfer
+                    elif p.metode_pembayaran_pulang == 'Transfer':
+                        data['pulang_transfer_count'] += 1
+                        if p.status_pulang == 'Lunas':
+                            data['pulang_lunas'] += biaya_pulang
+                            data['pulang_transfer_lunas'] += 1
+                            data['pulang_transfer_lunas_rp'] += biaya_pulang
+                            # Alokasi fee untuk LUNAS
+                            data['alokasi_bus_pulang'] += tarif_pulang.harga_bus
+                            data['alokasi_korda_pulang'] += tarif_pulang.fee_korda
+                            data['alokasi_pondok_pulang'] += 10000
                         else: # Belum Bayar
-                            financial_data['kembali_belum_lunas'] += biaya_kembali
+                            data['pulang_belum_lunas'] += biaya_pulang
+                            data['pulang_transfer_belum_lunas'] += 1
+                            data['pulang_transfer_belum_lunas_rp'] += biaya_pulang
         
-        # Kalkulasi total global
-        financial_data['global_total'] = financial_data['pulang_total'] + financial_data['kembali_total']
-        financial_data['global_lunas'] = financial_data['pulang_lunas'] + financial_data['kembali_lunas']
-        financial_data['global_belum_lunas'] = financial_data['global_total'] - financial_data['global_lunas']
+        # --- LOGIKA KALKULASI KEMBALI YANG DIPERBAIKI ---
+        # Prioritas: rombongan_kembali jika ada, kalau tidak ada pakai rombongan_pulang
+        rombongan_kembali = p.rombongan_kembali if p.rombongan_kembali else p.rombongan_pulang
+        
+        if p.status_kembali != 'Tidak Ikut' and rombongan_kembali:
+            # Cek apakah user berhak mengakses rombongan kembali (lintas rombongan)
+            can_access_kembali = (
+                current_user.role.name in ['Korpus', 'Korpuspi', 'Bendahara Pusat', 'Sekretaris'] or
+                rombongan_kembali.id in managed_rombongan_ids
+            )
+            
+            if can_access_kembali:
+                # Prioritas: titik_jemput_kembali jika ada, kalau tidak ada pakai titik_turun
+                titik_jemput = p.titik_jemput_kembali if p.titik_jemput_kembali else p.titik_turun
+                tarif_kembali = next((t for t in rombongan_kembali.tarifs if t.titik_turun == titik_jemput), None)
+                
+                if tarif_kembali:
+                    biaya_kembali = tarif_kembali.harga_bus + tarif_kembali.fee_korda + 10000
+                    data['kembali_total'] += biaya_kembali
+                    
+                    # Proses pembayaran Cash
+                    if p.metode_pembayaran_kembali == 'Cash':
+                        data['kembali_cash_count'] += 1
+                        if p.status_kembali == 'Lunas':
+                            data['kembali_lunas'] += biaya_kembali
+                            data['kembali_cash_lunas'] += 1
+                            data['kembali_cash_lunas_rp'] += biaya_kembali
+                            # Alokasi fee untuk LUNAS (masuk ke rombongan kembali, bisa lintas)
+                            data['alokasi_bus_kembali'] += tarif_kembali.harga_bus
+                            data['alokasi_korda_kembali'] += tarif_kembali.fee_korda
+                            data['alokasi_pondok_kembali'] += 10000
+                        else: # Belum Bayar
+                            data['kembali_belum_lunas'] += biaya_kembali
+                            data['kembali_cash_belum_lunas'] += 1
+                            data['kembali_cash_belum_lunas_rp'] += biaya_kembali
 
-    return render_template('manajemen_keuangan.html', data=financial_data)
+                    # Proses pembayaran Transfer
+                    elif p.metode_pembayaran_kembali == 'Transfer':
+                        data['kembali_transfer_count'] += 1
+                        if p.status_kembali == 'Lunas':
+                            data['kembali_lunas'] += biaya_kembali
+                            data['kembali_transfer_lunas'] += 1
+                            data['kembali_transfer_lunas_rp'] += biaya_kembali
+                            # Alokasi fee untuk LUNAS (masuk ke rombongan kembali, bisa lintas)
+                            data['alokasi_bus_kembali'] += tarif_kembali.harga_bus
+                            data['alokasi_korda_kembali'] += tarif_kembali.fee_korda
+                            data['alokasi_pondok_kembali'] += 10000
+                        else: # Belum Bayar
+                            data['kembali_belum_lunas'] += biaya_kembali
+                            data['kembali_transfer_belum_lunas'] += 1
+                            data['kembali_transfer_belum_lunas_rp'] += biaya_kembali
+
+    # Kalkulasi total global
+    data['global_total'] = data['pulang_total'] + data['kembali_total']
+    data['global_lunas'] = data['pulang_lunas'] + data['kembali_lunas']
+    data['global_belum_lunas'] = data['global_total'] - data['global_lunas']
+    
+    # Daftar rombongan untuk filter
+    rombongan_for_filter = []
+    if current_user.role.name in ['Korwil', 'Korda']:
+        rombongan_for_filter = sorted([r for r in current_user.managed_rombongan], key=lambda x: x.nama_rombongan)
+    else:
+        rombongan_for_filter = Rombongan.query.filter_by(edisi_id=active_edisi.id).order_by(Rombongan.nama_rombongan).all()
+
+    return render_template('manajemen_keuangan.html', data=data, active_edisi=active_edisi, rombongan_for_filter=rombongan_for_filter)
 
 @admin_bp.route('/keuangan/export-pdf')
 @login_required
