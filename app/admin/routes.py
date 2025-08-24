@@ -1855,6 +1855,11 @@ def manajemen_keuangan():
                     biaya_pulang = tarif_pulang.harga_bus + tarif_pulang.fee_korda + 10000
                     data['pulang_total'] += biaya_pulang
 
+                    # Alokasi fee untuk SEMUA STATUS (lunas dan belum lunas)
+                    data['alokasi_bus_pulang'] += tarif_pulang.harga_bus
+                    data['alokasi_korda_pulang'] += tarif_pulang.fee_korda
+                    data['alokasi_pondok_pulang'] += 10000
+
                     # Proses pembayaran Cash
                     if p.metode_pembayaran_pulang == 'Cash':
                         data['pulang_cash_count'] += 1
@@ -1862,10 +1867,6 @@ def manajemen_keuangan():
                             data['pulang_lunas'] += biaya_pulang
                             data['pulang_cash_lunas'] += 1
                             data['pulang_cash_lunas_rp'] += biaya_pulang
-                            # Alokasi fee untuk LUNAS
-                            data['alokasi_bus_pulang'] += tarif_pulang.harga_bus
-                            data['alokasi_korda_pulang'] += tarif_pulang.fee_korda
-                            data['alokasi_pondok_pulang'] += 10000
                         else: # Belum Bayar
                             data['pulang_belum_lunas'] += biaya_pulang
                             data['pulang_cash_belum_lunas'] += 1
@@ -1878,10 +1879,6 @@ def manajemen_keuangan():
                             data['pulang_lunas'] += biaya_pulang
                             data['pulang_transfer_lunas'] += 1
                             data['pulang_transfer_lunas_rp'] += biaya_pulang
-                            # Alokasi fee untuk LUNAS
-                            data['alokasi_bus_pulang'] += tarif_pulang.harga_bus
-                            data['alokasi_korda_pulang'] += tarif_pulang.fee_korda
-                            data['alokasi_pondok_pulang'] += 10000
                         else: # Belum Bayar
                             data['pulang_belum_lunas'] += biaya_pulang
                             data['pulang_transfer_belum_lunas'] += 1
@@ -1907,6 +1904,11 @@ def manajemen_keuangan():
                     biaya_kembali = tarif_kembali.harga_bus + tarif_kembali.fee_korda + 10000
                     data['kembali_total'] += biaya_kembali
                     
+                    # Alokasi fee untuk SEMUA STATUS (lunas dan belum lunas)
+                    data['alokasi_bus_kembali'] += tarif_kembali.harga_bus
+                    data['alokasi_korda_kembali'] += tarif_kembali.fee_korda
+                    data['alokasi_pondok_kembali'] += 10000
+                    
                     # Proses pembayaran Cash
                     if p.metode_pembayaran_kembali == 'Cash':
                         data['kembali_cash_count'] += 1
@@ -1914,10 +1916,6 @@ def manajemen_keuangan():
                             data['kembali_lunas'] += biaya_kembali
                             data['kembali_cash_lunas'] += 1
                             data['kembali_cash_lunas_rp'] += biaya_kembali
-                            # Alokasi fee untuk LUNAS (masuk ke rombongan kembali, bisa lintas)
-                            data['alokasi_bus_kembali'] += tarif_kembali.harga_bus
-                            data['alokasi_korda_kembali'] += tarif_kembali.fee_korda
-                            data['alokasi_pondok_kembali'] += 10000
                         else: # Belum Bayar
                             data['kembali_belum_lunas'] += biaya_kembali
                             data['kembali_cash_belum_lunas'] += 1
@@ -1930,10 +1928,6 @@ def manajemen_keuangan():
                             data['kembali_lunas'] += biaya_kembali
                             data['kembali_transfer_lunas'] += 1
                             data['kembali_transfer_lunas_rp'] += biaya_kembali
-                            # Alokasi fee untuk LUNAS (masuk ke rombongan kembali, bisa lintas)
-                            data['alokasi_bus_kembali'] += tarif_kembali.harga_bus
-                            data['alokasi_korda_kembali'] += tarif_kembali.fee_korda
-                            data['alokasi_pondok_kembali'] += 10000
                         else: # Belum Bayar
                             data['kembali_belum_lunas'] += biaya_kembali
                             data['kembali_transfer_belum_lunas'] += 1
