@@ -2,7 +2,7 @@ name: Deploy mabarati
 
 on:
   push:
-    branches: ["main"]
+    branches: [ "main" ]
 
 jobs:
   deploy:
@@ -19,71 +19,10 @@ jobs:
         username: ${{ secrets.VPS_USER }}
         key: ${{ secrets.VPS_SSH_KEY }}
         script: |
-          set -Eeuo pipefail
-
           cd ${{ secrets.VPS_PATH }}
-
-          echo "==> Pull latest code"
-          git fetch origin main
-          git reset --hard origin/main
-
-          echo "==> Activate venv & install deps"
+          git pull origin main
           source venv/bin/activate
           pip install -r requirements.txt
-
-          # Pastikan FLASK_APP ter-set, sesuaikan kalau app kamu beda
-          export FLASK_APP=run.py
-          export FLASK_ENV=production
-
-          echo "==> Alembic current revision (before)"
-          flask db current || true
-          flask db heads || true
-
-          # (Opsional) Backup cepat tabel izin jika kredensial MySQL tersedia di secrets
-          if [[ -n "${{ secrets.MYSQL_HOST || '' }}" && -n "${{ secrets.MYSQL_USER || '' }}" && -n "${{ secrets.MYSQL_DB || '' }}" ]]; then
-            echo "==> MySQL quick backup (table izin)"
-            mysqldump -h "${{ secrets.MYSQL_HOST }}" -u "${{ secrets.MYSQL_USER }}" -p"${{ secrets.MYSQL_PASSWORD }}" \
-              --single-transaction --skip-lock-tables "${{ secrets.MYSQL_DB }}" izin > "izin_backup_$(date +%F_%H%M%S).sql" || true
-          else
-            echo "==> Skip MySQL backup (secrets not provided)"
-          fi
-
-          echo "==> Pre-check for duplicates (santri_id, edisi_id, status)"
-          python3 - <<'PY'
-          import sys
-          from app import create_app, db
-          from sqlalchemy import text
-
-          app = create_app()
-          with app.app_context():
-              # cari duplikat yang akan menabrak UNIQUE (santri_id, edisi_id, status)
-              sql = text("""
-                  SELECT santri_id, edisi_id, status, COUNT(*) AS n
-                  FROM izin
-                  GROUP BY santri_id, edisi_id, status
-                  HAVING n > 1
-              """)
-              rows = db.session.execute(sql).fetchall()
-              if rows:
-                  print("ERROR: Ditemukan duplikat pada kombinasi (santri_id, edisi_id, status):")
-                  for r in rows:
-                      print(f"  - santri_id={r.santri_id} edisi_id={r.edisi_id} status={r.status!r} n={r.n}")
-                  # GAGALKAN deploy agar tidak mengunci saat CREATE UNIQUE
-                  sys.exit(2)
-              else:
-                  print("OK: Tidak ada duplikat yang melanggar UNIQUE baru.")
-          PY
-
-          echo "==> Run Alembic upgrade"
           flask db upgrade
-
-          echo "==> Run seed (jika aman untuk idempotent)"
-          flask seed || true
-
-          echo "==> Alembic current revision (after)"
-          flask db current || true
-
-          echo "==> Restart service"
+          flask seed
           sudo systemctl restart mabarati
-
-          echo "==> Done."
