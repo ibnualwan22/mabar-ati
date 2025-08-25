@@ -1,7 +1,7 @@
 from . import admin_bp
 from flask import render_template, redirect, url_for, flash, request, jsonify, abort, Response, send_file, current_app
 from app.models import ActivityLog, Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, Transaksi, User, Edisi, Bus, Role, Wisuda
-from app.admin.forms import ChangePasswordForm, ImportWisudaForm, KonfirmasiSetoranForm, PengeluaranBusForm, RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, TransaksiForm, UserForm, UserEditForm, EdisiForm, BusForm, KorlapdaForm, WisudaForm
+from app.admin.forms import ChangePasswordForm, ImportWisudaForm, KonfirmasiSetoranForm, PengeluaranBusForm, RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, SantriManualForm, TransaksiForm, UserForm, UserEditForm, EdisiForm, BusForm, KorlapdaForm, WisudaForm
 from app import db, login_manager
 import json, requests
 from collections import defaultdict
@@ -3799,3 +3799,112 @@ def profil_saya():
     # Logika untuk panduan akan ditambahkan di sini nanti
     # Untuk sekarang, kita hanya menampilkan data user
     return render_template('profil_saya.html', title="Profil Saya")
+
+
+
+# Ganti seluruh fungsi tambah_santri_manual dengan ini
+
+# Ganti/tambahkan route ini di app/admin/routes.py
+
+@admin_bp.route('/santri/tambah-manual', methods=['GET', 'POST'])
+@login_required
+@role_required('Korpus', 'Korda')
+def tambah_santri_manual():
+    form = SantriManualForm()
+    
+    # Validasi tambahan untuk memastikan form berfungsi
+    if request.method == 'POST':
+        print(f"Form submitted. Valid: {form.validate()}")
+        print(f"Form errors: {form.errors}")
+        print(f"Form data: {form.data}")
+    
+    if form.validate_on_submit():
+        try:
+            # --- LOGIKA PEMBUATAN NIS OTOMATIS ---
+            tahun_sekarang = str(datetime.now().year)
+            # Cari santri terakhir yang dibuat manual di tahun ini
+            santri_terakhir = Santri.query.filter(
+                Santri.nis.like(f'M{tahun_sekarang}%')
+            ).order_by(Santri.nis.desc()).first()
+            
+            if santri_terakhir:
+                # Ambil 4 digit terakhir dan convert ke int
+                try:
+                    nomor_urut_terakhir = int(santri_terakhir.nis[-4:])
+                    nomor_urut_baru = nomor_urut_terakhir + 1
+                except ValueError:
+                    # Jika gagal parsing, mulai dari 1
+                    nomor_urut_baru = 1
+            else:
+                nomor_urut_baru = 1
+            
+            nis_baru = f"M{tahun_sekarang}{nomor_urut_baru:04d}"
+            # ------------------------------------
+
+            # Buat api_student_id unik sementara
+            api_id_manual = f"manual_{nis_baru}_{int(datetime.utcnow().timestamp())}"
+
+            # Validasi data sebelum disimpan
+            if not form.nama.data or len(form.nama.data.strip()) < 2:
+                flash('Nama harus diisi minimal 2 karakter.', 'error')
+                return render_template('tambah_santri_manual.html', title="Tambah Santri Manual", form=form)
+            
+            if not form.provinsi.data or not form.kabupaten.data:
+                flash('Provinsi dan Kabupaten harus dipilih.', 'error')
+                return render_template('tambah_santri_manual.html', title="Tambah Santri Manual", form=form)
+
+            new_santri = Santri(
+                api_student_id=api_id_manual,
+                nis=nis_baru,
+                nama=form.nama.data.strip(),
+                provinsi=form.provinsi.data,
+                kabupaten=form.kabupaten.data,
+                jenis_kelamin=form.jenis_kelamin.data,
+                status_santri=form.status_santri.data,
+                asrama=form.asrama.data.strip() if form.asrama.data else None,
+                no_hp_wali=form.no_hp_wali.data.strip() if form.no_hp_wali.data else None,
+                kelas_formal=form.kelas_formal.data.strip() if form.kelas_formal.data else None,
+                kelas_ngaji=form.kelas_ngaji.data.strip() if form.kelas_ngaji.data else None
+            )
+            
+            db.session.add(new_santri)
+            db.session.commit()
+            
+            log_activity('Tambah', 'Santri', f"Menambah santri manual: '{new_santri.nama}' dengan NIS '{new_santri.nis}'")
+            flash(f'Santri "{new_santri.nama}" berhasil ditambahkan dengan NIS: {nis_baru}.', 'success')
+            return redirect(url_for('admin.manajemen_santri'))
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error saat menambah santri: {str(e)}")
+            flash(f'Terjadi kesalahan: {str(e)}', 'error')
+    
+    return render_template('tambah_santri_manual.html', title="Tambah Santri Manual", form=form)
+
+
+# API endpoints untuk provinsi dan kabupaten
+@admin_bp.route('/api/get-provinsi')
+@login_required
+def api_get_provinsi():
+    try:
+        api_url = "https://backapp.amtsilatipusat.com/api/provinces"
+        response = requests.get(api_url, timeout=10)
+        response.raise_for_status()
+        return jsonify(response.json())
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching provinsi: {str(e)}")
+        return jsonify({'data': [], 'error': 'Gagal mengambil data provinsi'})
+
+
+@admin_bp.route('/api/get-kabupaten/<int:provinsi_id>')
+@login_required
+def api_get_kabupaten(provinsi_id):
+    try:
+        api_url = f"https://backapp.amtsilatipusat.com/api/regencies/{provinsi_id}"
+        response = requests.get(api_url, timeout=10)
+        response.raise_for_status()
+        return jsonify(response.json())
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching kabupaten: {str(e)}")
+        return jsonify({'data': [], 'error': 'Gagal mengambil data kabupaten'})
+

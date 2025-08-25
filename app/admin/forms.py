@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, IntegerField, DateTimeLocalField, FieldList, FormField, SubmitField, Form, HiddenField, SelectField, PasswordField, BooleanField, DateTimeLocalField
+from wtforms import StringField, TextAreaField, IntegerField, DateTimeLocalField, FieldList, FormField, SubmitField, Form, HiddenField, SelectField, PasswordField, BooleanField, DateTimeLocalField, ValidationError
 from wtforms.validators import DataRequired, Optional, EqualTo, Length, URL, NumberRange
 from wtforms_sqlalchemy.fields import QuerySelectField, QuerySelectMultipleField
 from app.models import Rombongan, Santri, Role
@@ -291,5 +291,119 @@ class ChangePasswordForm(FlaskForm):
         EqualTo('new_password', message='Konfirmasi password tidak cocok dengan password baru.')
     ])
     submit = SubmitField('Ganti Password')
+
+# Di dalam file app/admin/forms.py
+
+class SantriManualForm(FlaskForm):
+    nama = StringField(
+        'Nama Lengkap Santri', 
+        validators=[
+            DataRequired(message='Nama harus diisi'),
+            Length(min=2, max=100, message='Nama harus 2-100 karakter')
+        ]
+    )
+    
+    # SelectField dengan validasi yang lebih fleksibel untuk dynamic choices
+    provinsi = StringField(  # Ganti ke StringField untuk menghindari validasi choices
+        'Provinsi', 
+        validators=[DataRequired(message='Provinsi harus dipilih')]
+    )
+    
+    kabupaten = StringField(  # Ganti ke StringField untuk menghindari validasi choices
+        'Kabupaten/Kota', 
+        validators=[DataRequired(message='Kabupaten harus dipilih')]
+    )
+    
+    jenis_kelamin = SelectField(
+        'Jenis Kelamin', 
+        choices=[('', '-- Pilih Jenis Kelamin --'), ('PUTRA', 'Putra'), ('PUTRI', 'Putri')],
+        validators=[DataRequired(message='Jenis kelamin harus dipilih')]
+    )
+    
+    status_santri = SelectField(
+        'Status Santri', 
+        choices=[
+            ('', '-- Pilih Status --'),
+            ('Aktif', 'Aktif'), 
+            ('Izin', 'Izin'), 
+            ('Partisipan', 'Partisipan'), 
+            ('Wisuda', 'Wisuda')
+        ],
+        default='Aktif',
+        validators=[DataRequired(message='Status santri harus dipilih')]
+    )
+    
+    asrama = StringField(
+        'Asrama', 
+        validators=[
+            Optional(),
+            Length(max=50, message='Nama asrama maksimal 50 karakter')
+        ]
+    )
+    
+    no_hp_wali = StringField(
+        'No. HP Wali', 
+        validators=[
+            Optional(),
+            Length(min=10, max=15, message='Nomor HP harus 10-15 karakter')
+        ]
+    )
+    
+    kelas_formal = StringField(
+        'Kelas Formal', 
+        validators=[
+            Optional(),
+            Length(max=20, message='Kelas formal maksimal 20 karakter')
+        ]
+    )
+    
+    kelas_ngaji = StringField(
+        'Kelas Ngaji', 
+        validators=[
+            Optional(),
+            Length(max=20, message='Kelas ngaji maksimal 20 karakter')
+        ]
+    )
+    
+    submit = SubmitField('Simpan Data Santri')
+    
+    def validate_no_hp_wali(self, field):
+        """Custom validation untuk nomor HP"""
+        if field.data:
+            import re
+            if not re.match(r'^[0-9+\-\s]+$', field.data):
+                raise ValidationError('Nomor HP hanya boleh mengandung angka, +, -, dan spasi')
+    
+    def validate_provinsi(self, field):
+        """Custom validation untuk provinsi - bisa ditambahkan validasi tambahan jika diperlukan"""
+        if field.data and field.data.strip() == '':
+            raise ValidationError('Provinsi harus dipilih')
+    
+    def validate_kabupaten(self, field):
+        """Custom validation untuk kabupaten - bisa ditambahkan validasi tambahan jika diperlukan"""
+        if field.data and field.data.strip() == '':
+            raise ValidationError('Kabupaten harus dipilih')
+    
+    def validate(self, extra_validators=None):
+        """Custom validation tambahan"""
+        if not super().validate(extra_validators):
+            return False
+            
+        # Validasi nama tidak boleh hanya spasi
+        if self.nama.data and not self.nama.data.strip():
+            self.nama.errors.append('Nama tidak boleh kosong')
+            return False
+        
+        # Validasi provinsi tidak boleh placeholder
+        if self.provinsi.data in ['-- Pilih Provinsi --', '']:
+            self.provinsi.errors.append('Provinsi harus dipilih')
+            return False
+            
+        # Validasi kabupaten tidak boleh placeholder
+        if self.kabupaten.data in ['-- Pilih Kabupaten/Kota --', '-- Pilih Provinsi Dulu --', '']:
+            self.kabupaten.errors.append('Kabupaten harus dipilih')
+            return False
+            
+        return True
 
 

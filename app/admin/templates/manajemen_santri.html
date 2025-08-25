@@ -115,10 +115,20 @@
         <hr>
         <div class="action-buttons">
             {% if current_user.role.name == 'Korpus' %}
-                <button id="open-impor-modal" class="btn btn-success"><i class="fas fa-user-plus me-2"></i>Impor Santri Individual</button>
-                <form method="POST" action="{{ url_for('admin.impor_semua_santri') }}" style="display: inline-block;" onsubmit="return confirm('Proses ini akan memakan waktu. Lanjutkan?');">
-                    <button type="submit" class="btn btn-info"><i class="fas fa-sync-alt me-2"></i>Impor & Sinkronkan Semua</button>
-                </form>
+                <button id="open-impor-modal" class="btn btn-success">
+    <i class="fas fa-user-plus me-2"></i>Impor Santri Individual
+</button>
+
+<form method="POST" action="{{ url_for('admin.impor_semua_santri') }}" style="display: inline-block;" onsubmit="return confirm('Proses ini akan memakan waktu. Lanjutkan?');">
+    <button type="submit" class="btn btn-info">
+        <i class="fas fa-sync-alt me-2"></i>Impor & Sinkronkan Semua
+    </button>
+</form>
+
+<a href="{{ url_for('admin.tambah_santri_manual') }}" class="btn btn-primary">
+    <i class="fas fa-user-edit me-2"></i>Tambah Santri Manual
+</a>
+
             {% endif %}
         </div>
     </div>

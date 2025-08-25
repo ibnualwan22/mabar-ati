@@ -1,0 +1,357 @@
+{% extends "_admin_layout.html" %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h4 class="mb-0">{{ title }}</h4>
+            </div>
+            <div class="card-body">
+                <!-- Tampilkan error jika ada -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form method="POST" novalidate>
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="row g-3">
+                        <!-- Nama -->
+                        <div class="col-12">
+                            {{ form.nama.label(class="form-label required") }}
+                            {{ form.nama(class="form-control" + (" is-invalid" if form.nama.errors else "")) }}
+                            {% if form.nama.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.nama.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Provinsi - Sekarang menggunakan select yang dibuat manual -->
+                        <div class="col-md-6">
+                            <label for="provinsi" class="form-label required">Provinsi</label>
+                            <select name="provinsi" id="provinsi" class="form-select{{ ' is-invalid' if form.provinsi.errors else '' }}">
+                                <option value="">-- Pilih Provinsi --</option>
+                            </select>
+                            <!-- Hidden input untuk WTForms -->
+                            {{ form.provinsi(style="display: none;") }}
+                            {% if form.provinsi.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.provinsi.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text" id="provinsi-loading" style="display: none;">
+                                <i class="fas fa-spinner fa-spin"></i> Memuat provinsi...
+                            </div>
+                        </div>
+
+                        <!-- Kabupaten - Sekarang menggunakan select yang dibuat manual -->
+                        <div class="col-md-6">
+                            <label for="kabupaten" class="form-label required">Kabupaten/Kota</label>
+                            <select name="kabupaten" id="kabupaten" class="form-select{{ ' is-invalid' if form.kabupaten.errors else '' }}" disabled>
+                                <option value="">-- Pilih Provinsi Dulu --</option>
+                            </select>
+                            <!-- Hidden input untuk WTForms -->
+                            {{ form.kabupaten(style="display: none;") }}
+                            {% if form.kabupaten.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.kabupaten.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text" id="kabupaten-loading" style="display: none;">
+                                <i class="fas fa-spinner fa-spin"></i> Memuat kabupaten...
+                            </div>
+                        </div>
+
+                        <!-- Jenis Kelamin -->
+                        <div class="col-md-6">
+                            {{ form.jenis_kelamin.label(class="form-label required") }}
+                            {{ form.jenis_kelamin(class="form-select" + (" is-invalid" if form.jenis_kelamin.errors else "")) }}
+                            {% if form.jenis_kelamin.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.jenis_kelamin.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Status Santri -->
+                        <div class="col-md-6">
+                            {{ form.status_santri.label(class="form-label required") }}
+                            {{ form.status_santri(class="form-select" + (" is-invalid" if form.status_santri.errors else "")) }}
+                            {% if form.status_santri.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.status_santri.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Asrama -->
+                        <div class="col-md-6">
+                            {{ form.asrama.label(class="form-label") }}
+                            {{ form.asrama(class="form-control" + (" is-invalid" if form.asrama.errors else "")) }}
+                            {% if form.asrama.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.asrama.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- No HP Wali -->
+                        <div class="col-md-6">
+                            {{ form.no_hp_wali.label(class="form-label") }}
+                            {{ form.no_hp_wali(class="form-control" + (" is-invalid" if form.no_hp_wali.errors else ""), placeholder="Contoh: 08123456789") }}
+                            {% if form.no_hp_wali.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.no_hp_wali.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Kelas Formal -->
+                        <div class="col-md-6">
+                            {{ form.kelas_formal.label(class="form-label") }}
+                            {{ form.kelas_formal(class="form-control" + (" is-invalid" if form.kelas_formal.errors else ""), placeholder="Contoh: X IPA 1") }}
+                            {% if form.kelas_formal.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.kelas_formal.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Kelas Ngaji -->
+                        <div class="col-md-6">
+                            {{ form.kelas_ngaji.label(class="form-label") }}
+                            {{ form.kelas_ngaji(class="form-control" + (" is-invalid" if form.kelas_ngaji.errors else ""), placeholder="Contoh: Tajwid Dasar") }}
+                            {% if form.kelas_ngaji.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.kelas_ngaji.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    
+                    <div class="d-flex gap-2">
+                        {{ form.submit(class="btn btn-primary", id="submit-btn") }}
+                        <a href="{{ url_for('admin.manajemen_santri') }}" class="btn btn-secondary">Batal</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.required::after {
+    content: " *";
+    color: red;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const provinsiSelect = document.getElementById('provinsi');
+    const kabupatenSelect = document.getElementById('kabupaten');
+    const provinsiHidden = document.querySelector('input[name="provinsi"]');  // Hidden WTForms field
+    const kabupatenHidden = document.querySelector('input[name="kabupaten"]');  // Hidden WTForms field
+    const provinsiLoading = document.getElementById('provinsi-loading');
+    const kabupatenLoading = document.getElementById('kabupaten-loading');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    let provinsiDataCache = [];
+
+    // Fungsi untuk sync visible select dengan hidden input
+    function syncProvinsi() {
+        provinsiHidden.value = provinsiSelect.value;
+    }
+
+    function syncKabupaten() {
+        kabupatenHidden.value = kabupatenSelect.value;
+    }
+
+    // Fungsi untuk show/hide loading
+    function showLoading(element, show) {
+        if (show) {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+
+    // Fungsi untuk disable/enable submit button
+    function toggleSubmitButton(disabled) {
+        if (disabled) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memuat...';
+        } else {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Simpan Data Santri';
+        }
+    }
+
+    // 1. Load provinsi saat halaman dimuat
+    showLoading(provinsiLoading, true);
+    toggleSubmitButton(true);
+    
+    fetch('/admin/api/get-provinsi')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            showLoading(provinsiLoading, false);
+            toggleSubmitButton(false);
+            
+            if (data.data && Array.isArray(data.data)) {
+                provinsiDataCache = data.data;
+                
+                // Clear existing options
+                provinsiSelect.innerHTML = '<option value="">-- Pilih Provinsi --</option>';
+                
+                // Add provinces
+                provinsiDataCache.forEach(prov => {
+                    const option = new Option(prov.name, prov.name);
+                    provinsiSelect.add(option);
+                });
+                
+                console.log(`Loaded ${provinsiDataCache.length} provinces`);
+            } else {
+                console.error('Invalid data format:', data);
+                alert('Gagal memuat data provinsi. Silakan refresh halaman.');
+            }
+        })
+        .catch(error => {
+            showLoading(provinsiLoading, false);
+            toggleSubmitButton(false);
+            console.error('Error loading provinces:', error);
+            alert('Gagal memuat data provinsi. Periksa koneksi internet Anda.');
+        });
+
+    // 2. Event listener untuk provinsi
+    provinsiSelect.addEventListener('change', function() {
+        syncProvinsi(); // Sync dengan hidden input
+        
+        const provinsiName = this.value;
+        
+        // Reset kabupaten
+        kabupatenSelect.innerHTML = '<option value="">-- Memuat... --</option>';
+        kabupatenSelect.disabled = true;
+        kabupatenHidden.value = ''; // Reset hidden input
+        
+        if (!provinsiName) {
+            kabupatenSelect.innerHTML = '<option value="">-- Pilih Provinsi Dulu --</option>';
+            return;
+        }
+
+        // Cari ID provinsi dari nama yang dipilih
+        const selectedProv = provinsiDataCache.find(p => p.name === provinsiName);
+        
+        if (!selectedProv) {
+            kabupatenSelect.innerHTML = '<option value="">-- Provinsi tidak valid --</option>';
+            return;
+        }
+
+        showLoading(kabupatenLoading, true);
+        
+        fetch(`/admin/api/get-kabupaten/${selectedProv.id}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(kabupatenData => {
+                showLoading(kabupatenLoading, false);
+                
+                if (kabupatenData.data && Array.isArray(kabupatenData.data)) {
+                    kabupatenSelect.innerHTML = '<option value="">-- Pilih Kabupaten/Kota --</option>';
+                    
+                    kabupatenData.data.forEach(kab => {
+                        const option = new Option(kab.name, kab.name);
+                        kabupatenSelect.add(option);
+                    });
+                    
+                    kabupatenSelect.disabled = false;
+                    console.log(`Loaded ${kabupatenData.data.length} regencies for ${provinsiName}`);
+                } else {
+                    kabupatenSelect.innerHTML = '<option value="">-- Data tidak tersedia --</option>';
+                    console.error('Invalid kabupaten data format:', kabupatenData);
+                }
+            })
+            .catch(error => {
+                showLoading(kabupatenLoading, false);
+                kabupatenSelect.innerHTML = '<option value="">-- Gagal memuat data --</option>';
+                console.error('Error loading regencies:', error);
+            });
+    });
+
+    // 3. Event listener untuk kabupaten
+    kabupatenSelect.addEventListener('change', function() {
+        syncKabupaten(); // Sync dengan hidden input
+    });
+
+    // 4. Form validation sebelum submit
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        // Sync semua nilai sebelum submit
+        syncProvinsi();
+        syncKabupaten();
+
+        const nama = document.querySelector('input[name="nama"]').value.trim();
+        const provinsi = provinsiSelect.value;
+        const kabupaten = kabupatenSelect.value;
+        const jenisKelamin = document.getElementById('jenis_kelamin').value;
+        const statusSantri = document.getElementById('status_santri').value;
+
+        console.log('Form validation:', {
+            nama, provinsi, kabupaten, jenisKelamin, statusSantri
+        });
+
+        if (!nama) {
+            alert('Nama harus diisi');
+            e.preventDefault();
+            return;
+        }
+
+        if (!provinsi) {
+            alert('Provinsi harus dipilih');
+            e.preventDefault();
+            return;
+        }
+
+        if (!kabupaten) {
+            alert('Kabupaten harus dipilih');
+            e.preventDefault();
+            return;
+        }
+
+        if (!jenisKelamin) {
+            alert('Jenis kelamin harus dipilih');
+            e.preventDefault();
+            return;
+        }
+
+        if (!statusSantri) {
+            alert('Status santri harus dipilih');
+            e.preventDefault();
+            return;
+        }
+
+        // Show loading on submit
+        toggleSubmitButton(true);
+    });
+});
+</script>
+{% endblock %}
