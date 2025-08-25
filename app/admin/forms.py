@@ -134,11 +134,33 @@ class PendaftaranEditForm(FlaskForm):
 def santri_aktif_query():
     return Santri.query.filter_by(status_santri='Aktif', izin=None).order_by(Santri.nama).all()
 
+# Di dalam file app/admin/forms.py
+
 class IzinForm(FlaskForm):
     santri = HiddenField('Pilih Santri', validators=[DataRequired()])
-    tanggal_berakhir = DateField('Izin Sampai Tanggal', format='%Y-%m-%d', validators=[DataRequired()])
+    
+    # Field baru untuk memilih status
+    status_izin = SelectField('Status Pengajuan Izin', choices=[
+        ('Diterima', 'Diterima (Santri akan berstatus Izin)'), 
+        ('Ditolak', 'Ditolak (Santri tetap berstatus Aktif)')
+    ], validators=[DataRequired()])
+
+    tanggal_pengajuan = DateField('Izin Diajukan Pada Tanggal', format='%Y-%m-%d', validators=[DataRequired()])
+    tanggal_berakhir = DateField('Izin Diterima Sampai Tanggal (kosongi jika ditolak)', format='%Y-%m-%d', validators=[Optional()])
+    
     keterangan = TextAreaField('Keterangan Keperluan', validators=[DataRequired()])
     submit = SubmitField('Simpan Izin')
+
+class EditIzinForm(FlaskForm):
+    status_izin = SelectField('Status Pengajuan Izin', choices=[
+        ('Aktif', 'Diterima (Santri akan berstatus Izin)'), 
+        ('Ditolak', 'Ditolak (Santri tetap berstatus Aktif)')
+    ], validators=[DataRequired()])
+    
+    tanggal_pengajuan = DateField('Izin Diajukan Pada Tanggal', format='%Y-%m-%d', validators=[DataRequired()])
+    tanggal_berakhir = DateField('Izin Diterima Sampai Tanggal (kosongi jika ditolak)', format='%Y-%m-%d', validators=[Optional()])
+    keterangan = TextAreaField('Keterangan Keperluan', validators=[DataRequired()])
+    submit = SubmitField('Update Izin')
 
 def santri_bisa_jadi_partisipan_query():
     return Santri.query.filter(

@@ -13,6 +13,9 @@
         --text-primary: #1e293b;
         --text-secondary: #64748b;
         --border-color: #e2e8f0;
+        --success-green: #10b981;
+        --warning-orange: #f59e0b;
+        --danger-red: #ef4444;
     }
 
     .perizinan-container {
@@ -104,7 +107,7 @@
         display: block;
     }
 
-    .form-control, #select-santri-izin {
+    .form-control, #select-santri-izin, .form-select {
         border: 1px solid var(--border-color);
         border-radius: 8px;
         padding: 0.75rem;
@@ -114,7 +117,7 @@
         width: 100%;
     }
 
-    .form-control:focus, .ts-control.focus {
+    .form-control:focus, .ts-control.focus, .form-select:focus {
         border-color: var(--primary-blue) !important;
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
         outline: none !important;
@@ -227,11 +230,28 @@
         color: var(--text-primary);
     }
 
-    .badge { padding: 0.4rem 0.8rem; border-radius: 20px; font-weight: 500; font-size: 0.75rem; }
+    .badge { 
+        padding: 0.4rem 0.8rem; 
+        border-radius: 20px; 
+        font-weight: 500; 
+        font-size: 0.75rem; 
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
     .badge-putra { background: #dbeafe; color: #1e40af; }
     .badge-putri { background: #fef3c7; color: #92400e; }
+    .badge-aktif { background: #dcfce7; color: #166534; }
+    .badge-ditolak { background: #fee2e2; color: #dc2626; }
+    .badge-berakhir { background: #f3f4f6; color: #374151; }
 
-    .btn-action { padding: 0.5rem 1rem; font-size: 0.85rem; font-weight: 500; border-radius: 8px; transition: all 0.2s ease; }
+    .btn-action { 
+        padding: 0.5rem 1rem; 
+        font-size: 0.85rem; 
+        font-weight: 500; 
+        border-radius: 8px; 
+        transition: all 0.2s ease; 
+    }
     .btn-edit { background: var(--accent-blue); color: white; border: none; }
     .btn-edit:hover { background: var(--dark-blue); }
     .btn-danger { background: #ef4444; color: white; border: none; }
@@ -240,67 +260,96 @@
     .empty-state { text-align: center; padding: 2rem; color: var(--text-secondary); }
     .empty-state i { font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.6; }
 
+    /* Status izin conditional styling */
+    .status-info {
+        padding: 0.75rem;
+        border-radius: 8px;
+        margin-top: 1rem;
+        font-size: 0.9rem;
+    }
+
+    .status-info.diterima {
+        background: #dcfce7;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+    }
+
+    .status-info.ditolak {
+        background: #fee2e2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+    }
+
+    .conditional-field {
+        opacity: 0.5;
+        pointer-events: none;
+        transition: all 0.3s ease;
+    }
+
+    .conditional-field.active {
+        opacity: 1;
+        pointer-events: all;
+    }
+
     /* === Responsive table: < 800px === */
-@media (max-width: 800px) {
-  /* Kecilkan font & cegah teks numpuk ke bawah */
-  .table thead th,
-  .table tbody td {
-    font-size: 0.8rem;
-    white-space: nowrap;          /* teks tidak membungkus (biar tabel melebar) */
-  }
+    @media (max-width: 800px) {
+        .table thead th,
+        .table tbody td {
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
 
-  /* Tetapkan min-width agar kolom penting tidak mengecil parah */
-  .table thead th:nth-child(2),
-  .table tbody td:nth-child(2) {  /* Nama Santri */
-    min-width: 160px;
-  }
-  .table thead th:nth-child(4),
-  .table tbody td:nth-child(4) {  /* Asrama */
-    min-width: 120px;
-  }
-  .table thead th:nth-child(5),
-  .table tbody td:nth-child(5) {  /* Alamat */
-    min-width: 180px;
-  }
-  .table thead th:nth-child(6),
-  .table tbody td:nth-child(6) {  /* Izin Sampai */
-    min-width: 140px;
-  }
-  /* Jika role Korpus/Keamanan, kolom 7=Keterangan, 8=Aksi */
-  .table thead th:nth-child(7),
-  .table tbody td:nth-child(7) {  /* Keterangan */
-    min-width: 200px;
-    /* kalau mau tetap bisa baris-baru di kolom keterangan saja, hapus komentar di bawah */
-    /* white-space: normal; */
-  }
-  .table thead th:nth-child(8),
-  .table tbody td:nth-child(8) {  /* Aksi */
-    min-width: 130px;
-  }
+        .table thead th:nth-child(2),
+        .table tbody td:nth-child(2) {
+            min-width: 160px;
+        }
+        .table thead th:nth-child(4),
+        .table tbody td:nth-child(4) {
+            min-width: 120px;
+        }
+        .table thead th:nth-child(5),
+        .table tbody td:nth-child(5) {
+            min-width: 180px;
+        }
+        .table thead th:nth-child(6),
+        .table tbody td:nth-child(6) {
+            min-width: 140px;
+        }
+        .table thead th:nth-child(7),
+        .table tbody td:nth-child(7) {
+            min-width: 140px;
+        }
+        .table thead th:nth-child(8),
+        .table tbody td:nth-child(8) {
+            min-width: 200px;
+        }
+        .table thead th:nth-child(9),
+        .table tbody td:nth-child(9) {
+            min-width: 130px;
+        }
 
-  /* Pastikan wrapper bisa scroll horizontal */
-  .table-responsive {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-}
-
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+    }
 </style>
 
 <div class="perizinan-container">
     <div class="perizinan-header">
         <h1><i class="fas fa-id-card me-3"></i>Manajemen Perizinan</h1>
-        <p>Gunakan halaman ini untuk mencatat dan memantau santri yang izin tidak mengikuti kegiatan perpulangan.</p>
+        <p>Gunakan halaman ini untuk mencatat dan memantau pengajuan izin santri, baik yang diterima maupun yang ditolak.</p>
     </div>
 
     {% if current_user.role.name in ['Korpus', 'Keamanan'] %}
     <div class="form-card">
         <div class="form-card-header">
-            <h5><i class="fas fa-plus-circle me-2"></i>Tambah Izin Baru</h5>
+            <h5><i class="fas fa-plus-circle me-2"></i>Proses Pengajuan Izin</h5>
         </div>
         <div class="form-card-body">
             <form method="POST" action="{{ url_for('admin.perizinan') }}">
                 {{ form.hidden_tag() }}
+                
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">
@@ -311,16 +360,44 @@
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label for="{{ form.tanggal_berakhir.id }}"><i class="fas fa-calendar me-2"></i>{{ form.tanggal_berakhir.label.text }}</label>
+                            <label for="{{ form.status_izin.id }}"><i class="fas fa-clipboard-check me-2"></i>{{ form.status_izin.label.text }}</label>
+                            {{ form.status_izin(class="form-select", id="status_izin_select") }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="{{ form.tanggal_pengajuan.id }}"><i class="fas fa-calendar-plus me-2"></i>{{ form.tanggal_pengajuan.label.text }}</label>
+                            {{ form.tanggal_pengajuan(class="form-control") }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group conditional-field" id="tanggal_berakhir_group">
+                            <label for="{{ form.tanggal_berakhir.id }}"><i class="fas fa-calendar-times me-2"></i>{{ form.tanggal_berakhir.label.text }}</label>
                             {{ form.tanggal_berakhir(class="form-control") }}
                         </div>
                     </div>
                 </div>
+
                 <div class="form-group">
                     <label for="{{ form.keterangan.id }}"><i class="fas fa-sticky-note me-2"></i>{{ form.keterangan.label.text }}</label>
-                    {{ form.keterangan(class="form-control", rows=3, placeholder="Tuliskan keterangan atau alasan izin...") }}
+                    {{ form.keterangan(class="form-control", rows=3, placeholder="Tuliskan keterangan atau alasan pengajuan izin...") }}
                 </div>
-                <div class="text-end">
+
+                <!-- Status Information -->
+                <div id="status_info_diterima" class="status-info diterima" style="display: none;">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Izin Diterima:</strong> Santri akan berstatus "Izin" dan wajib mengisi tanggal berakhir izin.
+                </div>
+                
+                <div id="status_info_ditolak" class="status-info ditolak" style="display: none;">
+                    <i class="fas fa-times-circle me-2"></i>
+                    <strong>Izin Ditolak:</strong> Santri tetap berstatus "Aktif" dan tanggal berakhir tidak perlu diisi.
+                </div>
+
+                <div class="text-end mt-3">
                     {{ form.submit(class="btn btn-primary") }}
                 </div>
             </form>
@@ -331,12 +408,17 @@
     <ul class="nav nav-tabs">
         <li class="nav-item">
             <a class="nav-link {% if view_mode == 'aktif' %}active{% endif %}" href="{{ url_for('admin.perizinan', view='aktif') }}">
-                <i class="fas fa-clock me-2"></i>Izin Aktif
+                <i class="fas fa-clock me-2"></i>Izin Diterima & Aktif
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if view_mode == 'ditolak' %}active{% endif %}" href="{{ url_for('admin.perizinan', view='ditolak') }}">
+                <i class="fas fa-times-circle me-2"></i>Izin Ditolak
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link {% if view_mode == 'riwayat' %}active{% endif %}" href="{{ url_for('admin.perizinan', view='riwayat') }}">
-                <i class="fas fa-history me-2"></i>Riwayat Izin
+                <i class="fas fa-history me-2"></i>Semua Riwayat
             </a>
         </li>
     </ul>
@@ -348,7 +430,7 @@
             <h5><i class="fas fa-download me-2"></i>Export Data Perizinan</h5>
         </div>
         <div class="form-card-body">
-            <p class="text-muted mb-3">Export semua data perizinan (aktif dan riwayat) berdasarkan jenis kelamin ke format Excel</p>
+            <p class="text-muted mb-3">Export semua data perizinan (diterima, ditolak, dan riwayat) berdasarkan jenis kelamin ke format Excel</p>
             <div class="d-flex gap-2 flex-wrap">
                 <a href="{{ url_for('admin.export_perizinan', jenis_kelamin='putra') }}" class="btn btn-primary">
                     <i class="fas fa-mars me-2"></i>Export Santri Putra
@@ -362,27 +444,27 @@
     {% endif %}
 
     <div class="card-body">
-    <form method="GET" class="mb-3">
-        <input type="hidden" name="view" value="{{ view_mode }}">
-        <div class="row g-3 align-items-end">
-            <div class="col-md-6">
-                <label for="nama" class="form-label">Filter Nama Santri</label>
-                <input type="text" name="nama" id="nama" class="form-control" placeholder="Ketik nama..." value="{{ request.args.get('nama', '') }}">
+        <form method="GET" class="mb-3">
+            <input type="hidden" name="view" value="{{ view_mode }}">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label for="nama" class="form-label">Filter Nama Santri</label>
+                    <input type="text" name="nama" id="nama" class="form-control" placeholder="Ketik nama..." value="{{ request.args.get('nama', '') }}">
+                </div>
+                
+                <div class="col-md-4">
+                    <label for="jenis_kelamin" class="form-label">Jenis Kelamin</label>
+                    <select name="jenis_kelamin" id="jenis_kelamin" class="form-select">
+                        <option value="">-- Semua --</option>
+                        <option value="Putra" {% if request.args.get('jenis_kelamin') == 'Putra' %}selected{% endif %}>Putra</option>
+                        <option value="Putri" {% if request.args.get('jenis_kelamin') == 'Putri' %}selected{% endif %}>Putri</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Cari</button>
+                </div>
             </div>
-            
-            <div class="col-md-4">
-                <label for="jenis_kelamin" class="form-label">Jenis Kelamin</label>
-                <select name="jenis_kelamin" id="jenis_kelamin" class="form-select">
-                    <option value="">-- Semua --</option>
-                    <option value="Putra" {% if request.args.get('jenis_kelamin') == 'Putra' %}selected{% endif %}>Putra</option>
-                    <option value="Putri" {% if request.args.get('jenis_kelamin') == 'Putri' %}selected{% endif %}>Putri</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100">Cari</button>
-            </div>
-        </div>
-    </form>
+        </form>
 
         <div class="table-responsive">
             <table class="table">
@@ -393,6 +475,8 @@
                         <th>Jenis Kelamin</th>
                         <th>Asrama</th>
                         <th>Alamat</th>
+                        <th>Tgl Pengajuan</th>
+                        <th>Status Izin</th>
                         <th>Izin Sampai</th>
                         {% if current_user.role.name in ['Korpus', 'Keamanan'] %}
                         <th>Keterangan</th>
@@ -401,101 +485,333 @@
                     </tr>
                 </thead>
                 <tbody>
-  {% for izin in semua_izin %}
-  <tr>
-    <td><strong>{{ loop.index }}</strong></td>
-    <td><strong>{{ izin.santri.nama }}</strong></td>
-    <td>
-      {% if izin.santri.jenis_kelamin == 'PUTRA' %}
-        <span class="badge badge-putra"><i class="fas fa-mars me-1"></i>Putra</span>
-      {% elif izin.santri.jenis_kelamin == 'PUTRI' %}
-        <span class="badge badge-putri"><i class="fas fa-venus me-1"></i>Putri</span>
-      {% else %}
-        <span class="badge" style="background: var(--text-secondary); color: #fff;">
-          {{ izin.santri.jenis_kelamin }}
-        </span>
-      {% endif %}
-    </td>
-    <td>{{ izin.santri.asrama }}</td>
-    <td>{{ izin.santri.kabupaten }}</td>
-    <td>{{ izin.tanggal_berakhir|date_wib }}</td>
+                    {% for izin in semua_izin %}
+                    <tr>
+                        <td><strong>{{ loop.index }}</strong></td>
+                        <td><strong>{{ izin.santri.nama }}</strong></td>
+                        <td>
+                            {% if izin.santri.jenis_kelamin == 'PUTRA' %}
+                                <span class="badge badge-putra"><i class="fas fa-mars me-1"></i>Putra</span>
+                            {% elif izin.santri.jenis_kelamin == 'PUTRI' %}
+                                <span class="badge badge-putri"><i class="fas fa-venus me-1"></i>Putri</span>
+                            {% else %}
+                                <span class="badge" style="background: var(--text-secondary); color: #fff;">
+                                    {{ izin.santri.jenis_kelamin }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>{{ izin.santri.asrama }}</td>
+                        <td>{{ izin.santri.kabupaten }}</td>
+                        <td>{{ izin.tanggal_pengajuan|date_wib if izin.tanggal_pengajuan else '-' }}</td>
+                        <td>
+                            {% if izin.status == 'Aktif' %}
+                                <span class="badge badge-aktif"><i class="fas fa-check-circle"></i>Diterima</span>
+                            {% elif izin.status == 'Ditolak' %}
+                                <span class="badge badge-ditolak"><i class="fas fa-times-circle"></i>Ditolak</span>
+                            {% else %}
+                                <span class="badge badge-berakhir"><i class="fas fa-clock"></i>{{ izin.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if izin.tanggal_berakhir %}
+                                {{ izin.tanggal_berakhir|date_wib }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
 
-    {% if current_user.role.name in ['Korpus', 'Keamanan'] %}
-    <td>
-      <div style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
-           title="{{ izin.keterangan }}">
-        {{ izin.keterangan }}
-      </div>
-    </td>
-    <td>
-      <div class="d-flex gap-2">
-        <a href="{{ url_for('admin.edit_izin', izin_id=izin.id) }}" class="btn btn-action btn-edit">Edit</a>
-        <form method="POST" action="{{ url_for('admin.cabut_izin', izin_id=izin.id) }}"
-              onsubmit="return confirm('⚠️ Anda yakin ingin mencabut izin ini?');">
-          <button type="submit" class="btn btn-action btn-danger">Cabut</button>
-        </form>
-      </div>
-    </td>
-    {% endif %}
-  </tr>
-  {% else %}
-  <tr>
-    <td colspan="{% if current_user.role.name in ['Korpus', 'Keamanan'] %}8{% else %}6{% endif %}" class="empty-state">
-      <i class="fas fa-inbox"></i>
-      <h5>Tidak ada data izin</h5>
-      <p class="text-muted">
-        {% if view_mode == 'aktif' %}Belum ada izin aktif saat ini{% else %}Belum ada riwayat izin yang tersimpan{% endif %}
-      </p>
-    </td>
-  </tr>
-  {% endfor %}
-</tbody>
-
+                        {% if current_user.role.name in ['Korpus', 'Keamanan'] %}
+                        <td>
+                            <div style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                                 title="{{ izin.keterangan }}">
+                                {{ izin.keterangan }}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex gap-2">
+                                {% if izin.status == 'Aktif' %}
+                                <button class="btn btn-action btn-edit" onclick="editIzin({{ izin.id }}, '{{ izin.santri.nama }}', '{{ izin.tanggal_pengajuan }}', '{{ izin.tanggal_berakhir }}', '{{ izin.keterangan }}', 'Aktif')">
+                                    <i class="fas fa-edit me-1"></i>Edit
+                                </button>
+                                <form method="POST" action="{{ url_for('admin.cabut_izin', izin_id=izin.id) }}"
+                                      onsubmit="return confirm('⚠️ Anda yakin ingin mencabut izin ini?');">
+                                    <button type="submit" class="btn btn-action btn-danger">
+                                        <i class="fas fa-times me-1"></i>Cabut
+                                    </button>
+                                </form>
+                                {% elif izin.status == 'Ditolak' %}
+                                <button class="btn btn-action btn-edit" onclick="editIzin({{ izin.id }}, '{{ izin.santri.nama }}', '{{ izin.tanggal_pengajuan }}', null, '{{ izin.keterangan }}', 'Ditolak')">
+                                    <i class="fas fa-edit me-1"></i>Edit
+                                </button>
+                                <form method="POST" action="{{ url_for('admin.perizinan') }}" 
+                                      onsubmit="return confirm('⚠️ Anda yakin ingin menghapus record izin ini?');">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="izin_id" value="{{ izin.id }}">
+                                    <button type="submit" class="btn btn-action btn-danger">
+                                        <i class="fas fa-trash me-1"></i>Hapus
+                                    </button>
+                                </form>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="{% if current_user.role.name in ['Korpus', 'Keamanan'] %}10{% else %}8{% endif %}" class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <h5>Tidak ada data izin</h5>
+                            <p class="text-muted">
+                                {% if view_mode == 'aktif' %}
+                                    Belum ada izin yang diterima dan masih aktif
+                                {% elif view_mode == 'ditolak' %}
+                                    Belum ada pengajuan izin yang ditolak
+                                {% else %}
+                                    Belum ada riwayat izin yang tersimpan
+                                {% endif %}
+                            </p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
             </table>
         </div>
-        
+    </div>
+</div>
+
+<!-- Modal Edit Izin -->
+<div class="modal fade" id="editIzinModal" tabindex="-1" aria-labelledby="editIzinModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background: var(--primary-blue); color: white;">
+                <h5 class="modal-title" id="editIzinModalLabel">
+                    <i class="fas fa-edit me-2"></i>Edit Data Izin
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="background: #fafbff;">
+                <form id="editIzinForm" method="POST" action="{{ url_for('admin.perizinan') }}">
+                    <input type="hidden" name="action" value="edit">
+                    <input type="hidden" name="izin_id" id="edit_izin_id">
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label><i class="fas fa-user me-2"></i>Nama Santri</label>
+                                <input type="text" id="edit_nama_santri" class="form-control" readonly style="background: #f8f9fa;">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label><i class="fas fa-clipboard-check me-2"></i>Status Izin</label>
+                                <select name="status_izin" id="edit_status_izin" class="form-select">
+                                    <option value="Diterima">Diterima (Santri berstatus Izin)</option>
+                                    <option value="Ditolak">Ditolak (Santri tetap Aktif)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label><i class="fas fa-calendar-plus me-2"></i>Tanggal Pengajuan</label>
+                                <input type="date" name="tanggal_pengajuan" id="edit_tanggal_pengajuan" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group" id="edit_tanggal_berakhir_group">
+                                <label><i class="fas fa-calendar-times me-2"></i>Izin Sampai Tanggal</label>
+                                <input type="date" name="tanggal_berakhir" id="edit_tanggal_berakhir" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-sticky-note me-2"></i>Keterangan</label>
+                        <textarea name="keterangan" id="edit_keterangan" class="form-control" rows="3" placeholder="Keterangan atau alasan izin..."></textarea>
+                    </div>
+                    
+                    <div class="text-end mt-3">
+                        <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i>Batal
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Simpan Perubahan
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const hiddenSantriInput = document.getElementById('santri');
+    const statusSelect = document.getElementById('status_izin_select');
+    const tanggalBerakhirGroup = document.getElementById('tanggal_berakhir_group');
+    const statusInfoDiterima = document.getElementById('status_info_diterima');
+    const statusInfoDitolak = document.getElementById('status_info_ditolak');
 
+    // Initialize TomSelect
     new TomSelect('#select-santri-izin', {
         valueField: 'id',
         labelField: 'nama',
-        searchField: 'nama',
-        load: (query, callback) => {
+        searchField: ['nama', 'asrama', 'kabupaten'],
+        loadThrottle: 300,
+        preload: false,
+        load: function(query, callback) {
+            if (!query.length) return callback();
+            
             const url = `/admin/api/search-active-santri?q=${encodeURIComponent(query)}`;
-            fetch(url).then(response => response.json()).then(json => {
-                callback(json.results);
-            }).catch(() => {
-                callback();
-            });
+            
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(json => {
+                    console.log('API Response:', json); // Debug log
+                    if (json && json.results && Array.isArray(json.results)) {
+                        callback(json.results);
+                    } else if (json && Array.isArray(json)) {
+                        callback(json);
+                    } else {
+                        callback([]);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading data:', error);
+                    callback();
+                });
         },
-        onChange: (value) => {
-            hiddenSantriInput.value = value;
+        onChange: function(value) {
+            hiddenSantriInput.value = value || '';
         },
         render: {
             option: function(data, escape) {
+                const nama = data.nama || 'Nama tidak tersedia';
+                const asrama = data.asrama || 'N/A';
+                const kabupaten = data.kabupaten || data.alamat || 'N/A';
+                const initial = nama.charAt(0).toUpperCase();
+                
                 return `
-                    <div class="d-flex align-items-center py-2 px-3">
-                        <div class="avatar-circle me-3" style="...">${escape(data.nama[0])}</div>
-                        <div>
-                            <div class="fw-medium">${escape(data.nama)}</div>
-                            <small class="text-muted">${escape(data.asrama || 'N/A')} • ${escape(data.kabupaten || 'N/A')}</small>
+                    <div class="d-flex align-items-center py-2 px-3" style="border-bottom: 1px solid #f1f5f9;">
+                        <div class="avatar-circle me-3" style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary-blue); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 1rem;">${escape(initial)}</div>
+                        <div class="flex-grow-1">
+                            <div class="fw-medium text-dark" style="font-size: 0.95rem;">${escape(nama)}</div>
+                            <small class="text-muted" style="font-size: 0.8rem;">
+                                <i class="fas fa-home me-1"></i>${escape(asrama)} • 
+                                <i class="fas fa-map-marker-alt me-1"></i>${escape(kabupaten)}
+                            </small>
                         </div>
                     </div>`;
             },
             item: function(data, escape) {
+                const nama = data.nama || 'Nama tidak tersedia';
+                const initial = nama.charAt(0).toUpperCase();
+                
                 return `
                     <div class="d-flex align-items-center">
-                        <div class="avatar-circle me-2" style="...">${escape(data.nama[0])}</div>
-                        <span>${escape(data.nama)}</span>
+                        <div class="avatar-circle me-2" style="width: 24px; height: 24px; border-radius: 50%; background: var(--primary-blue); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.8rem;">${escape(initial)}</div>
+                        <span>${escape(nama)}</span>
                     </div>`;
+            },
+            no_results: function(data, escape) {
+                return '<div class="text-center py-3 text-muted"><i class="fas fa-search me-2"></i>Tidak ada santri ditemukan</div>';
             }
-        }
+        },
+        dropdownParent: 'body',
+        create: false,
+        maxItems: 1,
+        placeholder: '🔍 Ketik nama, asrama, atau alamat santri...'
     });
+
+    // Handle status change
+    function toggleFields() {
+        const selectedStatus = statusSelect.value;
+        
+        if (selectedStatus === 'Diterima') {
+            tanggalBerakhirGroup.classList.add('active');
+            statusInfoDiterima.style.display = 'block';
+            statusInfoDitolak.style.display = 'none';
+        } else if (selectedStatus === 'Ditolak') {
+            tanggalBerakhirGroup.classList.remove('active');
+            statusInfoDiterima.style.display = 'none';
+            statusInfoDitolak.style.display = 'block';
+            // Clear tanggal berakhir value when ditolak
+            document.getElementById('tanggal_berakhir').value = '';
+        } else {
+            tanggalBerakhirGroup.classList.remove('active');
+            statusInfoDiterima.style.display = 'none';
+            statusInfoDitolak.style.display = 'none';
+        }
+    }
+
+    // Initialize on page load
+    toggleFields();
+
+    // Add event listener for status change
+    statusSelect.addEventListener('change', toggleFields);
+
+    // Set default date for tanggal_pengajuan to today
+    const today = new Date().toISOString().split('T')[0];
+    const tanggalPengajuanInput = document.getElementById('tanggal_pengajuan');
+    if (!tanggalPengajuanInput.value) {
+        tanggalPengajuanInput.value = today;
+    }
+
+    // Edit izin modal functions
+    window.editIzin = function(izinId, namaSantri, tanggalPengajuan, tanggalBerakhir, keterangan, status) {
+        document.getElementById('edit_izin_id').value = izinId;
+        document.getElementById('edit_nama_santri').value = namaSantri;
+        document.getElementById('edit_tanggal_pengajuan').value = tanggalPengajuan || '';
+        document.getElementById('edit_tanggal_berakhir').value = tanggalBerakhir || '';
+        document.getElementById('edit_keterangan').value = keterangan || '';
+        
+        // Set status
+        const statusSelect = document.getElementById('edit_status_izin');
+        if (status === 'Aktif') {
+            statusSelect.value = 'Diterima';
+        } else if (status === 'Ditolak') {
+            statusSelect.value = 'Ditolak';
+        }
+        
+        // Toggle tanggal berakhir field
+        toggleEditTanggalBerakhir();
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('editIzinModal'));
+        modal.show();
+    };
+
+    // Handle status change in edit modal
+    const editStatusSelect = document.getElementById('edit_status_izin');
+    const editTanggalBerakhirGroup = document.getElementById('edit_tanggal_berakhir_group');
+    
+    function toggleEditTanggalBerakhir() {
+        const selectedStatus = editStatusSelect.value;
+        
+        if (selectedStatus === 'Diterima') {
+            editTanggalBerakhirGroup.classList.add('active');
+            editTanggalBerakhirGroup.style.opacity = '1';
+            editTanggalBerakhirGroup.style.pointerEvents = 'all';
+        } else {
+            editTanggalBerakhirGroup.classList.remove('active');
+            editTanggalBerakhirGroup.style.opacity = '0.5';
+            editTanggalBerakhirGroup.style.pointerEvents = 'none';
+            document.getElementById('edit_tanggal_berakhir').value = '';
+        }
+    }
+    
+    if (editStatusSelect) {
+        editStatusSelect.addEventListener('change', toggleEditTanggalBerakhir);
+    }
 });
 </script>
 {% endblock %}

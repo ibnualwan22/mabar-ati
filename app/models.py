@@ -47,12 +47,14 @@ class Tarif(db.Model):
 class Izin(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     santri_id = db.Column(db.Integer, db.ForeignKey('santri.id'), nullable=False)
-    tanggal_berakhir = db.Column(db.Date, nullable=False)
-    keterangan = db.Column(db.Text, nullable=False)
     edisi_id = db.Column(db.Integer, db.ForeignKey('edisi.id'), nullable=False)
-    status = db.Column(db.String(20), default='Aktif', nullable=False)
+    tanggal_pengajuan = db.Column(db.Date, nullable=False) # Tanggal izin diajukan
+    tanggal_berakhir = db.Column(db.Date, nullable=True) # Dibuat nullable (boleh kosong jika ditolak)
+    keterangan = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), default='Aktif', nullable=False) # Status: Aktif, Selesai, Ditolak
+
     __table_args__ = (
-        UniqueConstraint('santri_id', 'edisi_id', name='uq_izin_santri_edisi'),
+        UniqueConstraint('santri_id', 'edisi_id', 'status', name='uq_izin_santri_edisi_status'),
     )
 
 class Partisipan(db.Model):
