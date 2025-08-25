@@ -16,7 +16,7 @@
                 <strong class="text-dark">{{ pendaftaran.santri.nama }}</strong>
             </div>
         </div>
-        <a href="{{ url_for('admin.daftar_peserta', rombongan_id=pendaftaran.rombongan_pulang_id or pendaftaran.rombongan_kembali_id) }}" 
+        <a href="{{ url_for('admin.daftar_peserta', rombongan_id=pendaftaran.rombongan_pulang_id) }}" 
            class="btn btn-outline-primary btn-sm d-flex align-items-center">
             <i class="fas fa-arrow-left me-2"></i>
             Kembali ke Daftar Peserta
@@ -52,7 +52,7 @@
 
                         <!-- Status Pulang -->
                         <div class="mb-4">
-                            {{ form.status_pulang.label(class="form-label fw-semibold text-dark d-flex align-items-center") }}
+                            {{ form.status_pulang.label(class="form-label fw-semibold text-dark") }}
                             <i class="fas fa-info-circle me-1 text-primary"></i>
                             {{ form.status_pulang(class="form-select") }}
                             {% if form.status_pulang.errors %}
@@ -66,23 +66,23 @@
 
                         <!-- Metode Pembayaran Pulang -->
                         <div class="mb-4">
-                            {{ form.metode_pembayaran_pulang.label(class="form-label fw-semibold text-dark d-flex align-items-center") }}
+                            {{ form.metode_pembayaran_pulang.label(class="form-label fw-semibold text-dark") }}
                             <i class="fas fa-credit-card me-1 text-primary"></i>
                             {{ form.metode_pembayaran_pulang(class="form-select") }}
                         </div>
 
                         <!-- Titik Turun -->
                         <div class="mb-4">
-                            {{ form.titik_turun.label(class="form-label fw-semibold text-dark d-flex align-items-center") }}
+                            {{ form.titik_turun.label(class="form-label fw-semibold text-dark") }}
                             <i class="fas fa-map-marker-alt me-1 text-primary"></i>
-                            {{ form.titik_turun(class="form-select") }}
+                            {{ form.titik_turun(class="form-select", id="titik_turun") }}
                         </div>
 
                         <!-- Bus Pulang -->
                         <div class="mb-0">
-                            {{ form.bus_pulang.label(class="form-label fw-semibold text-dark d-flex align-items-center") }}
+                            {{ form.bus_pulang.label(class="form-label fw-semibold text-dark") }}
                             <i class="fas fa-bus me-1 text-primary"></i>
-                            {{ form.bus_pulang(class="form-select") }}
+                            {{ form.bus_pulang(class="form-select", id="bus_pulang") }}
                         </div>
                     </div>
                 </div>
@@ -100,37 +100,37 @@
                     <div class="card-body p-4">
                         <!-- Rombongan Kembali -->
                         <div class="mb-4">
-                            {{ form.rombongan_kembali.label(class="form-label fw-semibold text-dark d-flex align-items-center") }}
+                            {{ form.rombongan_kembali.label(class="form-label fw-semibold text-dark") }}
                             <i class="fas fa-users me-1 text-success"></i>
-                            {{ form.rombongan_kembali(class="form-select") }}
-                        </div>
-
-                        <!-- Titik Jemput Kembali -->
-                        <div class="mb-4" id="field-titik-jemput">
-                            {{ form.titik_jemput_kembali.label(class="form-label fw-semibold text-dark d-flex align-items-center") }}
-                            <i class="fas fa-map-marker-alt me-1 text-success"></i>
-                            {{ form.titik_jemput_kembali(class="form-select") }}
-                        </div>
-
-                        <!-- Bus Kembali -->
-                        <div class="mb-4">
-                            {{ form.bus_kembali.label(class="form-label fw-semibold text-dark d-flex align-items-center") }}
-                            <i class="fas fa-bus me-1 text-success"></i>
-                            {{ form.bus_kembali(class="form-select") }}
+                            {{ form.rombongan_kembali(class="form-select", id="rombongan_kembali") }}
                         </div>
 
                         <!-- Status Kembali -->
                         <div class="mb-4">
-                            {{ form.status_kembali.label(class="form-label fw-semibold text-dark d-flex align-items-center") }}
+                            {{ form.status_kembali.label(class="form-label fw-semibold text-dark") }}
                             <i class="fas fa-info-circle me-1 text-success"></i>
                             {{ form.status_kembali(class="form-select") }}
                         </div>
 
                         <!-- Metode Pembayaran Kembali -->
-                        <div class="mb-0">
-                            {{ form.metode_pembayaran_kembali.label(class="form-label fw-semibold text-dark d-flex align-items-center") }}
+                        <div class="mb-4">
+                            {{ form.metode_pembayaran_kembali.label(class="form-label fw-semibold text-dark") }}
                             <i class="fas fa-credit-card me-1 text-success"></i>
                             {{ form.metode_pembayaran_kembali(class="form-select") }}
+                        </div>
+
+                        <!-- Titik Jemput Kembali -->
+                        <div class="mb-4" id="field-titik-jemput">
+                            {{ form.titik_jemput_kembali.label(class="form-label fw-semibold text-dark") }}
+                            <i class="fas fa-map-marker-alt me-1 text-success"></i>
+                            {{ form.titik_jemput_kembali(class="form-select", id="titik_jemput_kembali") }}
+                        </div>
+
+                        <!-- Bus Kembali -->
+                        <div class="mb-0">
+                            {{ form.bus_kembali.label(class="form-label fw-semibold text-dark") }}
+                            <i class="fas fa-bus me-1 text-success"></i>
+                            {{ form.bus_kembali(class="form-select", id="bus_kembali") }}
                         </div>
                     </div>
                 </div>
@@ -142,8 +142,7 @@
             <div class="col-12">
                 <div class="d-flex flex-column flex-md-row gap-3 justify-content-center justify-content-md-start">
                     {{ form.submit(class="btn btn-primary btn-lg px-5 d-flex align-items-center justify-content-center") }}
-                    <i class="fas fa-save me-2"></i>
-                    <a href="{{ url_for('admin.daftar_peserta', rombongan_id=pendaftaran.rombongan_pulang_id or pendaftaran.rombongan_kembali_id) }}" 
+                    <a href="{{ url_for('admin.daftar_peserta', rombongan_id=pendaftaran.rombongan_pulang_id) }}" 
                        class="btn btn-outline-secondary btn-lg px-5 d-flex align-items-center justify-content-center">
                         <i class="fas fa-times me-2"></i>
                         Batal
@@ -264,21 +263,40 @@ document.addEventListener('DOMContentLoaded', function() {
     const rombonganKembaliSelect = document.getElementById('rombongan_kembali');
     const busKembaliSelect = document.getElementById('bus_kembali');
     const titikJemputSelect = document.getElementById('titik_jemput_kembali');
+    const busPulangSelect = document.getElementById('bus_pulang');
     const loadingOverlay = document.getElementById('loadingOverlay');
     const form = document.querySelector('form');
 
+    // Data awal dari server
+    const initialData = {
+        rombonganPulangId: {{ pendaftaran.rombongan_pulang_id or 'null' }},
+        rombonganKembaliId: {{ pendaftaran.rombongan_kembali_id or 'null' }},
+        busPulangId: {{ pendaftaran.bus_pulang_id or 'null' }},
+        busKembaliId: {{ pendaftaran.bus_kembali_id or 'null' }},
+        titikTurun: "{{ pendaftaran.titik_turun or '' }}",
+        titikJemputKembali: "{{ pendaftaran.titik_jemput_kembali or '' }}"
+    };
+
+    console.log('Initial data:', initialData);
+
     // Show loading function
     function showLoading() {
-        loadingOverlay.classList.remove('d-none');
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('d-none');
+        }
     }
 
     // Hide loading function
     function hideLoading() {
-        loadingOverlay.classList.add('d-none');
+        if (loadingOverlay) {
+            loadingOverlay.classList.add('d-none');
+        }
     }
 
     // Add loading state to selects
     function setSelectLoading(selectElement, isLoading) {
+        if (!selectElement) return;
+        
         if (isLoading) {
             selectElement.disabled = true;
             selectElement.innerHTML = '<option value="">Memuat...</option>';
@@ -287,55 +305,99 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Update bus pulang dengan sisa kuota (menggunakan API yang sama)
+    function updateBusPulangWithQuota() {
+        if (!initialData.rombonganPulangId || !busPulangSelect) return;
+
+        // Ambil data detail rombongan pulang
+        fetch(`/admin/api/rombongan-detail/${initialData.rombonganPulangId}`)
+            .then(res => {
+                if (!res.ok) throw new Error('Network response was not ok');
+                return res.json();
+            })
+            .then(data => {
+                console.log('Bus Pulang data:', data);
+                
+                // Update pilihan Bus Pulang dengan sisa kuota
+                if (data.buses) {
+                    const busChoices = data.buses.map(bus => {
+                        const displayName = `${bus.nama_armada}`;
+                        const identifier = bus.nomor_lambung || bus.plat_nomor;
+                        const quota = bus.sisa_kuota_pulang !== undefined ? `(Sisa: ${bus.sisa_kuota_pulang})` : '';
+                        const disabled = (bus.sisa_kuota_pulang !== undefined && bus.sisa_kuota_pulang <= 0) ? 'disabled' : '';
+                        return `<option value="${bus.id}" ${disabled}>${displayName} - ${identifier} ${quota}</option>`;
+                    }).join('');
+                    
+                    busPulangSelect.innerHTML = '<option value="">-- Pilih Bus --</option>' + busChoices;
+                    
+                    // Set nilai yang sudah ada sebelumnya
+                    if (initialData.busPulangId) {
+                        busPulangSelect.value = initialData.busPulangId;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching bus pulang:', error);
+            });
+    }
+
     function updateKembaliOptions(rombonganId) {
         // Show loading state
         setSelectLoading(busKembaliSelect, true);
         setSelectLoading(titikJemputSelect, true);
 
         // Jika pilihan dikosongkan, gunakan rombongan pulang sebagai default
-        if (!rombonganId) {
-            rombonganId = {{ pendaftaran.rombongan_pulang_id or 'null' }};
-            if (!rombonganId) {
-                busKembaliSelect.innerHTML = '<option value="">-- Pilih Rombongan Dulu --</option>';
-                titikJemputSelect.innerHTML = '<option value="">-- Pilih Rombongan Dulu --</option>';
-                setSelectLoading(busKembaliSelect, false);
-                setSelectLoading(titikJemputSelect, false);
-                return;
-            }
+        let targetRombonganId = rombonganId;
+        if (!targetRombonganId) {
+            targetRombonganId = initialData.rombonganPulangId;
         }
         
+        if (!targetRombonganId) {
+            if (busKembaliSelect) busKembaliSelect.innerHTML = '<option value="">-- Pilih Rombongan Dulu --</option>';
+            if (titikJemputSelect) titikJemputSelect.innerHTML = '<option value="">-- Pilih Rombongan Dulu --</option>';
+            setSelectLoading(busKembaliSelect, false);
+            setSelectLoading(titikJemputSelect, false);
+            return;
+        }
+        
+        console.log('Fetching kembali options for rombongan:', targetRombonganId);
+        
         // Ambil data detail rombongan dari API
-        fetch(`/admin/api/rombongan-detail/${rombonganId}`)
+        fetch(`/admin/api/rombongan-detail/${targetRombonganId}`)
             .then(res => {
-                if (!res.ok) {
-                    throw new Error('Network response was not ok');
-                }
+                if (!res.ok) throw new Error('Network response was not ok');
                 return res.json();
             })
             .then(data => {
+                console.log('Kembali data:', data);
+                
                 // Update pilihan Bus Kembali
-                const busChoices = data.buses.map(bus => {
-                    const displayName = `${bus.nama_armada} - ${bus.nomor_lambung || bus.plat_nomor}`;
-                    const quota = `(Sisa: ${bus.sisa_kuota_kembali})`;
-                    return `<option value="${bus.id}" ${bus.sisa_kuota_kembali <= 0 ? 'disabled' : ''}>${displayName} ${quota}</option>`;
-                }).join('');
-                busKembaliSelect.innerHTML = '<option value="">-- Pilih Bus --</option>' + busChoices;
+                if (busKembaliSelect && data.buses) {
+                    const busChoices = data.buses.map(bus => {
+                        const displayName = `${bus.nama_armada}`;
+                        const identifier = bus.nomor_lambung || bus.plat_nomor;
+                        const quota = bus.sisa_kuota_kembali !== undefined ? `(Sisa: ${bus.sisa_kuota_kembali})` : '';
+                        const disabled = (bus.sisa_kuota_kembali !== undefined && bus.sisa_kuota_kembali <= 0) ? 'disabled' : '';
+                        return `<option value="${bus.id}" ${disabled}>${displayName} - ${identifier} ${quota}</option>`;
+                    }).join('');
+                    busKembaliSelect.innerHTML = '<option value="">-- Pilih Bus --</option>' + busChoices;
+                }
                 
                 // Update pilihan Titik Jemput Kembali
-                const titikChoices = data.tarifs.map(t => 
-                    `<option value="${t.titik_turun}">${t.titik_turun}</option>`
-                ).join('');
-                titikJemputSelect.innerHTML = '<option value="">-- Pilih Titik Jemput --</option>' + titikChoices;
+                if (titikJemputSelect && data.tarifs) {
+                    const titikChoices = data.tarifs.map(t => 
+                        `<option value="${t.titik_turun}">${t.titik_turun}</option>`
+                    ).join('');
+                    titikJemputSelect.innerHTML = '<option value="">-- Pilih Titik Jemput --</option>' + titikChoices;
+                }
 
                 // Set nilai yang sudah ada sebelumnya
-                const currentBusKembali = "{{ pendaftaran.bus_kembali_id or '' }}";
-                const currentTitikJemput = "{{ pendaftaran.titik_jemput_kembali or '' }}";
-                
-                if (currentBusKembali) {
-                    busKembaliSelect.value = currentBusKembali;
+                if (initialData.busKembaliId && busKembaliSelect) {
+                    busKembaliSelect.value = initialData.busKembaliId;
                 }
-                if (currentTitikJemput) {
-                    titikJemputSelect.value = currentTitikJemput;
+                
+                if (initialData.titikJemputKembali && titikJemputSelect) {
+                    titikJemputSelect.value = initialData.titikJemputKembali;
                 }
 
                 // Remove loading state
@@ -346,40 +408,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error fetching rombongan details:', error);
                 
                 // Show error state
-                busKembaliSelect.innerHTML = '<option value="">-- Error memuat data --</option>';
-                titikJemputSelect.innerHTML = '<option value="">-- Error memuat data --</option>';
+                if (busKembaliSelect) busKembaliSelect.innerHTML = '<option value="">-- Error memuat data --</option>';
+                if (titikJemputSelect) titikJemputSelect.innerHTML = '<option value="">-- Error memuat data --</option>';
                 
                 setSelectLoading(busKembaliSelect, false);
                 setSelectLoading(titikJemputSelect, false);
-                
-                // Show user-friendly error message
-                const toast = document.createElement('div');
-                toast.className = 'toast align-items-center text-white bg-danger border-0 position-fixed';
-                toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
-                toast.innerHTML = `
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            <i class="fas fa-exclamation-circle me-2"></i>
-                            Gagal memuat data rombongan. Silakan coba lagi.
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                    </div>
-                `;
-                document.body.appendChild(toast);
-                
-                const bsToast = new bootstrap.Toast(toast);
-                bsToast.show();
-                
-                // Remove toast after it's hidden
-                toast.addEventListener('hidden.bs.toast', () => {
-                    document.body.removeChild(toast);
-                });
             });
     }
 
     // Event listener untuk mengubah pilihan saat rombongan kembali diganti
     if (rombonganKembaliSelect) {
         rombonganKembaliSelect.addEventListener('change', function() {
+            console.log('Rombongan kembali changed to:', this.value);
             updateKembaliOptions(this.value);
         });
     }
@@ -400,20 +440,30 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Panggil sekali saat halaman dimuat untuk mengisi data awal
-    const initialRombonganKembali = rombonganKembaliSelect ? rombonganKembaliSelect.value : null;
-    updateKembaliOptions(initialRombonganKembali);
+    // Initialize saat halaman dimuat
+    console.log('Initializing page...');
+    
+    // Update bus pulang dengan sisa kuota
+    updateBusPulangWithQuota();
+    
+    // Update options untuk kembali
+    const rombonganKembaliTerpilih = initialData.rombonganKembaliId || initialData.rombonganPulangId;
+    updateKembaliOptions(rombonganKembaliTerpilih);
 
     // Add smooth animations to form elements
     const formElements = document.querySelectorAll('.form-select, .form-control');
     formElements.forEach(element => {
         element.addEventListener('focus', function() {
-            this.parentElement.style.transform = 'scale(1.02)';
-            this.parentElement.style.transition = 'transform 0.2s ease';
+            if (this.parentElement) {
+                this.parentElement.style.transform = 'scale(1.02)';
+                this.parentElement.style.transition = 'transform 0.2s ease';
+            }
         });
         
         element.addEventListener('blur', function() {
-            this.parentElement.style.transform = 'scale(1)';
+            if (this.parentElement) {
+                this.parentElement.style.transform = 'scale(1)';
+            }
         });
     });
 });

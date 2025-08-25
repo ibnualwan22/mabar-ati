@@ -81,7 +81,7 @@ def santri_query():
 
 class PendaftaranForm(FlaskForm):
     rombongan = SelectField('Pilih Rombongan', validators=[DataRequired()])
-    santri = HiddenField('Pilih Santri', validators=[DataRequired()])
+    santri_list = HiddenField('Pilih Santri (bisa lebih dari satu)', validators=[DataRequired()])
     
     # Detail Perjalanan Pulang
     status_pulang = SelectField('Status Pembayaran Pulang', choices=[('Belum Bayar', 'Belum Bayar'), ('Lunas', 'Lunas'), ('Tidak Ikut', 'Tidak Ikut')], default='Belum Bayar', validators=[DataRequired()])

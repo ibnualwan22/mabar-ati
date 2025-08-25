@@ -741,78 +741,100 @@ def hapus_santri(id):
     flash(f"Santri '{nama_santri}' berhasil dihapus dari sistem.", "info")
     return redirect(url_for('admin.manajemen_santri'))
 
-@admin_bp.route('/pendaftaran', methods=['GET', 'POST'])
+@admin_bp.route('/pendaftaran-rombongan', methods=['GET', 'POST'])
 @login_required
 @role_required('Korpus', 'Korda', 'Korpuspi')
 def pendaftaran_rombongan():
     form = PendaftaranForm()
     active_edisi = get_active_edisi()
-    
-    # Mengisi pilihan dropdown rombongan
-    rombongan_choices = []
-    if active_edisi:
-        query = Rombongan.query.filter_by(edisi=active_edisi)
-        if current_user.role.name == 'Korda':
-            managed_ids = [r.id for r in current_user.managed_rombongan]
-            query = query.filter(Rombongan.id.in_(managed_ids))
-        rombongan_choices = [(r.id, r.nama_rombongan) for r in query.order_by(Rombongan.nama_rombongan).all()]
-    form.rombongan.choices = [('', '-- Pilih Rombongan --')] + rombongan_choices
+    if not active_edisi:
+        flash("Tidak ada edisi yang aktif.", "warning")
+        return redirect(url_for('admin.dashboard'))
 
-    # Mengisi pilihan dinamis untuk validasi saat POST
-    if request.method == 'POST':
-        rombongan_id_from_form = request.form.get('rombongan')
-        if rombongan_id_from_form:
-            selected_rombongan = Rombongan.query.get(rombongan_id_from_form)
-            if selected_rombongan:
-                form.titik_turun.choices = [(t.titik_turun, t.titik_turun) for t in selected_rombongan.tarifs]
-                bus_choices = [('', '-- Pilih Bus --')] + [(bus.id, f"{bus.nama_armada} - {bus.nomor_lambung or bus.plat_nomor}") for bus in selected_rombongan.buses]
+    # --- BAGIAN PERBAIKAN ---
+    # 1. Isi pilihan Rombongan di luar kondisi GET/POST agar selalu terisi
+    if current_user.role.name == 'Korda':
+        form.rombongan.choices = [(r.id, r.nama_rombongan) for r in current_user.managed_rombongan]
+    else:
+        form.rombongan.choices = [(r.id, r.nama_rombongan) for r in Rombongan.query.filter_by(edisi_id=active_edisi.id).order_by(Rombongan.nama_rombongan).all()]
+
+    # 2. Jika ada data rombongan yang dikirim (baik GET maupun POST), isi pilihan Titik Turun dan Bus
+    selected_rombongan_id = form.rombongan.data
+    if request.method == 'POST' or request.args.get('rombongan_id'):
+        if not selected_rombongan_id:
+             selected_rombongan_id = request.args.get('rombongan_id') # Ambil dari URL jika ada
+        
+        if selected_rombongan_id:
+            rombongan = Rombongan.query.get(int(selected_rombongan_id))
+            if rombongan:
+                form.titik_turun.choices = [(t.titik_turun, t.titik_turun) for t in rombongan.tarifs]
+                bus_choices = [(b.id, f"{b.nama_armada} ({b.nomor_lambung or b.plat_nomor})") for b in rombongan.buses]
                 form.bus_pulang.choices = bus_choices
                 form.bus_kembali.choices = bus_choices
+    # --- AKHIR PERBAIKAN ---
 
     if form.validate_on_submit():
-        rombongan_id = int(form.rombongan.data)
-        santri_id = form.santri.data
+        # Ambil daftar NIS dari form (sekarang berupa string dipisah koma)
+        nis_list_str = form.santri_list.data
+        nis_list = [nis.strip() for nis in nis_list_str.split(',') if nis.strip()]
+
+        if not nis_list:
+            flash('Tidak ada santri yang dipilih.', 'danger')
+            return redirect(url_for('admin.pendaftaran_rombongan'))
+
+        santri_terpilih = Santri.query.filter(Santri.nis.in_(nis_list)).all()
+        rombongan_id = form.rombongan.data
+        rombongan_obj = Rombongan.query.get(rombongan_id)
         
-        rombongan = Rombongan.query.get(rombongan_id)
-        santri = Santri.query.get(santri_id)
+        berhasil_didaftarkan = 0
+        sudah_terdaftar_sebelumnya = []
+        gagal_karena_izin = []
+        pendaftaran_baru_list = []
 
-        if not santri or not rombongan:
-            flash("ERROR: Santri atau Rombongan tidak ditemukan.", "danger")
-            return redirect(url_for('admin.pendaftaran_rombongan'))
+        for santri in santri_terpilih:
+            existing_pendaftaran = Pendaftaran.query.filter_by(santri_id=santri.id, edisi_id=active_edisi.id).first()
+            if existing_pendaftaran:
+                sudah_terdaftar_sebelumnya.append(santri.nama)
+                continue
+            if santri.status_santri == 'Izin':
+                gagal_karena_izin.append(santri.nama)
+                continue
 
-        # Gunakan HANYA pengecekan yang baru dan akurat
-        existing_pendaftaran = santri.pendaftarans.filter(Pendaftaran.edisi_id == active_edisi.id).first()
-        if existing_pendaftaran:
-            flash(f"ERROR: {santri.nama} sudah terdaftar di edisi ini.", "danger")
-            return redirect(url_for('admin.pendaftaran_rombongan'))
+            tarif = Tarif.query.filter_by(rombongan_id=rombongan_id, titik_turun=form.titik_turun.data).first()
+            total_biaya = 0
+            if tarif:
+                biaya_per_perjalanan = tarif.harga_bus + tarif.fee_korda + 10000
+                if form.status_pulang.data != 'Tidak Ikut': total_biaya += biaya_per_perjalanan
+                if form.status_kembali.data != 'Tidak Ikut': total_biaya += biaya_per_perjalanan
+            
+            new_pendaftaran = Pendaftaran(
+                edisi_id=active_edisi.id, santri_id=santri.id,
+                rombongan_pulang_id=rombongan_id, status_pulang=form.status_pulang.data,
+                metode_pembayaran_pulang=form.metode_pembayaran_pulang.data,
+                bus_pulang_id=form.bus_pulang.data or None, titik_turun=form.titik_turun.data,
+                status_kembali=form.status_kembali.data,
+                metode_pembayaran_kembali=form.metode_pembayaran_kembali.data,
+                bus_kembali_id=form.bus_kembali.data or None, total_biaya=total_biaya
+            )
+            pendaftaran_baru_list.append(new_pendaftaran)
+            berhasil_didaftarkan += 1
         
-        if santri.status_santri == 'Izin':
-            flash(f"ERROR: {santri.nama} sedang Izin dan tidak bisa didaftarkan.", "danger")
-            return redirect(url_for('admin.pendaftaran_rombongan'))
+        if pendaftaran_baru_list:
+            db.session.add_all(pendaftaran_baru_list)
+            db.session.commit()
+            log_activity('Tambah', 'Pendaftaran', f"Mendaftarkan {berhasil_didaftarkan} santri ke rombongan '{rombongan_obj.nama_rombongan}'")
 
-        # Kalkulasi biaya
-        selected_tarif = Tarif.query.filter_by(rombongan_id=rombongan_id, titik_turun=form.titik_turun.data).first()
-        biaya_per_perjalanan = selected_tarif.harga_bus + selected_tarif.fee_korda + 10000 if selected_tarif else 0
-        total_biaya = 0
-        if form.status_pulang.data != 'Tidak Ikut': total_biaya += biaya_per_perjalanan
-        if form.status_kembali.data != 'Tidak Ikut': total_biaya += biaya_per_perjalanan
+        if berhasil_didaftarkan > 0: flash(f'{berhasil_didaftarkan} santri berhasil didaftarkan.', 'success')
+        if sudah_terdaftar_sebelumnya: flash(f'Santri berikut dilewati karena sudah terdaftar: {", ".join(sudah_terdaftar_sebelumnya)}', 'warning')
+        if gagal_karena_izin: flash(f'Santri berikut dilewati karena berstatus Izin: {", ".join(gagal_karena_izin)}', 'danger')
 
-        pendaftaran = Pendaftaran(
-            edisi_id=active_edisi.id,santri_id=santri.id, rombongan_pulang_id=rombongan.id, rombongan_kembali_id=rombongan.id,
-            status_pulang=form.status_pulang.data, metode_pembayaran_pulang=form.metode_pembayaran_pulang.data or None,
-            bus_pulang_id=int(form.bus_pulang.data) if form.bus_pulang.data else None,
-            titik_turun=form.titik_turun.data, status_kembali=form.status_kembali.data,
-            metode_pembayaran_kembali=form.metode_pembayaran_kembali.data or None,
-            bus_kembali_id=int(form.bus_kembali.data) if form.bus_kembali.data else None,
-            titik_jemput_kembali=form.titik_turun.data,total_biaya=total_biaya
-        )
-        db.session.add(pendaftaran)
-        log_activity('Tambah', 'Pendaftaran', f"Mendaftarkan santri '{santri.nama}' ke rombongan '{rombongan.nama_rombongan}'")
-        db.session.commit()
-        flash(f"{santri.nama} berhasil didaftarkan ke {rombongan.nama_rombongan}!", "success")
-        return redirect(url_for('admin.daftar_peserta', rombongan_id=rombongan.id))
-    
-    return render_template('pendaftaran_rombongan.html', form=form)
+        return redirect(url_for('admin.pendaftaran_rombongan', rombongan_id=rombongan_id))
+
+    rombongan_id_url = request.args.get('rombongan_id')
+    if rombongan_id_url:
+        form.rombongan.data = int(rombongan_id_url)
+
+    return render_template('pendaftaran_rombongan.html', form=form, title="Form Pendaftaran Rombongan")
 
 @admin_bp.route('/pendaftaran/edit/<int:pendaftaran_id>', methods=['GET', 'POST'])
 @login_required
@@ -977,30 +999,49 @@ def rombongan_detail(id):
     })
 
 @admin_bp.route('/api/search-santri')
-def search_santri_api():
-    query = request.args.get('q', '')
-    query_id = request.args.get('q_id', type=int)
-
-    if query_id:
-        santri_results = Santri.query.filter_by(id=query_id).all()
-    elif len(query) < 3:
+@login_required
+def api_search_santri():
+    """API untuk mencari santri yang 'tersedia' untuk didaftarkan."""
+    active_edisi = get_active_edisi()
+    if not active_edisi:
         return jsonify({'results': []})
-    else:
-        santri_results = Santri.query.filter(
-            Santri.nama.ilike(f'%{query}%'),
-            Santri.pendaftarans == None
-        ).limit(20).all()
 
-    results = [
-        {
-            'id': santri.id,
-            'nama': santri.nama,
-            'asrama': santri.asrama,
-            'kabupaten': santri.kabupaten,
-            'jenis_kelamin': santri.jenis_kelamin,
-            'status_santri': santri.status_santri
-        } for santri in santri_results
+    q = request.args.get('q', '')
+    query_id = request.args.get('q_id') # Untuk mengambil santri spesifik by ID
+
+    # 1. Dapatkan daftar ID santri yang SUDAH terdaftar di edisi ini
+    registered_santri_ids = [
+        p.santri_id for p in Pendaftaran.query.with_entities(Pendaftaran.santri_id)
+        .filter_by(edisi_id=active_edisi.id)
     ]
+    
+    # 2. Siapkan query dasar untuk santri yang 'tersedia'
+    query = Santri.query.filter(
+        Santri.status_santri == 'Aktif',
+        Santri.id.notin_(registered_santri_ids) # Filter utama: jangan tampilkan yang sudah terdaftar
+    )
+
+    # Terapkan filter pencarian nama
+    if q:
+        query = query.filter(Santri.nama.ilike(f'%{q}%'))
+    
+    # Tambahan: Jika ada q_id dari URL, cari santri spesifik itu (berguna untuk pra-pengisian form)
+    if query_id:
+        # Untuk kasus ini, kita abaikan filter 'sudah terdaftar' agar datanya bisa diambil
+        query = Santri.query.filter_by(id=query_id)
+    
+    santri_list = query.limit(20).all()
+
+    # 3. Format hasil ke dalam JSON
+    results = [{
+        'id': s.id,
+        'nis': s.nis,
+        'nama': s.nama,
+        'asrama': s.asrama,
+        'kabupaten': s.kabupaten,
+        'status_santri': s.status_santri
+    } for s in santri_list]
+    
     return jsonify({'results': results})
 
 @admin_bp.route('/rombongan/<int:rombongan_id>/peserta')

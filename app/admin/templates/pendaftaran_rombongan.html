@@ -451,7 +451,7 @@
                     <select id="select-santri" placeholder="-- Cari dan Pilih Santri --" autocomplete="off">
                         <option value="">-- Cari dan Pilih Santri --</option>
                     </select>
-                    {{ form.santri() }}
+                    {{ form.santri_list() }}
                 </div>
             </div>
             <div id="info-rombongan" class="info-box p-3" style="display: none;"></div>
@@ -551,7 +551,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- 1. DEKLARASI SEMUA VARIABEL DI ATAS ---
     const rombonganSelect = document.getElementById('rombongan');
     const titikTurunSelect = document.getElementById('titik_turun');
-    const hiddenSantriInput = document.getElementById('santri');
+    const hiddenSantriInput = document.getElementById('santri_list'); // DIPERBAIKI: sesuaikan dengan nama field form
     const busPulangSelect = document.getElementById('bus_pulang');
     const busKembaliSelect = document.getElementById('bus_kembali');
     const infoRombonganDiv = document.getElementById('info-rombongan');
@@ -564,8 +564,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- 2. INISIALISASI TOM SELECT ---
     const tomSelectSantri = new TomSelect('#select-santri',{
-        valueField: 'id',
+        valueField: 'nis', // Gunakan NIS sebagai nilai
         searchField: 'nama',
+        maxItems: 100, // Izinkan pemilihan lebih dari satu (atur batasnya)
+        plugins: ['remove_button'],
         render: {
             option: (data, escape) => `<div><strong>${escape(data.nama)}</strong><br><small class="text-muted">${escape(data.asrama || '')} - ${escape(data.kabupaten || '')}</small></div>`,
             item: (data, escape) => `<div>${escape(data.nama)}</div>`
@@ -574,13 +576,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const url = `/admin/api/search-santri?q=${encodeURIComponent(query)}`;
             fetch(url).then(res => res.json()).then(json => callback(json.results)).catch(() => callback());
         },
-        onChange: (value) => {
-            hiddenSantriInput.value = value;
-            const santriData = tomSelectSantri.options[value];
-            if (santriData && santriData.status_santri === 'Izin') {
-                alert(`ERROR: ${santriData.nama} sedang Izin.`);
-                tomSelectSantri.clear();
-            }
+        onChange: (values) => { // 'values' sekarang adalah sebuah array
+            // Gabungkan array NIS menjadi satu string dipisahkan koma
+            hiddenSantriInput.value = values.join(',');
         }
     });
 
