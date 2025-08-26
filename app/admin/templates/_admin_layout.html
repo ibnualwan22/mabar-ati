@@ -877,6 +877,8 @@
                 <i class="fas fa-history"></i> Riwayat Edisi
             </a>
         </li>
+        {% endif %}
+        {% if current_user.role.name in ['Korpus', 'Korpuspi'] %}
         <li class="nav-item">
             <a href="{{ url_for('admin.manajemen_user') }}" 
                class="nav-link {{ 'active' if 'manajemen_user' in request.endpoint else '' }}">
