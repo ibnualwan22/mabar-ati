@@ -1193,7 +1193,7 @@ def daftar_peserta_global():
 
 @admin_bp.route('/perizinan', methods=['GET', 'POST'])
 @login_required
-@role_required('Korpus', 'Keamanan')
+@role_required('Korpus', 'Keamanan', 'Korda', 'Korwil', 'Bendahara', 'Korpuspi', 'Sekretaris', 'PJ Acara')
 def perizinan():
     form = IzinForm()
     active_edisi = get_active_edisi()
