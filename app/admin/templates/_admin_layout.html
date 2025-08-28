@@ -815,6 +815,13 @@
             </a>
         </li>
         {% endif %}
+        {% if current_user.role.name in ['Korpus', 'Korwil', 'Korda', 'Sekretaris', 'Korpuspi'] %}
+<li class="nav-item">
+    <a href="{{ url_for('admin.rekap_absen') }}" class="nav-link {{ 'active' if 'rekap_absen' in request.endpoint else '' }}">
+        <i class="fas fa-clipboard-check"></i> Rekap Absen Peserta
+    </a>
+</li>
+{% endif %}
         <li class="nav-item">
             <a href="{{ url_for('admin.perizinan') }}" 
                class="nav-link {{ 'active' if 'perizinan' in request.endpoint else '' }}">

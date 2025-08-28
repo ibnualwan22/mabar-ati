@@ -1,0 +1,169 @@
+{% extends "_admin_layout.html" %}
+{% block title %}Rekap Absen Peserta{% endblock %}
+
+{% block content %}
+<style>
+    .page-header {
+        border-left: 6px solid #4e73df;
+        padding-left: .75rem;
+        margin-bottom: 1rem;
+    }
+    .accordion-button {
+        background: #f8f9fc;
+        font-weight: 600;
+        color: #4e73df;
+    }
+    .accordion-button:not(.collapsed) {
+        background: #4e73df;
+        color: #fff;
+    }
+    .card-header {
+        background: linear-gradient(90deg,#4e73df,#2e59d9);
+        color: #fff;
+        font-weight: 600;
+    }
+    .table th {
+        background: #f1f5ff;
+        color: #4e73df;
+    }
+    .badge {
+        font-size: .8rem;
+        padding: .4em .6em;
+    }
+    .btn-primary.btn-sm {
+        background: #4e73df;
+        border-color: #4e73df;
+    }
+    .btn-primary.btn-sm:hover {
+        background: #3757d9;
+    }
+    .modal-header {
+        background: #4e73df;
+        color: #fff;
+    }
+    .list-group-item {
+        font-size: .9rem;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h2 page-header">📊 Rekap Absen Peserta</h1>
+</div>
+<p class="text-muted">Halaman ini menampilkan rekapitulasi absensi peserta berdasarkan data yang diinput oleh Korlapda di lapangan.</p>
+
+{% if not rekap_data %}
+    <div class="alert alert-info shadow-sm">
+        <i class="fas fa-info-circle me-2"></i>
+        Belum ada data absensi yang tercatat untuk rombongan yang Anda kelola.
+    </div>
+{% else %}
+    <div class="accordion" id="rombonganAccordion">
+        {% for rombongan, bus_data in rekap_data.items()|sort(attribute='0.nama_rombongan') %}
+            <div class="accordion-item shadow-sm mb-2">
+                <h2 class="accordion-header" id="heading-{{ rombongan.id }}">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ rombongan.id }}">
+                        <i class="fas fa-users me-2 text-primary"></i>
+                        <strong>{{ rombongan.nama_rombongan }}</strong>
+                    </button>
+                </h2>
+                <div id="collapse-{{ rombongan.id }}" class="accordion-collapse collapse" data-bs-parent="#rombonganAccordion">
+                    <div class="accordion-body">
+                        {% for bus, checkpoint_data in bus_data.items() %}
+                            <div class="card mb-3 shadow-sm">
+                                <div class="card-header">
+                                    <i class="fas fa-bus me-2"></i>
+                                    Bus: {{ bus.nama_armada if bus != 'Tanpa Bus' else 'Tanpa Bus' }} - {{ bus.nomor_lambung }}
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover align-middle mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Nama Checkpoint</th>
+                                                <th class="text-center">Hadir</th>
+                                                <th class="text-center">Belum Hadir</th>
+                                                <th class="text-center">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for checkpoint, status_data in checkpoint_data.items()|sort %}
+                                            <tr>
+                                                <td><i class="fas fa-map-marker-alt text-primary me-1"></i>{{ checkpoint }}</td>
+                                                <td class="text-center">
+                                                    <span class="badge bg-success">{{ status_data.hadir|length }}</span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="badge bg-danger">{{ status_data.tidak_hadir|length }}</span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#detailAbsenModal"
+                                                            data-checkpoint="{{ checkpoint }}"
+                                                            data-hadir="{{ status_data.hadir|join(', ') }}"
+                                                            data-tidak-hadir="{{ status_data.tidak_hadir|join(', ') }}">
+                                                        <i class="fas fa-eye me-1"></i> Detail
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<!-- Modal Detail -->
+<div class="modal fade" id="detailAbsenModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailAbsenModalLabel">Detail Absensi</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6 id="checkpoint-title" class="mb-3 text-primary"></h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-check-circle text-success me-2"></i>Daftar Hadir</h6>
+                        <ul id="daftar-hadir" class="list-group list-group-flush border"></ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-times-circle text-danger me-2"></i>Daftar Belum Hadir</h6>
+                        <ul id="daftar-tidak-hadir" class="list-group list-group-flush border"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const detailModal = document.getElementById('detailAbsenModal');
+    detailModal.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const checkpoint = button.getAttribute('data-checkpoint');
+        const hadirList = button.getAttribute('data-hadir').split(', ').filter(Boolean);
+        const tidakHadirList = button.getAttribute('data-tidak-hadir').split(', ').filter(Boolean);
+
+        const modalTitle = detailModal.querySelector('#checkpoint-title');
+        const hadirUl = detailModal.querySelector('#daftar-hadir');
+        const tidakHadirUl = detailModal.querySelector('#daftar-tidak-hadir');
+
+        modalTitle.textContent = `Checkpoint: ${checkpoint}`;
+        
+        hadirUl.innerHTML = hadirList.length > 0 
+            ? hadirList.map(nama => `<li class="list-group-item">${nama}</li>`).join('')
+            : '<li class="list-group-item text-muted">Tidak ada.</li>';
+
+        tidakHadirUl.innerHTML = tidakHadirList.length > 0 
+            ? tidakHadirList.map(nama => `<li class="list-group-item">${nama}</li>`).join('')
+            : '<li class="list-group-item text-muted">Tidak ada.</li>';
+    });
+});
+</script>
+{% endblock %}

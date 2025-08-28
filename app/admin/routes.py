@@ -1,6 +1,6 @@
 from . import admin_bp
 from flask import render_template, redirect, url_for, flash, request, jsonify, abort, Response, send_file, current_app
-from app.models import ActivityLog, Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, Transaksi, User, Edisi, Bus, Role, Wisuda
+from app.models import Absen, ActivityLog, Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, Transaksi, User, Edisi, Bus, Role, Wisuda
 from app.admin.forms import ChangePasswordForm, ImportWisudaForm, KonfirmasiSetoranForm, PengeluaranBusForm, RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, SantriManualForm, TransaksiForm, UserForm, UserEditForm, EdisiForm, BusForm, KorlapdaForm, WisudaForm
 from app import db, login_manager
 import json, requests
@@ -4001,4 +4001,55 @@ def api_get_kabupaten(provinsi_id):
     except requests.exceptions.RequestException as e:
         print(f"Error fetching kabupaten: {str(e)}")
         return jsonify({'data': [], 'error': 'Gagal mengambil data kabupaten'})
+    
+@admin_bp.route('/rekap-absen')
+@login_required
+@role_required('Korpus', 'Korwil', 'Korda', 'Sekretaris', 'Korpuspi')
+def rekap_absen():
+    active_edisi = get_active_edisi()
+    if not active_edisi:
+        flash("Tidak ada edisi aktif.", "warning")
+        return render_template('rekap_absen.html', active_edisi=None, rekap_data={})
+
+    # 1. Ambil semua rombongan yang relevan berdasarkan peran
+    base_query = Rombongan.query.filter_by(edisi_id=active_edisi.id)
+    if current_user.role.name in ['Korwil', 'Korda']:
+        managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+        if not managed_rombongan_ids:
+            base_query = base_query.filter(db.false())
+        else:
+            base_query = base_query.filter(Rombongan.id.in_(managed_rombongan_ids))
+    
+    rombongan_list = base_query.order_by(Rombongan.nama_rombongan).all()
+
+    # 2. Ambil semua data absensi yang relevan dalam satu query besar
+    all_absensi = db.session.query(
+        Absen, Pendaftaran, Santri, Bus, Rombongan
+    ).join(
+        Pendaftaran, Absen.pendaftaran_id == Pendaftaran.id
+    ).join(
+        Santri, Pendaftaran.santri_id == Santri.id
+    ).join(
+        Rombongan, or_(Pendaftaran.rombongan_pulang_id == Rombongan.id, Pendaftaran.rombongan_kembali_id == Rombongan.id)
+    ).outerjoin(
+        Bus, or_(Pendaftaran.bus_pulang_id == Bus.id, Pendaftaran.bus_kembali_id == Bus.id)
+    ).filter(
+        Rombongan.id.in_([r.id for r in rombongan_list])
+    ).all()
+
+    # 3. Proses dan strukturkan data untuk ditampilkan di template
+    rekap_data = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {'hadir': [], 'tidak_hadir': []})))
+    
+    for absen, pendaftaran, santri, bus, rombongan in all_absensi:
+        bus_key = bus if bus else 'Tanpa Bus'
+        
+        if absen.status == 'Hadir':
+            rekap_data[rombongan][bus_key][absen.nama_absen]['hadir'].append(santri.nama)
+        else:
+            rekap_data[rombongan][bus_key][absen.nama_absen]['tidak_hadir'].append(santri.nama)
+
+    return render_template('rekap_absen.html', 
+                           rekap_data=rekap_data, 
+                           active_edisi=active_edisi,
+                           rombongan_list=rombongan_list)
 
