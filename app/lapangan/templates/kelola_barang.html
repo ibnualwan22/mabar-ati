@@ -1,0 +1,39 @@
+{% extends "lapangan_layout.html" %}
+{% block title %}Kelola Barang Santri{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white border-0 py-3">
+        <h5 class="mb-0">Kelola Barang: {{ pendaftaran.santri.nama }}</h5>
+    </div>
+    <div class="card-body">
+        <p>
+            <strong>Rombongan:</strong> {{ pendaftaran.rombongan_pulang.nama_rombongan }}<br>
+            <strong>Bus Pulang:</strong> {{ pendaftaran.bus_pulang.nama_armada if pendaftaran.bus_pulang else 'N/A' }}
+        </p>
+        <hr>
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+            <div class="mb-3">
+                {{ form.jumlah_koli.label(class="form-label") }}
+                {{ form.jumlah_koli(class="form-control", type="number") }}
+            </div>
+            <div class="mb-3">
+    {{ form.foto_barang.label(class="form-label") }}
+    {{ form.foto_barang(class="form-control") }}
+    
+    {% if barang and barang.foto_barang %}
+        <div class="mt-2">
+            <small class="text-muted">Foto saat ini:</small><br>
+            <img src="{{ url_for('static', filename='uploads/barang/' + barang.foto_barang) }}" 
+                 alt="Foto Barang" class="img-thumbnail mt-1" width="150">
+        </div>
+    {% endif %}
+</div>
+            <hr>
+            {{ form.submit(class="btn btn-primary") }}
+            <a href="{{ url_for('lapangan.barang_dashboard') }}" class="btn btn-secondary">Batal</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

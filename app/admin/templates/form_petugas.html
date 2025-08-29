@@ -1,0 +1,42 @@
+{% extends "_admin_layout.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+    <h1 class="h2">{{ title }}</h1>
+    <a href="{{ url_for('admin.manajemen_petugas') }}">&larr; Kembali</a>
+    <div class="card mt-3">
+        <div class="card-body">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">{{ form.username.label(class="form-label") }} {{ form.username(class="form-control") }}</div>
+                <div class="mb-3">{{ form.password.label(class="form-label") }} {{ form.password(class="form-control") }}</div>
+                <div class="mb-3">{{ form.confirm_password.label(class="form-label") }} {{ form.confirm_password(class="form-control") }}</div>
+                <div class="mb-3">{{ form.role.label(class="form-label") }} {{ form.role(class="form-select") }}</div>
+
+                <div class="mb-3" id="field_bus">{{ form.bus.label(class="form-label") }} {{ form.bus(class="form-select") }}</div>
+                <div class="mb-3" id="field_rombongan" style="display: none;">{{ form.managed_rombongan.label(class="form-label") }} {{ form.managed_rombongan(class="form-select") }}</div>
+
+                {{ form.submit(class="btn btn-primary") }}
+            </form>
+        </div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const roleSelect = document.getElementById('role');
+    const fieldBus = document.getElementById('field_bus');
+    const fieldRombongan = document.getElementById('field_rombongan');
+
+    function toggleFields() {
+        const selectedRoleText = roleSelect.options[roleSelect.selectedIndex].text;
+        if (selectedRoleText === 'Sarpras') {
+            fieldBus.style.display = 'none';
+            fieldRombongan.style.display = 'block';
+        } else { // Default ke Korlapda
+            fieldBus.style.display = 'block';
+            fieldRombongan.style.display = 'none';
+        }
+    }
+    roleSelect.addEventListener('change', toggleFields);
+    toggleFields(); // Panggil saat halaman dimuat
+});
+</script>
+{% endblock %}

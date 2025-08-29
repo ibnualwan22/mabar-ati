@@ -241,15 +241,22 @@ class BusForm(FlaskForm):
     keterangan = TextAreaField('Keterangan', validators=[Optional()])
     submit = SubmitField('Simpan Bus')
 
-class KorlapdaForm(FlaskForm):
-    username = StringField('Username Korlapda', validators=[DataRequired(), Length(min=4, max=25)])
+# Ganti KorlapdaForm dengan ini
+class PetugasLapanganForm(FlaskForm):
+    username = StringField('Username Petugas', validators=[DataRequired(), Length(min=4, max=25)])
+
+    # Dropdown baru untuk memilih peran
+    role = SelectField('Peran Petugas', coerce=int, validators=[DataRequired()])
+
+    # Field bus sekarang opsional, karena Sarpras tidak terikat pada bus
+    bus = SelectField('Tugaskan ke Bus (khusus Korlapda)', coerce=int, validators=[Optional()])
+
+    # Field baru untuk Sarpras, agar terikat pada rombongan Korda
+    managed_rombongan = SelectField('Tugaskan ke Rombongan (khusus Sarpras)', coerce=int, validators=[Optional()])
+
     password = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
     confirm_password = PasswordField('Konfirmasi Password', validators=[DataRequired(), EqualTo('password')])
-    
-    # Dropdown untuk memilih bus, pilihannya akan kita isi secara dinamis di route
-    bus = SelectField('Tugaskan ke Bus', validators=[DataRequired()])
-
-    submit = SubmitField('Simpan User Korlapda')
+    submit = SubmitField('Simpan Akun Petugas')
 
 class LokasiBusForm(FlaskForm):
     gmaps_share_url = StringField('URL Google Maps Share Location', validators=[DataRequired(), URL()])
@@ -428,4 +435,11 @@ class SantriManualForm(FlaskForm):
             
         return True
 
+
+class BarangForm(FlaskForm):
+    jumlah_koli = IntegerField('Jumlah Koli/Barang', validators=[DataRequired()])
+    foto_barang = FileField('Foto Barang', validators=[
+        FileAllowed(['jpg', 'jpeg', 'png'], 'Hanya gambar (JPG, PNG) yang diizinkan!')
+    ])
+    submit = SubmitField('Simpan Data Barang')
 

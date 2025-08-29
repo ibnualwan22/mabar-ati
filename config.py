@@ -8,6 +8,7 @@ class Config:
     """Konfigurasi dasar."""
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'default-secret-key-for-emergency'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    UPLOAD_FOLDER = 'app/static/uploads/barang'
     TRACCAR_URL = "https://traccar.amtsilatipusat.com" # Ganti jika URL Anda berbeda
     TRACCAR_TOKEN = "RzBFAiAQcc1IbBoWuFRQbnM6W21yE_iUEE2tGR7kuSVejbJtuwIhALraY2GnGENCvllH0I5dLQAioz-4ABWjhA2PABaSxM3-eyJ1IjoyLCJlIjoiMjAyNS0xMC0xOVQxNzowMDowMC4wMDArMDA6MDAifQ"
     API_INDUK_URL = "https://sigap.amtsilatipusat.com/api/student"

@@ -7,7 +7,7 @@ def seed_data():
     # Daftar semua peran yang seharusnya ada di sistem
     required_roles = [
         'Korpus', 'Korwil', 'Korda', 'Keamanan', 
-        'PJ Acara', 'Korlapda', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi'
+        'PJ Acara', 'Korlapda', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi', 'Sarpras'
     ]
     
     # Ambil semua nama peran yang sudah ada di database

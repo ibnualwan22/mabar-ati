@@ -230,4 +230,17 @@ class Transaksi(db.Model):
     edisi = db.relationship('Edisi', backref='transaksi')
     rombongan = db.relationship('Rombongan', backref='transaksi_setoran')
 
+class BarangSantri(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    pendaftaran_id = db.Column(db.Integer, db.ForeignKey('pendaftaran.id'), nullable=False)
+    jumlah_koli = db.Column(db.Integer, default=0) # Untuk mencatat jumlah barang
+    foto_barang = db.Column(db.String(255), nullable=True) # Untuk menyimpan nama file foto
+    status_absensi = db.Column(db.String(30), default='Belum Diabsen') # Status: 'Sudah Diabsen', 'Belum Diabsen'
+    dicatat_oleh_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relasi
+    pendaftaran = db.relationship('Pendaftaran', backref='barang')
+    dicatat_oleh = db.relationship('User', backref='barang_dicatat')
+
     

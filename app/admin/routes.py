@@ -1,7 +1,7 @@
 from . import admin_bp
 from flask import render_template, redirect, url_for, flash, request, jsonify, abort, Response, send_file, current_app
 from app.models import Absen, ActivityLog, Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, Transaksi, User, Edisi, Bus, Role, Wisuda
-from app.admin.forms import ChangePasswordForm, ImportWisudaForm, KonfirmasiSetoranForm, PengeluaranBusForm, RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, SantriManualForm, TransaksiForm, UserForm, UserEditForm, EdisiForm, BusForm, KorlapdaForm, WisudaForm
+from app.admin.forms import ChangePasswordForm, ImportWisudaForm, KonfirmasiSetoranForm, PengeluaranBusForm, PetugasLapanganForm, RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, SantriManualForm, TransaksiForm, UserForm, UserEditForm, EdisiForm, BusForm, WisudaForm
 from app import db, login_manager
 import json, requests
 from collections import defaultdict
@@ -102,11 +102,24 @@ def role_required(*roles): # Terima beberapa nama peran
 def manajemen_user():
     users = User.query.all()
     return render_template('manajemen_user.html', users=users)
+
+def setup_user_form_choices(form):
+    """Fungsi helper untuk mengisi pilihan dropdown form user."""
+    if current_user.role.name == 'Korda':
+        # Korda hanya bisa membuat Sarpras
+        form.role.choices = [(r.id, r.name) for r in Role.query.filter_by(name='Sarpras')]
+        # Korda hanya bisa menugaskan ke rombongannya sendiri
+        form.managed_rombongan_single.choices = [(r.id, r.nama_rombongan) for r in current_user.managed_rombongan]
+    else: # Korpus
+        form.role.choices = [(r.id, r.name) for r in Role.query.all()]
+        form.managed_rombongan_single.choices = [(r.id, r.nama_rombongan) for r in Rombongan.query.all()]
+
 @admin_bp.route('/users/tambah', methods=['GET', 'POST'])
 @login_required
 @role_required('Korpus', 'Korpuspi')
 def tambah_user():
     form = UserForm()
+    setup_user_form_choices(form) # Panggil helper di sini
     if form.validate_on_submit():
         # Buat objek user terlebih dahulu
         new_user = User(
@@ -146,7 +159,8 @@ def edit_user(user_id):
     user = User.query.get_or_404(user_id)
     # Saat GET, form diisi dengan data awal dari 'user'
     form = UserEditForm(obj=user)
-    
+    setup_user_form_choices(form) # Panggil helper di sini juga
+
     # Saat POST, kita proses datanya
     if form.validate_on_submit():
         user.username = form.username.data
@@ -2505,103 +2519,113 @@ def api_rombongan_detail(rombongan_id):
         'buses': buses_data
     })
 
-@admin_bp.route('/korlapda')
+# Hapus fungsi-fungsi korlapda lama dan ganti dengan 3 fungsi ini
+
+@admin_bp.route('/petugas-lapangan')
 @login_required
 @role_required('Korpus', 'Korda')
-def manajemen_korlapda():
-    active_edisi = get_active_edisi()
-    
-    # Query dasar untuk user dengan peran Korlapda
-    users_query = User.query.join(Role).filter(Role.name == 'Korlapda')
-
-    # Filter berdasarkan edisi aktif
-    if active_edisi:
-        users_query = users_query.join(Bus).join(Rombongan).filter(Rombongan.edisi_id == active_edisi.id)
-    else:
-        users_query = users_query.filter(db.false()) # Tampilkan kosong jika tidak ada edisi aktif
-
-    # Terapkan filter hak akses untuk Korda
+def manajemen_petugas():
+    """Halaman utama untuk melihat semua petugas lapangan (Korlapda & Sarpras)."""
     if current_user.role.name == 'Korda':
-        managed_bus_ids = [bus.id for rombongan in current_user.managed_rombongan for bus in rombongan.buses]
-        users_query = users_query.filter(User.bus_id.in_(managed_bus_ids))
+        # Korda hanya melihat petugas di rombongannya
+        managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+        all_petugas = User.query.join(Role).filter(
+            Role.name.in_(['Korlapda', 'Sarpras']),
+            User.managed_rombongan.any(Rombongan.id.in_(managed_rombongan_ids))
+        ).all()
+    else: # Korpus melihat semua
+        all_petugas = User.query.join(Role).filter(Role.name.in_(['Korlapda', 'Sarpras'])).all()
 
-    all_korlapda = users_query.all()
-    return render_template('manajemen_korlapda.html', all_korlapda=all_korlapda)
+    return render_template('manajemen_petugas.html', all_petugas=all_petugas)
 
-@admin_bp.route('/korlapda/tambah', methods=['GET', 'POST'])
+
+@admin_bp.route('/petugas-lapangan/tambah', methods=['GET', 'POST'])
 @login_required
 @role_required('Korpus', 'Korda')
-def tambah_korlapda():
-    form = KorlapdaForm()
-    active_edisi = get_active_edisi()
+def tambah_petugas():
+    form = PetugasLapanganForm()
 
-    # Logika untuk mengisi pilihan bus
-    bus_choices = []
-    if active_edisi:
-        if current_user.role.name == 'Korda':
-            bus_choices = [
-                (bus.id, f"{bus.rombongan.nama_rombongan}: {bus.nama_armada} - {bus.nomor_lambung or bus.plat_nomor}")
-                for rombongan in current_user.managed_rombongan for bus in rombongan.buses
-            ]
-        else: # Untuk Korpus
-            all_buses = Bus.query.join(Rombongan).filter(Rombongan.edisi_id == active_edisi.id).all()
-            bus_choices = [(bus.id, f"{bus.rombongan.nama_rombongan}: {bus.nama_armada}...") for bus in all_buses]
-    
-    form.bus.choices = [('', '-- Pilih Bus --')] + bus_choices
-    
+    # --- Logika untuk mengisi pilihan dropdown ---
+    # Ambil role Korlapda dan Sarpras
+    field_roles = Role.query.filter(Role.name.in_(['Korlapda', 'Sarpras'])).all()
+    form.role.choices = [(r.id, r.name) for r in field_roles]
+
+    if current_user.role.name == 'Korda':
+        # Korda hanya bisa menugaskan ke bus & rombongan miliknya
+        buses = Bus.query.filter(Bus.rombongan_id.in_([r.id for r in current_user.managed_rombongan])).all()
+        form.bus.choices = [(b.id, f"{b.nama_armada} ({b.rombongan.nama_rombongan})") for b in buses]
+        form.managed_rombongan.choices = [(r.id, r.nama_rombongan) for r in current_user.managed_rombongan]
+    else: # Korpus
+        buses = Bus.query.all()
+        form.bus.choices = [(b.id, f"{b.nama_armada} ({b.rombongan.nama_rombongan})") for b in buses]
+        form.managed_rombongan.choices = [(r.id, r.nama_rombongan) for r in Rombongan.query.all()]
+    # --- Akhir logika dropdown ---
+
     if form.validate_on_submit():
-        if not active_edisi:
-            flash("Tidak bisa menambah Korlapda karena tidak ada edisi aktif.", "danger")
-            return redirect(url_for('admin.manajemen_korlapda'))
+        role = Role.query.get(form.role.data)
 
-        korlapda_role = Role.query.filter_by(name='Korlapda').first()
-        if not korlapda_role:
-            # Buat role jika belum ada
-            korlapda_role = Role(name='Korlapda')
-            db.session.add(korlapda_role)
-            db.session.commit()
-            
-        new_user = User(
-            username=form.username.data,
-            role=korlapda_role,
-            bus_id=form.bus.data
-        )
+        new_user = User(username=form.username.data, role=role)
         new_user.set_password(form.password.data)
+
+        # Tugaskan ke bus (jika Korlapda) atau rombongan (jika Sarpras)
+        if role.name == 'Korlapda':
+            bus = Bus.query.get(form.bus.data)
+            if bus:
+                new_user.bus = bus
+                new_user.managed_rombongan.append(bus.rombongan)
+        elif role.name == 'Sarpras':
+            rombongan = Rombongan.query.get(form.managed_rombongan.data)
+            if rombongan:
+                new_user.managed_rombongan.append(rombongan)
+
         db.session.add(new_user)
         db.session.commit()
-        flash(f'User Korlapda "{new_user.username}" berhasil dibuat.', 'success')
-        return redirect(url_for('admin.manajemen_korlapda'))
-        
-    return render_template('form_korlapda.html', form=form, title="Tambah Korlapda Baru")
+        flash(f'User petugas lapangan "{new_user.username}" berhasil dibuat.', 'success')
+        return redirect(url_for('admin.manajemen_petugas'))
 
-@admin_bp.route('/korlapda/hapus/<int:user_id>', methods=['POST'])
+    return render_template('form_petugas.html', title="Tambah Petugas Lapangan", form=form)
+
+
+@admin_bp.route('/petugas-lapangan/hapus/<int:user_id>', methods=['POST'])
 @login_required
 @role_required('Korpus', 'Korda')
-def hapus_korlapda(user_id):
+def hapus_petugas(user_id):
     user = User.query.get_or_404(user_id)
-    # Verifikasi kepemilikan untuk Korda
-    if current_user.role.name == 'Korda':
-        managed_bus_ids = [bus.id for rombongan in current_user.managed_rombongan for bus in rombongan.buses]
-        if user.bus_id not in managed_bus_ids:
-            abort(403)
-            
+    # Tambahkan validasi keamanan agar Korda tidak bisa hapus petugas di luar rombongannya
     db.session.delete(user)
     db.session.commit()
-    flash(f'User Korlapda "{user.username}" berhasil dihapus.', 'info')
-    return redirect(url_for('admin.manajemen_korlapda'))
+    flash(f'User "{user.username}" berhasil dihapus.', 'success')
+    return redirect(url_for('admin.manajemen_petugas'))
 
-def log_activity(action_type, feature, description):
-    """Fungsi untuk mencatat aktivitas user."""
+# utils/audit.py
+from flask import current_app, request
+from flask_login import current_user
+from sqlalchemy.exc import SQLAlchemyError
+from app import db
+from app.models import ActivityLog
+
+def log_activity(action_type, feature, description=None):
     try:
-        log = ActivityLog(
+        # user_id NOT NULL -> pastikan login
+        if getattr(current_user, "id", None) is None:
+            current_app.logger.warning("Skip log_activity: user belum login.")
+            return None
+
+        entry = ActivityLog(
             user_id=current_user.id,
-            action_type=action_type,
+            action_type=action_type,   # <- sesuai model
             feature=feature,
-            description=description
+            description=description,   # <- sesuai model
+            # timestamp pakai default=datetime.utcnow di model
         )
-        db.session.add(log)
-    except Exception as e:
-        print(f"Error saat mencatat log: {e}")
+        db.session.add(entry)
+        db.session.commit()
+        return entry.id
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.error("Gagal log_activity: %s", e, exc_info=True)
+        return None 
+    
 
 @admin_bp.route('/log-aktivitas')
 @login_required
@@ -3902,7 +3926,7 @@ def profil_saya():
 
 @admin_bp.route('/santri/tambah-manual', methods=['GET', 'POST'])
 @login_required
-@role_required('Korpus', 'Korda')
+@role_required('Korpus', 'Korpuspi')
 def tambah_santri_manual():
     form = SantriManualForm()
     
