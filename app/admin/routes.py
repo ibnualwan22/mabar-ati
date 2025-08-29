@@ -109,7 +109,7 @@ def setup_user_form_choices(form):
         # Korda hanya bisa membuat Sarpras
         form.role.choices = [(r.id, r.name) for r in Role.query.filter_by(name='Sarpras')]
         # Korda hanya bisa menugaskan ke rombongannya sendiri
-        form.managed_rombongan_single.choices = [(r.id, r.nama_rombongan) for r in current_user.managed_rombongan]
+        form.managed_rombongan_single.choices = [(r.id, r.nama_rombongan) for r in current_user.active_managed_rombongan]
     else: # Korpus
         form.role.choices = [(r.id, r.name) for r in Role.query.all()]
         form.managed_rombongan_single.choices = [(r.id, r.nama_rombongan) for r in Rombongan.query.all()]
@@ -238,7 +238,7 @@ def dashboard():
     # 2. Ambil ID rombongan yang dikelola user
     managed_rombongan_ids = []
     if current_user.role.name in ['Korwil', 'Korda']:
-        managed_rombongan_ids = {r.id for r in current_user.managed_rombongan} # Gunakan set untuk pencarian cepat
+        managed_rombongan_ids = {r.id for r in current_user.active_managed_rombongan} # Gunakan set untuk pencarian cepat
 
     # 3. Terapkan filter hak akses jika bukan Korpus
     if current_user.role.name != 'Korpus':
@@ -296,7 +296,7 @@ def dashboard():
     query_belum_terdaftar = Santri.query.filter(Santri.status_santri == 'Aktif', ~Santri.id.in_(all_registered_santri_ids))
 
     if current_user.role.name in ['Korwil', 'Korda']:
-        managed_regions = {w.get('label') for r in current_user.managed_rombongan if r.cakupan_wilayah for w in r.cakupan_wilayah}
+        managed_regions = {w.get('label') for r in current_user.active_managed_rombongan if r.cakupan_wilayah for w in r.cakupan_wilayah}
         if managed_regions:
             query_belum_terdaftar = query_belum_terdaftar.filter(Santri.kabupaten.in_(list(managed_regions)))
         else:
@@ -328,7 +328,7 @@ def manajemen_rombongan():
         query = Rombongan.query.filter_by(edisi=active_edisi)
         
         if current_user.role.name in ['Korwil', 'Korda']:
-            managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+            managed_rombongan_ids = [r.id for r in current_user.active_managed_rombongan]
             if not managed_rombongan_ids:
                 query = query.filter(db.false())
             else:
@@ -402,7 +402,7 @@ def edit_rombongan(id):
         flash("Anda tidak bisa mengedit rombongan dari edisi yang sudah selesai.", "danger")
         return redirect(url_for('admin.manajemen_rombongan'))
     
-    if current_user.role.name == 'Korda' and rombongan not in current_user.managed_rombongan:
+    if current_user.role.name == 'Korda' and rombongan not in current_user.active_managed_rombongan:
         abort(403)
 
     # Buat form untuk rombongan dan bus
@@ -768,7 +768,7 @@ def pendaftaran_rombongan():
     # --- BAGIAN PERBAIKAN ---
     # 1. Isi pilihan Rombongan di luar kondisi GET/POST agar selalu terisi
     if current_user.role.name == 'Korda':
-        form.rombongan.choices = [(r.id, r.nama_rombongan) for r in current_user.managed_rombongan]
+        form.rombongan.choices = [(r.id, r.nama_rombongan) for r in current_user.active_managed_rombongan]
     else:
         form.rombongan.choices = [(r.id, r.nama_rombongan) for r in Rombongan.query.filter_by(edisi_id=active_edisi.id).order_by(Rombongan.nama_rombongan).all()]
 
@@ -862,7 +862,7 @@ def edit_pendaftaran(pendaftaran_id):
     
     # Verifikasi Kepemilikan Korda
     if current_user.role.name == 'Korda':
-        managed_ids = {r.id for r in current_user.managed_rombongan}
+        managed_ids = {r.id for r in current_user.active_managed_rombongan}
         if (pendaftaran.rombongan_pulang_id and pendaftaran.rombongan_pulang_id not in managed_ids) or \
            (pendaftaran.rombongan_kembali_id and pendaftaran.rombongan_kembali_id not in managed_ids):
             abort(403)
@@ -967,7 +967,7 @@ def hapus_pendaftaran(pendaftaran_id):
     # Verifikasi Kepemilikan (menggunakan rombongan pulang sebagai acuan)
     if current_user.role.name == 'Korda':
         # Cek apakah Korda mengelola salah satu dari rombongan pendaftaran
-        managed_ids = {r.id for r in current_user.managed_rombongan}
+        managed_ids = {r.id for r in current_user.active_managed_rombongan}
         if pendaftaran.rombongan_pulang_id not in managed_ids and pendaftaran.rombongan_kembali_id not in managed_ids:
             abort(403)
 
@@ -1087,7 +1087,7 @@ def daftar_peserta(rombongan_id):
     managed_rombongan_ids = []
     is_manager = False
     if current_user.role.name in ['Korwil', 'Korda']:
-        managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+        managed_rombongan_ids = [r.id for r in current_user.active_managed_rombongan]
         is_manager = True
 
     for p in pendaftar:
@@ -1136,7 +1136,7 @@ def daftar_peserta_global():
     # --- BAGIAN LOGIKA STATISTIK & FILTER BARU ---
     # Tentukan filter berdasarkan peran (role)
     if current_user.role.name in ['Korwil', 'Korda']:
-        managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+        managed_rombongan_ids = [r.id for r in current_user.active_managed_rombongan]
         
         if not managed_rombongan_ids:
             base_query = base_query.filter(db.false())
@@ -1849,7 +1849,7 @@ def detail_arsip(edisi_id):
 def tambah_bus(rombongan_id):
     rombongan = Rombongan.query.get_or_404(rombongan_id)
     # Verifikasi kepemilikan untuk Korda
-    if current_user.role.name == 'Korda' and rombongan not in current_user.managed_rombongan:
+    if current_user.role.name == 'Korda' and rombongan not in current_user.active_managed_rombongan:
         abort(403)
     
     form = BusForm()
@@ -1877,7 +1877,7 @@ def tambah_bus(rombongan_id):
 def edit_bus(bus_id):
     bus = Bus.query.get_or_404(bus_id)
     # Keamanan: Pastikan user yang login berhak mengedit bus ini
-    if current_user.role.name == 'Korda' and bus.rombongan not in current_user.managed_rombongan:
+    if current_user.role.name == 'Korda' and bus.rombongan not in current_user.active_managed_rombongan:
         abort(403)
 
     form = BusForm(obj=bus) # Isi form dengan data bus yang ada
@@ -1904,7 +1904,7 @@ def hapus_bus(bus_id):
     bus = Bus.query.get_or_404(bus_id)
     rombongan_id = bus.rombongan_id
     # Verifikasi kepemilikan untuk Korda
-    if current_user.role.name == 'Korda' and bus.rombongan not in current_user.managed_rombongan:
+    if current_user.role.name == 'Korda' and bus.rombongan not in current_user.active_managed_rombongan:
         abort(403)
 
     nama_bus = f"{bus.nama_armada} ({bus.nomor_lambung or bus.plat_nomor})"
@@ -1922,7 +1922,7 @@ def detail_bus(bus_id):
     
     # Verifikasi kepemilikan untuk Korda/Korwil
     if current_user.role.name in ['Korwil', 'Korda']:
-        if bus.rombongan not in current_user.managed_rombongan:
+        if bus.rombongan not in current_user.active_managed_rombongan:
             abort(403)
 
      # Ambil semua pendaftar untuk bus ini
@@ -1981,7 +1981,7 @@ def manajemen_keuangan():
     ).filter(Pendaftaran.edisi_id == active_edisi.id)
 
     # Filter berdasarkan role dan managed rombongan
-    managed_rombongan_ids = {r.id for r in current_user.managed_rombongan}
+    managed_rombongan_ids = {r.id for r in current_user.active_managed_rombongan}
     if current_user.role.name in ['Korwil', 'Korda'] and managed_rombongan_ids:
         pendaftaran_query = pendaftaran_query.filter(
             or_(
@@ -2093,7 +2093,7 @@ def manajemen_keuangan():
     # Daftar rombongan untuk filter
     rombongan_for_filter = []
     if current_user.role.name in ['Korwil', 'Korda']:
-        rombongan_for_filter = sorted([r for r in current_user.managed_rombongan], key=lambda x: x.nama_rombongan)
+        rombongan_for_filter = sorted([r for r in current_user.active_managed_rombongan], key=lambda x: x.nama_rombongan)
     else:
         rombongan_for_filter = Rombongan.query.filter_by(edisi_id=active_edisi.id).order_by(Rombongan.nama_rombongan).all()
 
@@ -2127,7 +2127,7 @@ def export_keuangan_pdf():
 
         managed_rombongan_ids = []
         if current_user.role.name in ['Korwil', 'Korda']:
-            managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+            managed_rombongan_ids = [r.id for r in current_user.active_managed_rombongan]
             if not managed_rombongan_ids:
                 pendaftaran_query = pendaftaran_query.filter(db.false())
             else:
@@ -2528,7 +2528,7 @@ def manajemen_petugas():
     """Halaman utama untuk melihat semua petugas lapangan (Korlapda & Sarpras)."""
     if current_user.role.name == 'Korda':
         # Korda hanya melihat petugas di rombongannya
-        managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+        managed_rombongan_ids = [r.id for r in current_user.active_managed_rombongan]
         all_petugas = User.query.join(Role).filter(
             Role.name.in_(['Korlapda', 'Sarpras']),
             User.managed_rombongan.any(Rombongan.id.in_(managed_rombongan_ids))
@@ -2552,9 +2552,9 @@ def tambah_petugas():
 
     if current_user.role.name == 'Korda':
         # Korda hanya bisa menugaskan ke bus & rombongan miliknya
-        buses = Bus.query.filter(Bus.rombongan_id.in_([r.id for r in current_user.managed_rombongan])).all()
+        buses = Bus.query.filter(Bus.rombongan_id.in_([r.id for r in current_user.active_managed_rombongan])).all()
         form.bus.choices = [(b.id, f"{b.nama_armada} ({b.rombongan.nama_rombongan})") for b in buses]
-        form.managed_rombongan.choices = [(r.id, r.nama_rombongan) for r in current_user.managed_rombongan]
+        form.managed_rombongan.choices = [(r.id, r.nama_rombongan) for r in current_user.active_managed_rombongan]
     else: # Korpus
         buses = Bus.query.all()
         form.bus.choices = [(b.id, f"{b.nama_armada} ({b.rombongan.nama_rombongan})") for b in buses]
@@ -2640,7 +2640,7 @@ def log_aktivitas():
     role = current_user.role.name
     if role == 'Korwil' or role == 'Korda':
         # Filter log yang deskripsinya mengandung nama rombongan yang dikelola
-        managed_rombongan_names = [r.nama_rombongan for r in current_user.managed_rombongan]
+        managed_rombongan_names = [r.nama_rombongan for r in current_user.active_managed_rombongan]
         if managed_rombongan_names:
             query = query.filter(or_(*[ActivityLog.description.like(f'%{name}%') for name in managed_rombongan_names]))
         else:
@@ -2691,9 +2691,9 @@ def manajemen_santri_wilayah():
     managed_rombongan_ids = []
     
     if current_user.role.name in ['Korwil', 'Korda']:
-        managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+        managed_rombongan_ids = [r.id for r in current_user.active_managed_rombongan]
         wilayah_kelolaan = set()
-        for rombongan in current_user.managed_rombongan:
+        for rombongan in current_user.active_managed_rombongan:
             if rombongan.cakupan_wilayah:
                 for wilayah in rombongan.cakupan_wilayah:
                     wilayah_kelolaan.add(wilayah.get('label'))
@@ -2886,9 +2886,9 @@ def export_santri_wilayah():
     managed_rombongan_ids = []
     
     if current_user.role.name in ['Korwil', 'Korda']:
-        managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+        managed_rombongan_ids = [r.id for r in current_user.active_managed_rombongan]
         wilayah_kelolaan = set()
-        for rombongan in current_user.managed_rombongan:
+        for rombongan in current_user.active_managed_rombongan:
             if rombongan.cakupan_wilayah:
                 for wilayah in rombongan.cakupan_wilayah:
                     wilayah_kelolaan.add(wilayah.get('label'))
@@ -3374,7 +3374,7 @@ def cetak_kartu():
     rombongan_for_filter = Rombongan.query.filter_by(edisi_id=active_edisi.id).order_by(Rombongan.nama_rombongan).all()
 
     if current_user.role.name in ['Korwil', 'Korda']:
-        managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+        managed_rombongan_ids = [r.id for r in current_user.active_managed_rombongan]
         if not managed_rombongan_ids:
             query = query.filter(db.false())
         else:
@@ -3441,7 +3441,7 @@ def cetak_tiket():
     rombongan_for_filter = Rombongan.query.filter_by(edisi_id=active_edisi.id).order_by(Rombongan.nama_rombongan).all()
 
     if current_user.role.name in ['Korwil', 'Korda']:
-        managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+        managed_rombongan_ids = [r.id for r in current_user.active_managed_rombongan]
         if not managed_rombongan_ids:
             query = query.filter(db.false())
         else:
@@ -4038,7 +4038,7 @@ def rekap_absen():
     # 1. Ambil semua rombongan yang relevan berdasarkan peran
     base_query = Rombongan.query.filter_by(edisi_id=active_edisi.id)
     if current_user.role.name in ['Korwil', 'Korda']:
-        managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+        managed_rombongan_ids = [r.id for r in current_user.active_managed_rombongan]
         if not managed_rombongan_ids:
             base_query = base_query.filter(db.false())
         else:

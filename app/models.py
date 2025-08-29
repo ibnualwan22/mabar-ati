@@ -36,6 +36,14 @@ class User(db.Model, UserMixin):
     managed_rombongan = db.relationship('Rombongan', secondary=user_rombongan, lazy='subquery', backref=db.backref('managers', lazy=True))
     def set_password(self, password): self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
     def check_password(self, password): return bcrypt.check_password_hash(self.password_hash, password)
+    @property
+    def active_managed_rombongan(self):
+        """Mengambil daftar rombongan yang dikelola HANYA dari edisi yang aktif."""
+        active_edisi = Edisi.query.filter_by(is_active=True).first()
+        if not active_edisi:
+            return []
+        
+        return [r for r in self.managed_rombongan if r.edisi_id == active_edisi.id]
 
 class Tarif(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -242,5 +250,3 @@ class BarangSantri(db.Model):
     # Relasi
     pendaftaran = db.relationship('Pendaftaran', backref='barang')
     dicatat_oleh = db.relationship('User', backref='barang_dicatat')
-
-    

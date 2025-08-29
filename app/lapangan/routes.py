@@ -255,7 +255,7 @@ def barang_dashboard():
     perjalanan_filter = request.args.get('perjalanan', '') # 'pulang' atau 'kembali'
 
     # Ambil rombongan yang dikelola oleh user Sarpras
-    managed_rombongan_ids = [r.id for r in current_user.managed_rombongan]
+    managed_rombongan_ids = [r.id for r in current_user.active_managed_rombongan]
     if not managed_rombongan_ids:
         return render_template('barang_dashboard.html', pendaftar_list=[], perjalanan_filter=perjalanan_filter)
 

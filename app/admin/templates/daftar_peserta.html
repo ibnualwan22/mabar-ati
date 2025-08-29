@@ -91,7 +91,7 @@
                             <th>Bus Pulang</th>
                             <th>Bus Kembali</th>
                             <th>Status Pembayaran</th>
-                            {% if current_user.role.name == 'Korpus' or (current_user.role.name == 'Korda' and rombongan in current_user.managed_rombongan) %}
+                            {% if current_user.role.name == 'Korpus' or (current_user.role.name == 'Korda' and rombongan in current_user.active_managed_rombongan) %}
                             <th style="width: 100px;">Aksi</th>
                             {% endif %}
                         </tr>
@@ -144,7 +144,7 @@
                                     </div>
                                 </div>
                             </td>
-                            {% if current_user.role.name == 'Korpus' or (current_user.role.name == 'Korda' and rombongan in current_user.managed_rombongan) %}
+                            {% if current_user.role.name == 'Korpus' or (current_user.role.name == 'Korda' and rombongan in current_user.active_managed_rombongan) %}
                             <td>
                                 <div class="action-buttons">
                                     <a href="{{ url_for('admin.edit_pendaftaran', pendaftaran_id=pendaftaran.id) }}" class="btn btn-edit"><i class="fas fa-edit"></i> Edit</a>
