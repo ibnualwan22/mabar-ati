@@ -777,7 +777,13 @@
         <li class="nav-item">
             <a href="{{ url_for('admin.manajemen_rombongan') }}" 
                class="nav-link {{ 'active' if 'manajemen_rombongan' in request.endpoint else '' }}">
-                <i class="fas fa-bus"></i> Manajemen Rombongan
+                <i class="bi bi-journal-album"></i>Manajemen Rombongan
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ url_for('admin.manajemen_peserta_bus') }}" 
+               class="nav-link {{ 'active' if 'manajemen_rombongan' in request.endpoint else '' }}">
+                <i class="fas fa-bus"></i> Manajemen Bus
             </a>
         </li>
         {% endif %}

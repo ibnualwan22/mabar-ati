@@ -1,0 +1,489 @@
+{% extends "_admin_layout.html" %}
+{% block title %}Alokasi Peserta Bus{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-blue: #4285f4;
+        --light-blue: #4285f4;
+        --sky-blue: #4285f4;
+        --blue-50: #e8f0fe;
+        --blue-100: #d2e3fc;
+        --blue-200: #aecbfa;
+        --blue-500: #4285f4;
+        --blue-600: #1a73e8;
+        --blue-700: #1557b0;
+        --gradient-blue: linear-gradient(135deg, #4285f4 0%, #1a73e8 100%);
+        --shadow-blue: rgba(66, 133, 244, 0.15);
+    }
+
+    .page-header {
+        background: var(--gradient-blue);
+        padding: 2rem 0;
+        margin: -1.5rem -1.5rem 2rem -1.5rem;
+        border-radius: 0 0 20px 20px;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+        opacity: 0.1;
+    }
+
+    .page-header .container {
+        position: relative;
+        z-index: 1;
+    }
+
+    .page-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .page-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-top: 0.5rem;
+    }
+
+    .btn-back {
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        border-radius: 10px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        backdrop-filter: blur(10px);
+    }
+
+    .btn-back:hover {
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+        border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    .nav-tabs-custom {
+        border: none;
+        background: white;
+        border-radius: 15px;
+        padding: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        margin-bottom: 2rem;
+    }
+
+    .nav-tabs-custom .nav-link {
+        border: none;
+        border-radius: 10px;
+        color: var(--primary-blue);
+        font-weight: 600;
+        padding: 1rem 2rem;
+        margin: 0 0.25rem;
+    }
+
+    .nav-tabs-custom .nav-link:hover {
+        background: var(--blue-50);
+        border: none;
+    }
+
+    .nav-tabs-custom .nav-link.active {
+        background: var(--gradient-blue);
+        color: white;
+        border: none;
+    }
+
+    .allocation-card {
+        background: white;
+        border: 2px solid var(--blue-100);
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+        height: 100%;
+    }
+
+    .allocation-card-header {
+        background: var(--blue-50);
+        color: var(--primary-blue);
+        padding: 1.5rem;
+        border-bottom: 2px solid var(--blue-100);
+        font-weight: 700;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .allocation-card-header::before {
+        content: '👥';
+        font-size: 1.5rem;
+    }
+
+    .list-container { 
+        min-height: 400px; 
+        max-height: 600px; 
+        overflow-y: auto; 
+        background: #fafbff;
+        padding: 1rem;
+    }
+
+    .list-group-modern {
+        border: none;
+    }
+
+    .list-group-item-modern { 
+        cursor: pointer;
+        border: 2px solid var(--blue-100);
+        border-radius: 10px;
+        margin-bottom: 0.75rem;
+        padding: 1rem;
+        background: white;
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        font-weight: 500;
+        color: var(--primary-blue);
+    }
+
+    .list-group-item-modern:hover { 
+        background: var(--blue-50);
+        border-color: var(--blue-200);
+    }
+
+    .btn-action {
+        border: none;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.2rem;
+        margin-left: auto;
+    }
+
+    .btn-add {
+        background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+        color: white;
+    }
+
+    .btn-add:hover {
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        color: white;
+        transform: scale(1.05);
+    }
+
+    .btn-remove {
+        background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+        color: white;
+    }
+
+    .btn-remove:hover {
+        background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+        color: white;
+        transform: scale(1.05);
+    }
+
+    .capacity-indicator {
+        background: var(--gradient-blue);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .capacity-indicator.over-capacity {
+        background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+        animation: pulse 2s infinite;
+    }
+
+    .btn-save {
+        background: var(--gradient-blue);
+        color: white;
+        border: none;
+        border-radius: 15px;
+        padding: 1rem 2rem;
+        font-weight: 700;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        box-shadow: 0 4px 15px var(--shadow-blue);
+    }
+
+    .btn-save::before {
+        content: '💾';
+        font-size: 1.2rem;
+    }
+
+    .btn-save:hover {
+        background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px var(--shadow-blue);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #6b7280;
+        font-style: italic;
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .stats-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        gap: 1rem;
+    }
+
+    .stat-badge {
+        background: var(--blue-50);
+        color: var(--primary-blue);
+        padding: 0.75rem 1.25rem;
+        border-radius: 15px;
+        font-weight: 600;
+        border: 2px solid var(--blue-100);
+        flex: 1;
+        text-align: center;
+    }
+
+    .scrollbar-custom::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .scrollbar-custom::-webkit-scrollbar-track {
+        background: var(--blue-50);
+        border-radius: 4px;
+    }
+
+    .scrollbar-custom::-webkit-scrollbar-thumb {
+        background: var(--blue-200);
+        border-radius: 4px;
+    }
+
+    .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+        background: var(--blue-500);
+    }
+
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+</style>
+
+<div class="page-header">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="page-title">🚌 Alokasi Peserta Bus: {{ bus.nama_armada }}</h1>
+                <p class="page-subtitle">Rombongan: {{ rombongan.nama_rombongan }}</p>
+            </div>
+            <a href="{{ url_for('admin.manajemen_peserta_bus') }}" class="btn-back">
+                <i class="fas fa-arrow-left"></i> Kembali
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="stats-container">
+        <div class="stat-badge">
+            <i class="fas fa-users me-2"></i>Total Peserta: {{ peserta_no_bus|length + peserta_in_bus|length }}
+        </div>
+        <div class="stat-badge">
+            <i class="fas fa-check-circle me-2"></i>Teralokasi: {{ peserta_in_bus|length }}
+        </div>
+        <div class="stat-badge">
+            <i class="fas fa-clock me-2"></i>Menunggu: {{ peserta_no_bus|length }}
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs nav-tabs-custom">
+        <li class="nav-item">
+            <a class="nav-link {% if perjalanan == 'pulang' %}active{% endif %}" href="{{ url_for('admin.alokasi_bus', bus_id=bus.id, perjalanan='pulang') }}">
+                <i class="fas fa-plane-departure me-2"></i>Bus Pulang
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if perjalanan == 'kembali' %}active{% endif %}" href="{{ url_for('admin.alokasi_bus', bus_id=bus.id, perjalanan='kembali') }}">
+                <i class="fas fa-plane-arrival me-2"></i>Bus Kembali
+            </a>
+        </li>
+    </ul>
+
+    <form method="POST">
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="card allocation-card">
+                    <div class="allocation-card-header">
+                        Peserta Belum Dapat Bus ({{ peserta_no_bus|length }})
+                    </div>
+                    <div class="list-container scrollbar-custom">
+                        <ul id="list-no-bus" class="list-group list-group-modern">
+                            {% for p in peserta_no_bus %}
+                            <li class="list-group-item list-group-item-modern" data-id="{{ p.id }}">
+                                {% set titik = (p.titik_turun if perjalanan else p.titik_jemput_kembali) %}
+<span>{{ p.santri.nama }} - {{ titik or '–' }}</span>
+
+                                <button type="button" class="btn btn-action btn-add add-btn">+</button>
+                            </li>
+                            {% else %}
+                            <div class="empty-state">
+                                <div class="empty-state-icon">✅</div>
+                                <p>Semua peserta sudah mendapat bus</p>
+                            </div>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card allocation-card">
+                    <div class="allocation-card-header">
+                        Peserta di Bus Ini 
+                        <span class="capacity-indicator ms-auto" id="capacity-indicator">
+                            <span id="jumlah-di-bus">{{ peserta_in_bus|length }}</span> / {{ bus.kuota }}
+                        </span>
+                    </div>
+                    <div class="list-container scrollbar-custom">
+                        <ul id="list-in-bus" class="list-group list-group-modern">
+                            {% for p in peserta_in_bus %}
+                            <li class="list-group-item list-group-item-modern" data-id="{{ p.id }}">
+                                {% set titik = (p.titik_turun if perjalanan else p.titik_jemput_kembali) %}
+                            <span>{{ p.santri.nama }} - {{ titik or '–' }}</span>
+
+                                <button type="button" class="btn btn-action btn-remove remove-btn">×</button>
+                                <input type="hidden" name="peserta_in_bus[]" value="{{ p.id }}">
+                            </li>
+                            {% else %}
+                            <div class="empty-state" id="empty-bus-state">
+                                <div class="empty-state-icon">🚌</div>
+                                <p>Belum ada peserta di bus ini</p>
+                            </div>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4">
+            <button type="submit" class="btn btn-save">
+                Simpan Perubahan Alokasi
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const listNoBus = document.getElementById('list-no-bus');
+    const listInBus = document.getElementById('list-in-bus');
+    const jumlahDiBus = document.getElementById('jumlah-di-bus');
+    const capacityIndicator = document.getElementById('capacity-indicator');
+    const kuota = parseInt("{{ bus.kuota }}");
+
+    function updateCounter() {
+        const count = listInBus.querySelectorAll('.list-group-item-modern').length;
+        jumlahDiBus.textContent = count;
+        
+        // Update capacity indicator
+        if (count > kuota) {
+            capacityIndicator.classList.add('over-capacity');
+        } else {
+            capacityIndicator.classList.remove('over-capacity');
+        }
+
+        // Show/hide empty states
+        const emptyBusState = document.getElementById('empty-bus-state');
+        if (count === 0 && !emptyBusState) {
+            listInBus.innerHTML = `
+                <div class="empty-state" id="empty-bus-state">
+                    <div class="empty-state-icon">🚌</div>
+                    <p>Belum ada peserta di bus ini</p>
+                </div>
+            `;
+        } else if (count > 0 && emptyBusState) {
+            emptyBusState.remove();
+        }
+    }
+
+    listNoBus.addEventListener('click', function(e) {
+        if (e.target.classList.contains('add-btn')) {
+            const li = e.target.parentElement;
+            
+            // Change button
+            e.target.className = 'btn btn-action btn-remove remove-btn';
+            e.target.textContent = '×';
+            
+            // Add hidden input
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'peserta_in_bus[]';
+            input.value = li.dataset.id;
+            li.appendChild(input);
+            
+            // Move to bus list
+            listInBus.appendChild(li);
+            
+            // Remove empty state if exists
+            const emptyBusState = document.getElementById('empty-bus-state');
+            if (emptyBusState) {
+                emptyBusState.remove();
+            }
+            
+            updateCounter();
+        }
+    });
+
+    listInBus.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-btn')) {
+            const li = e.target.parentElement;
+            
+            // Change button
+            e.target.className = 'btn btn-action btn-add add-btn';
+            e.target.textContent = '+';
+            
+            // Remove hidden input
+            const input = li.querySelector('input');
+            if (input) {
+                input.remove();
+            }
+            
+            // Move back to no bus list
+            listNoBus.appendChild(li);
+            updateCounter();
+        }
+    });
+
+    // Initial counter update
+    updateCounter();
+});
+</script>
+{% endblock %}

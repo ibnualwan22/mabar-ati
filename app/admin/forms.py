@@ -86,13 +86,11 @@ class PendaftaranForm(FlaskForm):
     # Detail Perjalanan Pulang
     status_pulang = SelectField('Status Pembayaran Pulang', choices=[('Belum Bayar', 'Belum Bayar'), ('Lunas', 'Lunas'), ('Tidak Ikut', 'Tidak Ikut')], default='Belum Bayar', validators=[DataRequired()])
     metode_pembayaran_pulang = SelectField('Metode Pembayaran (Pulang)', choices=[('', '-'), ('Cash', 'Cash'), ('Transfer', 'Transfer')], validators=[Optional()])
-    bus_pulang = SelectField('Bus Pulang', validators=[Optional()])
     titik_turun = SelectField('Pilih Titik Turun', choices=[], validators=[DataRequired()])
 
     # Detail Perjalanan Kembali
     status_kembali = SelectField('Status Pembayaran Kembali', choices=[('Belum Bayar', 'Belum Bayar'), ('Lunas', 'Lunas'), ('Tidak Ikut', 'Tidak Ikut')], default='Belum Bayar', validators=[DataRequired()])
     metode_pembayaran_kembali = SelectField('Metode Pembayaran (Kembali)', choices=[('', '-'), ('Cash', 'Cash'), ('Transfer', 'Transfer')], validators=[Optional()])
-    bus_kembali = SelectField('Bus Kembali', validators=[Optional()])
     
     submit = SubmitField('Daftarkan Santri')
 

@@ -88,6 +88,7 @@
                             <th>No.</th>
                             <th>Data Santri</th>
                             <th>Asrama & Alamat</th>
+                            <th>Titik Turun & Jemput</th>
                             <th>Bus Pulang</th>
                             <th>Bus Kembali</th>
                             <th>Status Pembayaran</th>
@@ -116,6 +117,19 @@
                                     <small class="text-muted mt-1">{{ pendaftaran.santri.kabupaten or '-' }}</small>
                                 </div>
                             </td>
+                            <td>
+                                <div class="rombongan-info">
+                                    <div>
+                                        <small class="text-muted">Pulang:</small><br>
+                                        <div class="rombongan-badge">{{ pendaftaran.rombongan_pulang.nama_rombongan if pendaftaran.rombongan_pulang else 'N/A' }}</div>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted">Kembali:</small><br>
+                                        <div class="rombongan-badge">{{ pendaftaran.rombongan_kembali.nama_rombongan if pendaftaran.rombongan_kembali else (pendaftaran.rombongan_pulang.nama_rombongan if pendaftaran.rombongan_pulang else 'N/A') }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                        
                             <td>
                                 {% if pendaftaran.bus_pulang %}
                                     <div class="bus-badge">

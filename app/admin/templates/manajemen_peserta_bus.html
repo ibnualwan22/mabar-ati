@@ -1,0 +1,471 @@
+{% extends "_admin_layout.html" %}
+{% block title %}Manajemen Peserta Bus{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --primary-blue: #4285f4;
+        --light-blue: #4285f4;
+        --sky-blue: #4285f4;
+        --blue-50: #e8f0fe;
+        --blue-100: #d2e3fc;
+        --blue-200: #aecbfa;
+        --blue-500: #4285f4;
+        --blue-600: #1a73e8;
+        --blue-700: #1557b0;
+        --gradient-blue: linear-gradient(135deg, #4285f4 0%, #1a73e8 100%);
+        --gradient-light: linear-gradient(135deg, #4285f4 0%, #1a73e8 100%);
+        --shadow-blue: rgba(66, 133, 244, 0.15);
+    }
+
+    .page-header {
+        background: var(--gradient-blue);
+        padding: 2rem 0;
+        margin: -1.5rem -1.5rem 2rem -1.5rem;
+        border-radius: 0 0 20px 20px;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+        opacity: 0.1;
+    }
+
+    .page-header .container {
+        position: relative;
+        z-index: 1;
+    }
+
+    .page-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+        color: 0 2px 4px rgb(255, 255, 255);
+        text-shadow: 0 2px 4px rgb(255, 255, 255);
+
+    }
+
+    .page-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-top: 0.5rem;
+                color: white;
+
+    }
+
+    .custom-accordion {
+        border: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        border-radius: 15px;
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+        background: white;
+    }
+
+    .custom-accordion-item {
+        border: none;
+        background: transparent;
+    }
+
+    .custom-accordion-button {
+        background: linear-gradient(135deg, var(--blue-50) 0%, var(--blue-100) 100%);
+        border: none;
+        padding: 1.5rem;
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: var(--primary-blue);
+        border-radius: 0;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+
+
+    .custom-accordion-button:not(.collapsed) {
+        background: var(--gradient-blue);
+        color: white;
+        box-shadow: inset 0 -1px 0 rgba(255,255,255,0.1);
+    }
+
+    .custom-accordion-button:focus {
+        box-shadow: 0 0 0 0.25rem var(--shadow-blue);
+    }
+
+    .custom-accordion-button::after {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23ffffff'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+        transition: transform 0.3s ease;
+    }
+
+    .custom-accordion-button.collapsed::after {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23374151'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+    }
+
+    .custom-accordion-body {
+        padding: 2rem;
+        background: #fafbff;
+    }
+
+    .bus-card {
+        background: white;
+        border: 2px solid var(--blue-100);
+        border-radius: 15px;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .bus-card:hover {
+        border-color: var(--blue-200);
+    }
+
+    .bus-card-body {
+        padding: 1.5rem;
+    }
+
+    .bus-card-title {
+        color: var(--primary-blue);
+        font-weight: 700;
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .bus-card-title::before {
+        content: '🚌';
+        font-size: 1.5rem;
+    }
+
+    .capacity-badge {
+        background: var(--gradient-blue);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .capacity-badge::before {
+        content: '👥';
+    }
+
+    .btn-modern {
+        border: none;
+        border-radius: 10px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .btn-primary-modern {
+        background: var(--gradient-blue);
+        color: white;
+    }
+
+    .btn-primary-modern:hover {
+        color: white;
+    }
+
+    .btn-secondary-modern {
+        background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%);
+        color: white;
+    }
+
+    .btn-secondary-modern:hover {
+        color: white;
+    }
+
+    .btn-success-modern {
+        background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+        color: white;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .btn-success-modern::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        transition: left 0.5s ease;
+    }
+
+    .btn-success-modern:hover::before {
+        left: 100%;
+    }
+
+    .btn-success-modern:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
+        color: white;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: #6b7280;
+    }
+
+    .empty-state-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .modal-content-modern {
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+    }
+
+    .modal-header-modern {
+        background: var(--gradient-blue);
+        color: white;
+        border-radius: 20px 20px 0 0;
+        padding: 1.5rem 2rem;
+        border: none;
+    }
+
+    .modal-title-modern {
+        font-weight: 700;
+        font-size: 1.3rem;
+    }
+
+    .btn-close-white {
+        filter: invert(1);
+    }
+
+    .form-control-modern {
+        border: 2px solid var(--blue-100);
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+    }
+
+    .form-control-modern:focus {
+        border-color: var(--blue-500);
+        box-shadow: 0 0 0 0.25rem var(--shadow-blue);
+    }
+
+    .alert-modern {
+        border: none;
+        border-radius: 15px;
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 100%);
+        color: var(--primary-blue);
+        border-left: 4px solid var(--blue-500);
+    }
+
+
+
+    .pulse {
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+</style>
+
+<div class="page-header">
+    <div class="container">
+        <h1 class="page-title">🚌 Manajemen Peserta Bus</h1>
+        <p class="page-subtitle">Kelola dan alokasikan peserta ke dalam armada bus rombongan</p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="accordion custom-accordion" id="rombonganAccordion">
+        {% for rombongan in semua_rombongan %}
+        <div class="accordion-item custom-accordion-item">
+            <h2 class="accordion-header" id="heading-{{ rombongan.id }}">
+                <button class="accordion-button custom-accordion-button {% if not loop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ rombongan.id }}">
+                    <strong>🎯 {{ rombongan.nama_rombongan }}</strong>
+                </button>
+            </h2>
+            <div id="collapse-{{ rombongan.id }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}" data-bs-parent="#rombonganAccordion">
+                <div class="accordion-body custom-accordion-body">
+                    <div class="d-flex justify-content-end mb-4">
+                        <button type="button" class="btn btn-modern btn-success-modern pulse" data-bs-toggle="modal" data-bs-target="#tambahBusModal-{{ rombongan.id }}">
+                            <i class="fas fa-plus"></i>Tambah Bus Baru
+                        </button>
+                    </div>
+                    <div class="row g-4">
+                        {% for bus in rombongan.buses %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card bus-card">
+                                <div class="card-body bus-card-body">
+                                    <h5 class="card-title bus-card-title">{{ bus.nama_armada }}{% if bus.nomor_lambung %} - {{ bus.nomor_lambung }}{% endif %}</h5>
+                                    <div class="mb-3">
+                                        <span class="capacity-badge">{{ bus.pendaftar_pulang|length + bus.pendaftar_kembali|length }} / {{ bus.kuota }}</span>
+                                    </div>
+                                    <div class="d-grid gap-2">
+                                        <a href="{{ url_for('admin.alokasi_bus', bus_id=bus.id) }}" class="btn btn-modern btn-primary-modern">
+                                            <i class="fas fa-tasks"></i>Masukkan Peserta ke bus
+                                        </a>
+                                        <a href="{{ url_for('admin.detail_bus', bus_id=bus.id) }}" class="btn btn-modern btn-secondary-modern">
+                                            <i class="fas fa-list"></i>Peserta Terdaftar di bus
+                                        </a>
+                                        </a>
+                                <a href="{{ url_for('admin.edit_bus', bus_id=bus.id) }}" class="btn btn-outline-secondary">
+            <i class="fas fa-edit me-1"></i>Edit bus
+        </a>
+                                        <form method="POST"
+                                          action="{{ url_for('admin.hapus_bus', bus_id=bus.id) }}" 
+                                          style="display:inline;" 
+                                          onsubmit="return confirm('Yakin ingin menghapus bus ini?');">
+                                        <button type="submit" class="btn btn-outline-danger">
+                                            <i class="fas fa-trash me-1"></i>Hapus
+                                        </button>
+                                    </form>
+        
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="col-12">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">🚌</div>
+                                <h4>Belum Ada Bus</h4>
+                                <p>Belum ada bus yang ditambahkan untuk rombongan ini. Klik tombol "Tambah Bus Baru" untuk memulai.</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-modern">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Informasi:</strong> Tidak ada rombongan yang dikelola oleh Anda di edisi ini.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% for rombongan in semua_rombongan %}
+<div class="modal fade" id="tambahBusModal-{{ rombongan.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content modal-content-modern">
+            <form method="POST" action="{{ url_for('admin.tambah_bus', rombongan_id=rombongan.id) }}">
+                <div class="modal-header modal-header-modern">
+                    <h5 class="modal-title modal-title-modern">🚌 Tambah Bus untuk {{ rombongan.nama_rombongan }}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    {{ bus_form.hidden_tag() }}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ bus_form.nama_armada.label(class="form-label fw-bold") }}
+                                {{ bus_form.nama_armada(class="form-control form-control-modern") }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ bus_form.nomor_lambung.label(class="form-label fw-bold") }}
+                                {{ bus_form.nomor_lambung(class="form-control form-control-modern") }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ bus_form.plat_nomor.label(class="form-label fw-bold") }}
+                                {{ bus_form.plat_nomor(class="form-control form-control-modern") }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ bus_form.kuota.label(class="form-label fw-bold") }}
+                                {{ bus_form.kuota(class="form-control form-control-modern") }}
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="mb-3">
+                                {{ bus_form.keterangan.label(class="form-label fw-bold") }}
+                                {{ bus_form.keterangan(class="form-control form-control-modern", rows=3) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4">
+                    <button type="button" class="btn btn-modern btn-secondary-modern" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i>Batal
+                    </button>
+                    {{ bus_form.submit(class="btn btn-modern btn-primary-modern") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add click animation to buttons
+    document.querySelectorAll('.btn-modern').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            let ripple = document.createElement('span');
+            let rect = this.getBoundingClientRect();
+            let size = Math.max(rect.width, rect.height);
+            let x = e.clientX - rect.left - size / 2;
+            let y = e.clientY - rect.top - size / 2;
+            
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = x + 'px';
+            ripple.style.top = y + 'px';
+            ripple.classList.add('ripple');
+            
+            this.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        });
+    });
+});
+</script>
+
+<style>
+.ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(0);
+    animation: rippleAnimation 0.6s linear;
+    pointer-events: none;
+}
+
+@keyframes rippleAnimation {
+    to {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+</style>
+
+{% endblock %}

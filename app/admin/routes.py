@@ -782,9 +782,7 @@ def pendaftaran_rombongan():
             rombongan = Rombongan.query.get(int(selected_rombongan_id))
             if rombongan:
                 form.titik_turun.choices = [(t.titik_turun, t.titik_turun) for t in rombongan.tarifs]
-                bus_choices = [(b.id, f"{b.nama_armada} ({b.nomor_lambung or b.plat_nomor})") for b in rombongan.buses]
-                form.bus_pulang.choices = bus_choices
-                form.bus_kembali.choices = bus_choices
+                
     # --- AKHIR PERBAIKAN ---
 
     if form.validate_on_submit():
@@ -801,6 +799,7 @@ def pendaftaran_rombongan():
         rombongan_obj = Rombongan.query.get(rombongan_id)
         
         berhasil_didaftarkan = 0
+        nama_santri_berhasil = []  # TAMBAHAN: List untuk menyimpan nama santri yang berhasil
         sudah_terdaftar_sebelumnya = []
         gagal_karena_izin = []
         pendaftaran_baru_list = []
@@ -822,25 +821,43 @@ def pendaftaran_rombongan():
                 if form.status_kembali.data != 'Tidak Ikut': total_biaya += biaya_per_perjalanan
             
             new_pendaftaran = Pendaftaran(
-                edisi_id=active_edisi.id, santri_id=santri.id,
-                rombongan_pulang_id=rombongan_id, status_pulang=form.status_pulang.data,
+                edisi_id=active_edisi.id,
+                santri_id=santri.id,
+                rombongan_pulang_id=rombongan_id,
+                status_pulang=form.status_pulang.data,
                 metode_pembayaran_pulang=form.metode_pembayaran_pulang.data,
-                bus_pulang_id=form.bus_pulang.data or None, titik_turun=form.titik_turun.data,
+                titik_turun=form.titik_turun.data,
                 status_kembali=form.status_kembali.data,
                 metode_pembayaran_kembali=form.metode_pembayaran_kembali.data,
-                bus_kembali_id=form.bus_kembali.data or None, total_biaya=total_biaya
+                total_biaya=total_biaya
             )
             pendaftaran_baru_list.append(new_pendaftaran)
             berhasil_didaftarkan += 1
+            nama_santri_berhasil.append(santri.nama)  # TAMBAHAN: Simpan nama santri yang berhasil
         
         if pendaftaran_baru_list:
             db.session.add_all(pendaftaran_baru_list)
             db.session.commit()
-            log_activity('Tambah', 'Pendaftaran', f"Mendaftarkan {berhasil_didaftarkan} santri ke rombongan '{rombongan_obj.nama_rombongan}'")
+            # MODIFIKASI: Log activity dengan semua nama santri untuk transparansi
+            if berhasil_didaftarkan == 1:
+                log_activity('Tambah', 'Pendaftaran', f"Mendaftarkan santri {nama_santri_berhasil[0]} ke rombongan '{rombongan_obj.nama_rombongan}'")
+            else:
+                nama_str_log = ', '.join(nama_santri_berhasil)
+                log_activity('Tambah', 'Pendaftaran', f"Mendaftarkan {berhasil_didaftarkan} santri ke rombongan '{rombongan_obj.nama_rombongan}': {nama_str_log}")
 
-        if berhasil_didaftarkan > 0: flash(f'{berhasil_didaftarkan} santri berhasil didaftarkan.', 'success')
-        if sudah_terdaftar_sebelumnya: flash(f'Santri berikut dilewati karena sudah terdaftar: {", ".join(sudah_terdaftar_sebelumnya)}', 'warning')
-        if gagal_karena_izin: flash(f'Santri berikut dilewati karena berstatus Izin: {", ".join(gagal_karena_izin)}', 'danger')
+        # MODIFIKASI: Flash message dengan semua nama santri
+        if berhasil_didaftarkan > 0:
+            if berhasil_didaftarkan == 1:
+                flash(f'Santri {nama_santri_berhasil[0]} berhasil didaftarkan.', 'success')
+            else:
+                # Tampilkan semua nama dengan format yang rapi
+                nama_str = ', '.join(nama_santri_berhasil[:-1]) + f' dan {nama_santri_berhasil[-1]}'
+                flash(f'{berhasil_didaftarkan} santri berhasil didaftarkan: {nama_str}.', 'success')
+        
+        if sudah_terdaftar_sebelumnya: 
+            flash(f'Santri berikut dilewati karena sudah terdaftar: {", ".join(sudah_terdaftar_sebelumnya)}', 'warning')
+        if gagal_karena_izin: 
+            flash(f'Santri berikut dilewati karena berstatus Izin: {", ".join(gagal_karena_izin)}', 'danger')
 
         return redirect(url_for('admin.pendaftaran_rombongan', rombongan_id=rombongan_id))
 
@@ -1869,7 +1886,7 @@ def tambah_bus(rombongan_id):
     else:
         flash('Gagal menambahkan bus. Pastikan semua field terisi.', 'danger')
     
-    return redirect(url_for('admin.edit_rombongan', id=rombongan_id))
+    return redirect(url_for('admin.manajemen_peserta_bus', id=rombongan_id))
 
 @admin_bp.route('/bus/edit/<int:bus_id>', methods=['GET', 'POST'])
 @login_required
@@ -1893,7 +1910,7 @@ def edit_bus(bus_id):
         db.session.commit()
         log_activity('Edit', 'Bus', f"Mengubah detail bus '{bus.nama_armada}' di rombongan '{bus.rombongan.nama_rombongan}'")
         flash('Detail bus berhasil diperbarui!', 'success')
-        return redirect(url_for('admin.edit_rombongan', id=bus.rombongan_id))
+        return redirect(url_for('admin.manajemen_peserta_bus', id=bus.rombongan_id))
 
     return render_template('edit_bus.html', form=form, bus=bus, title="Edit Detail Bus")
 
@@ -1912,7 +1929,7 @@ def hapus_bus(bus_id):
     log_activity('Hapus', 'Bus', f"Menghapus bus '{nama_bus}' dari rombongan '{bus.rombongan.nama_rombongan}'")
     db.session.commit()
     flash('Bus berhasil dihapus.', 'info')
-    return redirect(url_for('admin.edit_rombongan', id=rombongan_id))
+    return redirect(url_for('admin.manajemen_peserta_bus', id=rombongan_id))
 
 @admin_bp.route('/bus/<int:bus_id>/detail')
 @login_required
@@ -4076,4 +4093,92 @@ def rekap_absen():
                            rekap_data=rekap_data, 
                            active_edisi=active_edisi,
                            rombongan_list=rombongan_list)
+
+@admin_bp.route('/manajemen-bus')
+@login_required
+@role_required('Korpus', 'Korda', 'Korwil')
+def manajemen_peserta_bus():
+    active_edisi = get_active_edisi()
+    bus_form = BusForm() # Siapkan form untuk modal
+
+    if not active_edisi:
+        flash("Tidak ada edisi yang aktif.", "warning")
+        return render_template('manajemen_peserta_bus.html', semua_rombongan=[], bus_form=bus_form)
+
+    # Ambil semua rombongan yang relevan berdasarkan peran
+    if current_user.role.name in ['Korda', 'Korwil']:
+        # Korda/Korwil hanya melihat rombongan yang mereka kelola dari edisi aktif
+        semua_rombongan = current_user.active_managed_rombongan
+    else: # Korpus melihat semua
+        semua_rombongan = Rombongan.query.options(
+            joinedload(Rombongan.buses)
+        ).filter_by(edisi_id=active_edisi.id).order_by(Rombongan.nama_rombongan).all()
+
+    return render_template('manajemen_peserta_bus.html', 
+                           semua_rombongan=semua_rombongan,
+                           active_edisi=active_edisi,
+                           bus_form=bus_form) # Kirim bus_form ke template
+
+@admin_bp.route('/alokasi-bus/<int:bus_id>', methods=['GET', 'POST'])
+@login_required
+@role_required('Korpus', 'Korda', 'Korwil')
+def alokasi_bus(bus_id):
+    bus = Bus.query.get_or_404(bus_id)
+    rombongan = bus.rombongan
+    
+    # Keamanan: Pastikan Korda/Korwil hanya bisa mengakses bus di rombongannya
+    if current_user.role.name in ['Korda', 'Korwil']:
+        if rombongan not in current_user.active_managed_rombongan:
+            abort(403)
+
+    perjalanan = request.args.get('perjalanan', 'pulang') # Default ke 'pulang'
+
+    if request.method == 'POST':
+        # Ambil daftar ID pendaftaran dari form yang disubmit
+        peserta_ids_in_bus = request.form.getlist('peserta_in_bus[]', type=int)
+        
+        # Ambil semua pendaftar di rombongan ini
+        all_pendaftar_in_rombongan = Pendaftaran.query.filter(
+            or_(Pendaftaran.rombongan_pulang_id == rombongan.id, Pendaftaran.rombongan_kembali_id == rombongan.id)
+        ).all()
+        
+        for pendaftar in all_pendaftar_in_rombongan:
+            if perjalanan == 'pulang':
+                # Jika ID ada di daftar, set bus_id. Jika tidak, set ke None.
+                if pendaftar.id in peserta_ids_in_bus:
+                    pendaftar.bus_pulang_id = bus.id
+                elif pendaftar.bus_pulang_id == bus.id: # Hanya hapus jika sebelumnya di bus ini
+                    pendaftar.bus_pulang_id = None
+            elif perjalanan == 'kembali':
+                if pendaftar.id in peserta_ids_in_bus:
+                    pendaftar.bus_kembali_id = bus.id
+                elif pendaftar.bus_kembali_id == bus.id:
+                    pendaftar.bus_kembali_id = None
+        
+        db.session.commit()
+        flash(f'Alokasi peserta untuk perjalanan {perjalanan} di bus {bus.nama_armada} berhasil disimpan.', 'success')
+        return redirect(url_for('admin.alokasi_bus', bus_id=bus_id, perjalanan=perjalanan))
+
+    # Logika untuk GET request (menampilkan data)
+    if perjalanan == 'pulang':
+        peserta_in_bus = Pendaftaran.query.filter_by(bus_pulang_id=bus.id).join(Santri).order_by(Santri.nama).all()
+        peserta_no_bus = Pendaftaran.query.filter(
+            Pendaftaran.rombongan_pulang_id == rombongan.id,
+            Pendaftaran.status_pulang != 'Tidak Ikut',
+            Pendaftaran.bus_pulang_id == None
+        ).join(Santri).order_by(Santri.nama).all()
+    else: # Perjalanan kembali
+        peserta_in_bus = Pendaftaran.query.filter_by(bus_kembali_id=bus.id).join(Santri).order_by(Santri.nama).all()
+        peserta_no_bus = Pendaftaran.query.filter(
+            or_(Pendaftaran.rombongan_kembali_id == rombongan.id, and_(Pendaftaran.rombongan_kembali_id == None, Pendaftaran.rombongan_pulang_id == rombongan.id)),
+            Pendaftaran.status_kembali != 'Tidak Ikut',
+            Pendaftaran.bus_kembali_id == None
+        ).join(Santri).order_by(Santri.nama).all()
+        
+    return render_template('alokasi_bus.html', 
+                           bus=bus, 
+                           rombongan=rombongan,
+                           peserta_in_bus=peserta_in_bus,
+                           peserta_no_bus=peserta_no_bus,
+                           perjalanan=perjalanan)
 

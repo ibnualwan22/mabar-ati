@@ -484,10 +484,6 @@
                                 {{ form.titik_turun.label(class="form-label") }}
                                 {{ form.titik_turun(class="form-select", disabled=true) }}
                             </div>
-                            <div class="mb-3">
-                                {{ form.bus_pulang.label(class="form-label") }}
-                                {{ form.bus_pulang(class="form-select") }}
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -505,10 +501,6 @@
                             <div class="mb-3">
                                 {{ form.metode_pembayaran_kembali.label(class="form-label") }}
                                 {{ form.metode_pembayaran_kembali(class="form-select") }}
-                            </div>
-                            <div class="mb-3">
-                                {{ form.bus_kembali.label(class="form-label") }}
-                                {{ form.bus_kembali(class="form-select") }}
                             </div>
                         </div>
                     </div>
@@ -538,8 +530,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const rombonganSelect = document.getElementById('rombongan');
     const titikTurunSelect = document.getElementById('titik_turun');
     const hiddenSantriInput = document.getElementById('santri_list'); // DIPERBAIKI: sesuaikan dengan nama field form
-    const busPulangSelect = document.getElementById('bus_pulang');
-    const busKembaliSelect = document.getElementById('bus_kembali');
     const infoRombonganDiv = document.getElementById('info-rombongan');
     const totalBiayaP = document.getElementById('total-biaya');
     const daftarPesertaDiv = document.getElementById('daftar-peserta');
@@ -576,21 +566,16 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 tarifData = data.tarifs;
                 updateInfoRombongan(data.cakupan_wilayah, data.tarifs);
-                updateDropdowns(data.tarifs, data.buses || []);
+                updateDropdowns(data.tarifs || []);
                 updateDaftarPeserta(data.pendaftar || []);
                 calculateBiaya();
             });
     }
 
-    function updateDropdowns(tarifs, buses) {
+    function updateDropdowns(tarifs) {
         titikTurunSelect.innerHTML = '<option value="">-- Pilih Titik Turun --</option>';
         tarifs.forEach(t => titikTurunSelect.add(new Option(t.titik_turun, t.titik_turun)));
         titikTurunSelect.disabled = false;
-        
-        const busPulangChoices = buses.map(bus => `<option value="${bus.id}">${bus.nama_armada} - ${bus.nomor_lambung || bus.plat_nomor} (Sisa: ${bus.sisa_kuota_pulang})</option>`).join('');
-        const busKembaliChoices = buses.map(bus => `<option value="${bus.id}">${bus.nama_armada} - ${bus.nomor_lambung || bus.plat_nomor} (Sisa: ${bus.sisa_kuota_kembali})</option>`).join('');
-        busPulangSelect.innerHTML = '<option value="">-- Pilih Bus --</option>' + busPulangChoices;
-        busKembaliSelect.innerHTML = '<option value="">-- Pilih Bus --</option>' + busKembaliChoices;
     }
 
     function calculateBiaya() {
