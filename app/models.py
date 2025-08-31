@@ -77,7 +77,7 @@ class Partisipan(db.Model):
 
 class Santri(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    api_student_id = db.Column(db.String(50), unique=True, nullable=False)
+    api_student_id = db.Column(db.String(50), unique=False, nullable=False)
     nis = db.Column(db.String(30), unique=True, nullable=False)
     nama = db.Column(db.String(150), nullable=False)
     kabupaten = db.Column(db.String(100))
