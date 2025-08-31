@@ -3452,7 +3452,7 @@ def salin_rombongan():
 
 @admin_bp.route('/cetak-kartu')
 @login_required
-@role_required('Korpus', 'Korda', 'Korpuspi')
+@role_required('Korpus', 'Korda', 'Korpuspi', 'Sekretaris')
 def cetak_kartu():
     active_edisi = get_active_edisi()
     if not active_edisi:
