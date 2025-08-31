@@ -4096,7 +4096,7 @@ def rekap_absen():
 
 @admin_bp.route('/manajemen-bus')
 @login_required
-@role_required('Korpus', 'Korda', 'Korwil')
+@role_required('Korpus', 'Korda', 'Korwil', 'Korpuspi', 'Sekretaris', 'Bendahara Pusat')
 def manajemen_peserta_bus():
     active_edisi = get_active_edisi()
     bus_form = BusForm() # Siapkan form untuk modal
@@ -4121,7 +4121,7 @@ def manajemen_peserta_bus():
 
 @admin_bp.route('/alokasi-bus/<int:bus_id>', methods=['GET', 'POST'])
 @login_required
-@role_required('Korpus', 'Korda', 'Korwil')
+@role_required('Korpus', 'Korda', 'Korpuspi')
 def alokasi_bus(bus_id):
     bus = Bus.query.get_or_404(bus_id)
     rombongan = bus.rombongan
