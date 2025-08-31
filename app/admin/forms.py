@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, IntegerField, DateTimeLocalField, FieldList, FormField, SubmitField, Form, HiddenField, SelectField, PasswordField, BooleanField, DateTimeLocalField, ValidationError
+from wtforms import SelectMultipleField, StringField, TextAreaField, IntegerField, DateTimeLocalField, FieldList, FormField, SubmitField, Form, HiddenField, SelectField, PasswordField, BooleanField, DateTimeLocalField, ValidationError
 from wtforms.validators import DataRequired, Optional, EqualTo, Length, URL, NumberRange
 from wtforms_sqlalchemy.fields import QuerySelectField, QuerySelectMultipleField
 from app.models import Rombongan, Santri, Role
@@ -168,8 +168,18 @@ def santri_bisa_jadi_partisipan_query():
     ).order_by(Santri.nama).all()
 
 class PartisipanForm(FlaskForm):
-    santri = HiddenField('Pilih Santri', validators=[DataRequired()])
-    kategori = StringField('Kategori Partisipan', validators=[DataRequired()], description="Contoh: Marching band, Kecak, Demonstrasi, dll.")
+    # validate_choice=False supaya WTForms tidak memaksa nilai harus ada di choices
+    santri_ids = SelectMultipleField(
+        'Pilih Santri',
+        coerce=int,
+        choices=[],
+        validate_choice=False
+    )
+    kategori = StringField(
+        'Kategori Partisipan',
+        validators=[DataRequired()],
+        description="Contoh: Marching band, Kecak, Demonstrasi, dll."
+    )
     submit = SubmitField('Simpan Status Partisipan')
 
 class PartisipanEditForm(FlaskForm):

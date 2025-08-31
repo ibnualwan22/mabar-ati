@@ -1621,32 +1621,113 @@ def tambah_partisipan():
     form = PartisipanForm()
     active_edisi = get_active_edisi()
 
-    if form.validate_on_submit():
+    if request.method == 'POST':
+        # Pastikan ada edisi aktif
         if not active_edisi:
             flash("Tidak bisa menambah status partisipan karena tidak ada edisi yang aktif.", "danger")
             return redirect(url_for('admin.data_partisipan'))
 
-        santri_id = form.santri.data
-        santri = Santri.query.get(santri_id)
+        # Ambil kategori dari form (WTForms) atau request (jaga-jaga)
+        kategori = getattr(form, 'kategori', None).data if hasattr(form, 'kategori') else request.form.get('kategori')
 
-        if santri and santri.status_santri == 'Aktif':
-            # Buat record partisipan baru dan kaitkan dengan edisi aktif
+        # 1) Prefer: multi-select baru -> name="santri_ids"
+        santri_ids_raw = request.form.getlist('santri_ids')
+
+        # 2) Fallback: form lama single -> form.santri
+        if not santri_ids_raw and hasattr(form, 'santri'):
+            # form.validate_on_submit() lama mungkin gagal jika field dihapus dari template.
+            # Kita tetap coba ambil value single jika ada.
+            single_id = getattr(form, 'santri').data
+            if single_id:
+                santri_ids_raw = [str(single_id)]
+
+        # Validasi minimal ada satu
+        if not santri_ids_raw:
+            flash("Pilih minimal satu santri.", "warning")
+            return redirect(request.url)
+
+        # Konversi ke int, pisahkan yang invalid
+        santri_ids = []
+        invalid_ids = []
+        for s in santri_ids_raw:
+            try:
+                santri_ids.append(int(s))
+            except Exception:
+                invalid_ids.append(s)
+
+        # Ambil santri yang ditemukan
+        santri_list = Santri.query.filter(Santri.id.in_(santri_ids)).all()
+        found_by_id = {s.id: s for s in santri_list}
+        not_found_ids = [sid for sid in santri_ids if sid not in found_by_id]
+
+        created_names = []
+        skipped_duplicate = []
+        skipped_inactive = []
+
+        # Proses setiap santri valid
+        for sid, santri in found_by_id.items():
+            if santri.status_santri != 'Aktif':
+                skipped_inactive.append(santri.nama or f'ID {sid}')
+                continue
+
+            # Cek duplikasi pada edisi aktif
+            exists = Partisipan.query.filter_by(santri_id=sid, edisi_id=active_edisi.id).first()
+            if exists:
+                skipped_duplicate.append(santri.nama or f'ID {sid}')
+                continue
+
+            # Buat record baru
             new_partisipan = Partisipan(
                 edisi=active_edisi,
                 santri=santri,
-                kategori=form.kategori.data
+                kategori=kategori
             )
             # Update status santri
             santri.status_santri = 'Partisipan'
-            
-            db.session.add(new_partisipan)
-            log_activity('Tambah', 'Partisipan', f"Menetapkan santri '{santri.nama}' sebagai partisipan dengan kategori '{form.kategori.data}'")
-            db.session.commit()
-            flash(f"Status partisipan untuk {santri.nama} berhasil ditambahkan.", "success")
-            return redirect(url_for('admin.data_partisipan'))
-        else:
-            flash("Santri tidak valid atau statusnya bukan 'Aktif'.", "danger")
 
+            db.session.add(new_partisipan)
+            log_activity(
+                'Tambah', 'Partisipan',
+                f"Menetapkan santri '{santri.nama}' sebagai partisipan dengan kategori '{kategori}'"
+            )
+            created_names.append(santri.nama or f'ID {sid}')
+
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.exception("Gagal commit tambah_partisipan (bulk): %s", e)
+            flash("Terjadi kesalahan saat menyimpan partisipan. Silakan coba lagi.", "danger")
+            return redirect(url_for('admin.data_partisipan'))
+
+        # Susun ringkasan pesan
+        parts = []
+        if created_names:
+            daftar = ', '.join(created_names[:10]) + (' …' if len(created_names) > 10 else '')
+            parts.append(f"Ditambahkan: {len(created_names)} ({daftar})")
+
+        if skipped_duplicate:
+            daftar = ', '.join(skipped_duplicate[:10]) + (' …' if len(skipped_duplicate) > 10 else '')
+            parts.append(f"Sudah terdaftar (dilewati): {len(skipped_duplicate)} ({daftar})")
+
+        if skipped_inactive:
+            daftar = ', '.join(skipped_inactive[:10]) + (' …' if len(skipped_inactive) > 10 else '')
+            parts.append(f"Tidak Aktif (dilewati): {len(skipped_inactive)} ({daftar})")
+
+        if not_found_ids or invalid_ids:
+            # Info teknis singkat
+            nf = (f"tidak ditemukan: {len(not_found_ids)}" if not_found_ids else "")
+            iv = (f"invalid id: {len(invalid_ids)}" if invalid_ids else "")
+            extra = " & ".join([x for x in [nf, iv] if x])
+            if extra:
+                parts.append(extra)
+
+        message = " | ".join(parts) if parts else "Tidak ada perubahan."
+        flash(message, "success" if created_names else "info")
+
+        return redirect(url_for('admin.data_partisipan'))
+
+    # GET: render form seperti biasa
     return render_template('tambah_partisipan.html', form=form)
 
 

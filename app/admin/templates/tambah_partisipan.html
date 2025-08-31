@@ -69,7 +69,7 @@
         <a href="{{ url_for('admin.data_partisipan') }}">&larr; Kembali ke Data Partisipan</a>
     </div>
 
-    {% if current_user.role.name in ['Korpus', 'PJ Acara'] %}
+    {% if current_user.role.name in ['Korpus', 'PJ Acara', 'Sekretaris', 'Korpuspi'] %}
     <div class="form-card">
         <div class="form-card-header">
             <h5>Formulir Penambahan Partisipan</h5>
@@ -80,10 +80,10 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label for="select-santri-partisipan">Pilih Santri</label>
-                            <select id="select-santri-partisipan" placeholder="-- Cari Santri Aktif --"></select>
-                            {{ form.santri(hidden=True) }}
-                        </div>
+  <label for="select-santri-partisipan">Pilih Santri (Bisa Lebih Dari 1)</label>
+  <select id="select-santri-partisipan" name="santri_ids" multiple placeholder="-- Cari Santri Aktif --"></select>
+</div>
+
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
@@ -105,66 +105,74 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const hiddenSantriInput = document.getElementById('santri');
-    const infoSantriDiv = document.getElementById('info-santri');
+document.addEventListener('DOMContentLoaded', function () {
+  const infoSantriDiv = document.getElementById('info-santri');
 
-    new TomSelect('#select-santri-partisipan', {
-        valueField: 'id',
-        labelField: 'nama',
-        searchField: 'nama',
-        load: (query, callback) => {
-            const url = `/admin/api/search-santri-for-partisipan?q=${encodeURIComponent(query)}`;
-            fetch(url)
-                .then(response => response.json())
-                .then(json => {
-                    callback(json.results);
-                }).catch(() => {
-                    callback();
-                });
-        },
-        onChange: function(value) {
-            hiddenSantriInput.value = value;
-            // 'this.options' merujuk ke semua opsi yang ada di TomSelect
-            const selectedData = this.options[value];
-            if (selectedData) {
-                infoSantriDiv.innerHTML = `
-                    <strong>Detail Santri:</strong><br>
-                    Asrama: ${selectedData.asrama || '-'}<br>
-                    Kelas Formal: ${selectedData.kelas_formal || '-'}<br>
-                    Kelas Ngaji: ${selectedData.kelas_ngaji || '-'}
-                `;
-                infoSantriDiv.style.display = 'block';
-            } else {
-                infoSantriDiv.style.display = 'none';
-            }
-        },
-        render: {
-            option: function(data, escape) {
-                return `
-                    <div class="d-flex align-items-center py-2 px-3">
-                        <div class="avatar-circle me-3" style="width: 32px; height: 32px; background: var(--primary-blue); border-radius: 50%; display: flex; align-items-center; justify-content: center; color: white; font-weight: 600; font-size: 0.9rem;">
-                            ${escape(data.nama[0])}
-                        </div>
-                        <div>
-                            <div class="fw-medium">${escape(data.nama)}</div>
-                            <small class="text-muted">${escape(data.asrama || 'N/A')} • ${escape(data.kabupaten || 'N/A')}</small>
-                        </div>
-                    </div>
-                `;
-            },
-            item: function(data, escape) {
-                return `
-                    <div class="d-flex align-items-center">
-                        <div class="avatar-circle me-2" style="width: 24px; height: 24px; background: var(--primary-blue); border-radius: 50%; display: flex; align-items-center; justify-content: center; color: white; font-weight: 600; font-size: 0.8rem;">
-                            ${escape(data.nama[0])}
-                        </div>
-                        <span>${escape(data.nama)}</span>
-                    </div>
-                `;
-            }
-        }
-    });
+  const ts = new TomSelect('#select-santri-partisipan', {
+    valueField: 'id',
+    labelField: 'nama',
+    searchField: 'nama',
+    maxItems: null,                    // <- multi select tanpa batas
+    persist: false,
+    plugins: ['remove_button'],        // tombol x untuk hapus item terpilih
+    preload: false,
+    loadThrottle: 300,
+    load: (query, callback) => {
+      const url = `/admin/api/search-santri-for-partisipan?q=${encodeURIComponent(query||'')}`;
+      fetch(url)
+        .then(r => r.json())
+        .then(json => callback(json.results || []))
+        .catch(() => callback());
+    },
+    render: {
+      option(data, escape) {
+        return `
+          <div class="d-flex align-items-center py-2 px-3">
+            <div class="avatar-circle me-3" style="width:32px;height:32px;background:var(--primary-blue);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:.9rem;">
+              ${escape((data.nama||'?')[0])}
+            </div>
+            <div>
+              <div class="fw-medium">${escape(data.nama || 'Tanpa nama')}</div>
+              <small class="text-muted">${escape(data.asrama || 'N/A')} • ${escape(data.kabupaten || 'N/A')}</small>
+            </div>
+          </div>
+        `;
+      },
+      item(data, escape) {
+        return `
+          <div class="d-flex align-items-center">
+            <div class="avatar-circle me-2" style="width:24px;height:24px;background:var(--primary-blue);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:.8rem;">
+              ${escape((data.nama||'?')[0])}
+            </div>
+            <span>${escape(data.nama || 'Tanpa nama')}</span>
+          </div>
+        `;
+      }
+    },
+    onChange(values) {
+      // values = array id santri yang terpilih
+      if (!values || values.length === 0) {
+        infoSantriDiv.style.display = 'none';
+        infoSantriDiv.innerHTML = '';
+        return;
+      }
+      // ambil data lengkap dari cache options TomSelect
+      const items = values.map(v => this.options[v]).filter(Boolean);
+      infoSantriDiv.style.display = 'block';
+      infoSantriDiv.innerHTML = `
+        <strong>Santri terpilih (${items.length}):</strong>
+        <ul style="margin: .5rem 0 0 1rem">
+          ${items.map(s => `
+            <li>
+              <b>${s.nama || '-'}</b>
+              <small class="text-muted"> — ${s.asrama || '-'} • ${s.kelas_formal || '-'} • ${s.kelas_ngaji || '-'}</small>
+            </li>
+          `).join('')}
+        </ul>
+      `;
+    }
+  });
 });
 </script>
+
 {% endblock %}
