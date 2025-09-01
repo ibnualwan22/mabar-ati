@@ -848,7 +848,7 @@
             </a>
         </li>
         {% endif %}
-        {% if current_user.role.name in ['Korpus', 'Korda', 'Korwil', 'Bendahara Pusat', 'Korpuspi', 'Sekretaris'] %}
+        {% if current_user.role.name in ['Korpus', 'Korda', 'Bendahara Pusat', 'Korpuspi', 'Sekretaris'] %}
         <li class="nav-heading">Manajemen Keuangan</li>
         <li class="nav-item">
             <a href="{{ url_for('admin.manajemen_keuangan') }}" 
