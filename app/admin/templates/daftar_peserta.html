@@ -228,6 +228,11 @@
         --bs-pagination-active-bg: var(--primary-color);
         --bs-pagination-active-border-color: var(--primary-color);
     }
+    .payment-method {
+        font-size: 0.65rem;
+        color: var(--text-secondary);
+        font-style: italic;
+    }
     @media (max-width: 800px) {
   .enhanced-table td, 
   .enhanced-table th {
@@ -248,6 +253,10 @@
   .enhanced-table td:nth-child(4) {
     min-width: 150px; /* Titik Turun/Jemput */
   }
+  .payment-method {
+        font-size: 0.55rem;
+        line-height: 1.1;
+    }
 }
 </style>
 
@@ -375,9 +384,11 @@
                                     <div class="status-badge {{ 'status-lunas' if pendaftaran.status_pulang == 'Lunas' else 'status-belum' }}">
                                         Pulang: {{ pendaftaran.status_pulang }}
                                     </div>
+                                    <div class="payment-method">{{ pendaftaran.metode_pembayaran_pulang or '-' }}</div>
                                     <div class="status-badge {{ 'status-lunas' if pendaftaran.status_kembali == 'Lunas' else 'status-belum' }}">
                                         Kembali: {{ pendaftaran.status_kembali }}
                                     </div>
+                                    <div class="payment-method">{{ pendaftaran.metode_pembayaran_kembali or '-' }}</div>
                                 </div>
                             </td>
                             {% if current_user.role.name == 'Korpus' or (current_user.role.name == 'Korda' and rombongan in current_user.active_managed_rombongan) %}

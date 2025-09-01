@@ -729,6 +729,71 @@
     -webkit-overflow-scrolling: touch;
   }
 }
+/* Tambahkan CSS ini ke dalam tag <style> yang sudah ada */
+
+/* Sticky column untuk kolom nama santri (kolom ke-2) */
+.enhanced-table th:nth-child(2),
+.enhanced-table td:nth-child(2) {
+    position: sticky;
+    left: 0;
+    background: white;
+    z-index: 5;
+    border-right: 2px solid #e2e8f0;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Sticky untuk header kolom nama santri */
+.enhanced-table thead th:nth-child(2) {
+    background-color: #2563EB; /* Sama dengan warna header asli */
+    color: white;
+    z-index: 15; /* Lebih tinggi dari sticky body */
+    border-right: 2px solid #1d4ed8;
+}
+
+/* Jika ingin kolom No juga sticky (opsional) */
+.enhanced-table th:nth-child(1),
+.enhanced-table td:nth-child(1) {
+    position: sticky;
+    left: 0;
+    background: white;
+    z-index: 4;
+    border-right: 1px solid #e2e8f0;
+}
+
+.enhanced-table thead th:nth-child(1) {
+    background-color: #2563EB;
+    color: white;
+    z-index: 14;
+    border-right: 1px solid #1d4ed8;
+}
+
+/* Adjust left position jika kedua kolom sticky */
+.enhanced-table th:nth-child(2),
+.enhanced-table td:nth-child(2) {
+    left: 50px; /* Sesuaikan dengan lebar kolom No */
+}
+
+/* Responsive adjustments untuk mobile */
+@media (max-width: 800px) {
+    .enhanced-table th:nth-child(2),
+    .enhanced-table td:nth-child(2) {
+        left: 50px; /* Sesuaikan dengan lebar kolom No di mobile */
+        max-width: 180px;
+        min-width: 180px;
+    }
+    
+    .enhanced-table th:nth-child(1),
+    .enhanced-table td:nth-child(1) {
+        max-width: 50px;
+        min-width: 50px;
+    }
+}
+
+/* Hover effect untuk sticky column */
+.enhanced-table tbody tr:hover td:nth-child(1),
+.enhanced-table tbody tr:hover td:nth-child(2) {
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+}
 
 
     </style>
