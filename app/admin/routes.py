@@ -1029,52 +1029,72 @@ def rombongan_detail(id):
         'buses': buses_data, 'pendaftar': pendaftar_data
     })
 
+# Di dalam app/admin/routes.py
+
 @admin_bp.route('/api/search-santri')
 @login_required
 def api_search_santri():
-    """API untuk mencari santri yang 'tersedia' untuk didaftarkan."""
+    """
+    API untuk mencari semua santri aktif, 
+    dengan tambahan informasi apakah mereka sudah terdaftar atau belum.
+    """
     active_edisi = get_active_edisi()
     if not active_edisi:
         return jsonify({'results': []})
 
     q = request.args.get('q', '')
-    query_id = request.args.get('q_id') # Untuk mengambil santri spesifik by ID
+    query_id = request.args.get('q_id')
 
-    # 1. Dapatkan daftar ID santri yang SUDAH terdaftar di edisi ini
-    registered_santri_ids = [
-        p.santri_id for p in Pendaftaran.query.with_entities(Pendaftaran.santri_id)
-        .filter_by(edisi_id=active_edisi.id)
-    ]
-    
-    # 2. Siapkan query dasar untuk santri yang 'tersedia'
-    query = Santri.query.filter(
-        Santri.status_santri == 'Aktif',
-        Santri.id.notin_(registered_santri_ids) # Filter utama: jangan tampilkan yang sudah terdaftar
-    )
+    # Query dasar untuk semua santri aktif, tanpa filter status pendaftaran
+    base_query = Santri.query.filter(Santri.status_santri == 'Aktif')
 
-    # Terapkan filter pencarian nama
     if q:
-        query = query.filter(Santri.nama.ilike(f'%{q}%'))
+        base_query = base_query.filter(Santri.nama.ilike(f'%{q}%'))
     
-    # Tambahan: Jika ada q_id dari URL, cari santri spesifik itu (berguna untuk pra-pengisian form)
     if query_id:
-        # Untuk kasus ini, kita abaikan filter 'sudah terdaftar' agar datanya bisa diambil
-        query = Santri.query.filter_by(id=query_id)
+        base_query = Santri.query.filter_by(id=query_id)
     
-    santri_list = query.limit(20).all()
+    santri_list = base_query.limit(20).all()
 
-    # 3. Format hasil ke dalam JSON
-    results = [{
-        'id': s.id,
-        'nis': s.nis,
-        'nama': s.nama,
-        'asrama': s.asrama,
-        'kabupaten': s.kabupaten,
-        'status_santri': s.status_santri
-    } for s in santri_list]
+    # Ambil ID santri yang ditemukan untuk cek pendaftaran
+    santri_ids_on_page = [s.id for s in santri_list]
+
+    # Buat map pendaftaran untuk efisiensi
+    pendaftaran_map = {}
+    if santri_ids_on_page:
+        pendaftarans = Pendaftaran.query.options(
+            joinedload(Pendaftaran.rombongan_pulang) # Eager load untuk ambil nama rombongan
+        ).filter(
+            Pendaftaran.edisi_id == active_edisi.id,
+            Pendaftaran.santri_id.in_(santri_ids_on_page)
+        ).all()
+        pendaftaran_map = {p.santri_id: p for p in pendaftarans}
+
+    # Format hasil JSON dengan menambahkan status pendaftaran
+    results = []
+    for s in santri_list:
+        pendaftaran_info = pendaftaran_map.get(s.id)
+        is_registered = pendaftaran_info is not None
+        
+        # Ambil nama rombongan jika sudah terdaftar
+        rombongan_nama = ""
+        if is_registered and pendaftaran_info.rombongan_pulang:
+            rombongan_nama = pendaftaran_info.rombongan_pulang.nama_rombongan
+        elif is_registered and pendaftaran_info.rombongan_kembali:
+             rombongan_nama = pendaftaran_info.rombongan_kembali.nama_rombongan
+        
+        results.append({
+            'id': s.id,
+            'nis': s.nis,
+            'nama': s.nama,
+            'asrama': s.asrama,
+            'kabupaten': s.kabupaten,
+            'status_santri': s.status_santri,
+            'is_registered': is_registered,
+            'rombongan_nama': rombongan_nama
+        })
     
     return jsonify({'results': results})
-
 @admin_bp.route('/rombongan/<int:rombongan_id>/peserta')
 @login_required
 @role_required('Korpus', 'Korda', 'Korwil', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')

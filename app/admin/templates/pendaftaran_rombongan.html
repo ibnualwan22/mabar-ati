@@ -425,6 +425,11 @@
         color: var(--warning-color);
         border-left: 4px solid var(--warning-color);
     }
+    .ts-dropdown .option.disabled {
+        pointer-events: none;  /* <-- Kunci utamanya: Membuat elemen tidak bisa di-klik */
+        opacity: 0.6;          /* Memberi efek visual lebih redup */
+        cursor: not-allowed;   /* Mengubah kursor saat diarahkan ke opsi ini */
+    }
 </style>
 
 <div class="page-header">
@@ -545,7 +550,20 @@ document.addEventListener('DOMContentLoaded', function() {
         maxItems: 100, // Izinkan pemilihan lebih dari satu (atur batasnya)
         plugins: ['remove_button'],
         render: {
-            option: (data, escape) => `<div><strong>${escape(data.nama)}</strong><br><small class="text-muted">${escape(data.asrama || '')} - ${escape(data.kabupaten || '')}</small></div>`,
+            option: (data, escape) => {
+                let statusHtml = '';
+                // Cek jika santri sudah terdaftar
+                if (data.is_registered) {
+                    statusHtml = `<br><small class="text-danger"><strong>Sudah terdaftar di rombongan ${escape(data.rombongan_nama)}</strong></small>`;
+                }
+                // Tambahkan class 'disabled' jika sudah terdaftar agar tidak bisa dipilih
+                return `<div class="${data.is_registered ? 'disabled' : ''}">
+                            <strong>${escape(data.nama)}</strong>
+                            <br>
+                            <small class="text-muted">${escape(data.asrama || '')} - ${escape(data.kabupaten || '')}</small>
+                            ${statusHtml}
+                        </div>`;
+            },
             item: (data, escape) => `<div>${escape(data.nama)}</div>`
         },
         load: (query, callback) => {
