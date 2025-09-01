@@ -820,17 +820,25 @@ def pendaftaran_rombongan():
                 if form.status_pulang.data != 'Tidak Ikut': total_biaya += biaya_per_perjalanan
                 if form.status_kembali.data != 'Tidak Ikut': total_biaya += biaya_per_perjalanan
             
-            new_pendaftaran = Pendaftaran(
-                edisi_id=active_edisi.id,
-                santri_id=santri.id,
-                rombongan_pulang_id=rombongan_id,
-                status_pulang=form.status_pulang.data,
-                metode_pembayaran_pulang=form.metode_pembayaran_pulang.data,
-                titik_turun=form.titik_turun.data,
-                status_kembali=form.status_kembali.data,
-                metode_pembayaran_kembali=form.metode_pembayaran_kembali.data,
-                total_biaya=total_biaya
-            )
+            # Buat dictionary untuk menampung data pendaftaran
+            pendaftaran_data = {
+                'edisi_id': active_edisi.id,
+                'santri_id': santri.id,
+                'rombongan_pulang_id': rombongan_id,
+                'status_pulang': form.status_pulang.data,
+                'metode_pembayaran_pulang': form.metode_pembayaran_pulang.data,
+                'titik_turun': form.titik_turun.data,
+                'status_kembali': form.status_kembali.data,
+                'metode_pembayaran_kembali': form.metode_pembayaran_kembali.data,
+                'total_biaya': total_biaya
+            }
+
+            # Salin data pulang ke kembali HANYA JIKA santri ikut perjalanan kembali
+            if form.status_kembali.data != 'Tidak Ikut':
+                pendaftaran_data['rombongan_kembali_id'] = rombongan_id
+                pendaftaran_data['titik_jemput_kembali'] = form.titik_turun.data
+
+            new_pendaftaran = Pendaftaran(**pendaftaran_data)
             pendaftaran_baru_list.append(new_pendaftaran)
             berhasil_didaftarkan += 1
             nama_santri_berhasil.append(santri.nama)  # TAMBAHAN: Simpan nama santri yang berhasil
