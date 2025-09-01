@@ -1622,19 +1622,41 @@ def search_active_santri_api():
 
 
 
+# Di dalam file app/admin/routes.py
+
 @admin_bp.route('/partisipan')
 @role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
 @login_required
 def data_partisipan():
     active_edisi = get_active_edisi()
     
-    # Ambil semua data partisipan HANYA dari edisi yang aktif
+    semua_partisipan = []
     if active_edisi:
-        semua_partisipan = Partisipan.query.filter_by(edisi=active_edisi).all()
-    else:
-        semua_partisipan = []
+        # Mulai dengan query dasar untuk mengambil semua partisipan di edisi aktif
+        query = Partisipan.query.filter_by(edisi=active_edisi)
+
+        # Terapkan filter HANYA JIKA rolenya Korda atau Korwil
+        if current_user.role.name in ['Korda', 'Korwil']:
+            # 1. Kumpulkan semua cakupan wilayah yang dikelola oleh user saat ini
+            managed_regions = {
+                wilayah.get('label')
+                for rombongan in current_user.active_managed_rombongan
+                if rombongan.cakupan_wilayah
+                for wilayah in rombongan.cakupan_wilayah
+            }
+            
+            # 2. Filter query partisipan berdasarkan wilayah santri
+            if managed_regions:
+                # Lakukan join dengan tabel Santri dan filter berdasarkan kolom 'kabupaten'
+                query = query.join(Santri).filter(Santri.kabupaten.in_(list(managed_regions)))
+            else:
+                # Jika Korda/Korwil tidak punya cakupan wilayah, jangan tampilkan data apapun
+                query = query.filter(db.false())
+
+        # Eksekusi query setelah semua filter yang diperlukan diterapkan
+        semua_partisipan = query.all()
     
-    # 2. Kelompokkan data berdasarkan kategori
+    # Kelompokkan data berdasarkan kategori (logika ini tidak berubah)
     grouped_partisipan = defaultdict(list)
     for p in semua_partisipan:
         grouped_partisipan[p.kategori].append(p)
@@ -3613,6 +3635,8 @@ def cetak_tiket():
                            rombongan_for_filter=rombongan_for_filter)
 
 # 1. Halaman Utama Manajemen Wisuda (termasuk logika impor)
+# Di dalam file app/admin/routes.py
+
 @admin_bp.route('/manajemen-wisuda', methods=['GET', 'POST'])
 @login_required
 @role_required('Korpus', 'PJ Acara', 'Korwil', 'Korda', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
@@ -3661,20 +3685,44 @@ def manajemen_wisuda():
 
         return redirect(url_for('admin.manajemen_wisuda'))
 
-    wisudawan_list = Wisuda.query.filter_by(edisi_id=active_edisi.id).options(joinedload(Wisuda.santri)).all()
-    
-    # 2. Kelompokkan data berdasarkan kategori
-    grouped_wisudawan = {}
+    # --- AWAL BLOK LOGIKA BARU ---
+    wisudawan_list = []
+    if active_edisi:
+        # Mulai query dasar untuk wisudawan di edisi aktif
+        query = Wisuda.query.filter_by(edisi_id=active_edisi.id).options(joinedload(Wisuda.santri))
+
+        # Terapkan filter jika rolenya Korda atau Korwil
+        if current_user.role.name in ['Korda', 'Korwil']:
+            # Kumpulkan cakupan wilayah yang dikelola
+            managed_regions = {
+                wilayah.get('label')
+                for rombongan in current_user.active_managed_rombongan
+                if rombongan.cakupan_wilayah
+                for wilayah in rombongan.cakupan_wilayah
+            }
+
+            if managed_regions:
+                # Lakukan join dengan tabel Santri dan filter berdasarkan 'kabupaten'
+                # Note: Relasi Wisuda -> Santri via 'santri_nis' ke 'nis'
+                query = query.join(Santri, Wisuda.santri_nis == Santri.nis).filter(Santri.kabupaten.in_(list(managed_regions)))
+            else:
+                # Jika tidak punya wilayah, jangan tampilkan data
+                query = query.filter(db.false())
+        
+        wisudawan_list = query.all()
+    # --- AKHIR BLOK LOGIKA BARU ---
+
+    # Kelompokkan data berdasarkan kategori (logika ini tidak berubah)
+    grouped_wisudawan = defaultdict(list)
     for w in wisudawan_list:
         kategori = w.kategori_wisuda
         if kategori not in grouped_wisudawan:
             grouped_wisudawan[kategori] = []
         grouped_wisudawan[kategori].append(w)
-    # ------------------------------------
 
     return render_template('manajemen_wisuda.html', 
                            import_form=import_form, 
-                           grouped_wisudawan=grouped_wisudawan, # Kirim data yang sudah dikelompokkan
+                           grouped_wisudawan=dict(grouped_wisudawan), # Konversi kembali ke dict
                            active_edisi=active_edisi)
 
 # 2. Halaman untuk menambah wisudawan manual
