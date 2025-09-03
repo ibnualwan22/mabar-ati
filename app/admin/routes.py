@@ -3459,6 +3459,8 @@ def salin_rombongan():
     flash(f"Berhasil menyalin {len(old_to_new_rombongan_map)} rombongan dari edisi sebelumnya.", "success")
     return redirect(url_for('admin.manajemen_rombongan'))
 
+# Di dalam file app/admin/routes.py
+
 @admin_bp.route('/cetak-kartu')
 @login_required
 @role_required('Korpus', 'Korda', 'Korpuspi', 'Sekretaris')
@@ -3468,10 +3470,11 @@ def cetak_kartu():
         flash("Tidak ada edisi aktif.", "warning")
         return render_template('cetak_kartu.html', semua_pendaftar=[], rombongan_for_filter=[])
 
-    # BARU: Ambil parameter filter dari URL
+    # Ambil semua parameter filter dari URL
     nama_filter = request.args.get('nama', '')
     rombongan_id_filter = request.args.get('rombongan_id', type=int)
     perjalanan_filter = request.args.get('perjalanan', '')
+    jenis_kelamin_filter = request.args.get('jenis_kelamin', '') # <-- BARIS BARU
 
     # Siapkan query dasar
     query = Pendaftaran.query.join(Santri).filter(Pendaftaran.edisi_id == active_edisi.id)
@@ -3494,7 +3497,7 @@ def cetak_kartu():
         # Sesuaikan daftar rombongan untuk dropdown filter
         rombongan_for_filter = [r for r in rombongan_for_filter if r.id in managed_rombongan_ids]
     
-    # BARU: Terapkan filter ke query
+    # Terapkan filter ke query
     if nama_filter:
         query = query.filter(Santri.nama.ilike(f'%{nama_filter}%'))
     
@@ -3511,6 +3514,9 @@ def cetak_kartu():
             query = query.filter(Pendaftaran.status_pulang != 'Tidak Ikut')
         elif perjalanan_filter == 'kembali':
             query = query.filter(Pendaftaran.status_kembali != 'Tidak Ikut')
+            
+    if jenis_kelamin_filter: # <-- BLOK LOGIKA BARU
+        query = query.filter(Santri.jenis_kelamin == jenis_kelamin_filter)
 
     # Ambil semua pendaftar yang relevan dan urutkan
     semua_pendaftar = query.options(
@@ -3524,7 +3530,7 @@ def cetak_kartu():
 
     return render_template('cetak_kartu.html', 
                            semua_pendaftar=unique_pendaftar,
-                           rombongan_for_filter=rombongan_for_filter) # Kirim daftar rombongan ke template
+                           rombongan_for_filter=rombongan_for_filter)
 
 @admin_bp.route('/cetak-tiket')
 @login_required

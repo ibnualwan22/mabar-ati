@@ -152,6 +152,14 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             margin-bottom: 20px;
         }
+        /* Di dalam file cetak_kartu.html */
+.filter-row {
+    display: grid;
+    /* Ubah dari 3 kolom menjadi 4 kolom filter + 1 tombol */
+    grid-template-columns: repeat(4, 1fr) auto;
+    gap: 15px;
+    align-items: end;
+}
         
         .color-selector {
             background: white;
@@ -433,6 +441,14 @@
                             {% endfor %}
                         </select>
                     </div>
+                    <div class="filter-group">
+        <label for="jenis_kelamin">Jenis Kelamin</label>
+        <select class="form-select" id="jenis_kelamin" name="jenis_kelamin">
+            <option value="">Semua</option>
+            <option value="PUTRA" {% if request.args.get('jenis_kelamin') == 'PUTRA' %}selected{% endif %}>Putra</option>
+            <option value="PUTRI" {% if request.args.get('jenis_kelamin') == 'PUTRI' %}selected{% endif %}>Putri</option>
+        </select>
+    </div>
                     <div class="col-md-3">
                         <label for="perjalanan" class="form-label">Perjalanan</label>
                         <select name="perjalanan" id="perjalanan" class="form-select">
