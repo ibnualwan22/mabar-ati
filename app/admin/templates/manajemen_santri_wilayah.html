@@ -902,6 +902,19 @@
         text-overflow: ellipsis;
         white-space: nowrap;
     }
+    .student-name {
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    font-size: 0.8rem !important;
+    line-height: 1.2 !important;
+    white-space: normal !important;  /* biar bisa turun ke bawah */
+    word-break: break-word;          /* pecah kata kalau kepanjangan */
+    overflow: visible !important;    /* jangan sembunyikan teks */
+    text-overflow: unset !important; /* hapus titik tiga (...) */
+    display: block;
+    margin: 0;
+}
+
     
     /* Action buttons responsive */
     .action-btn {
@@ -1082,6 +1095,7 @@
 .table-responsive::-webkit-scrollbar-thumb:hover {
     background: var(--primary-dark);
 }
+
 
 
 </style>
@@ -1269,10 +1283,11 @@
                 <thead>
                     <tr>
                         <th style="width: 5%;">No.</th>
-                        <th style="width: 22%;">Data Santri</th>
+                        <th style="width: 15%;">Data Santri</th>
                         <th style="width: 13%;">Alamat & Asrama</th>
                         <th style="width: 13%;">No. Wali</th>
                         <th style="width: 18%;">Status & Pembayaran</th>
+                        <th style="width: 18%;">Titik Turun & Jemput</th>
                         <th style="width: 12%;">Status Santri</th>
                         <th style="width: 18%;">Alokasi Bus</th>
                         <th style="width: 12%;">Aksi</th>
@@ -1310,7 +1325,7 @@
   <div style="font-size: 0.875rem; color: var(--text-secondary);">
     {% if santri.no_hp_wali %}
       <a href="https://wa.me/{{ santri.no_hp_wali }}" target="_blank" style="color: inherit; text-decoration: none;">
-        {{ santri.no_hp_wali[:4] }}-{{ santri.no_hp_wali[4:8] }}-{{ santri.no_hp_wali[8:12] }}
+        {{ santri.no_hp_wali[:5] }}-{{ santri.no_hp_wali[5:9] }}-{{ santri.no_hp_wali[9:15] }}
       </a>
       <br>
       <small>Klik untuk menghubungi Wali Santri via WhatsApp</small>
@@ -1365,6 +1380,18 @@
                                 </span>
                             {% endif %}
                         </td>
+
+                        <td>
+                                <div class="location-info">
+                                    <div>
+                                        <small class="text-muted">Turun:</small><br>
+                                        <div class="location-badge">{{ pendaftaran.titik_turun or '-' }}</div>
+                                    
+                                        <small class="text-muted">Jemput:</small><br>
+                                        <div class="location-badge">{{ pendaftaran.titik_jemput_kembali or pendaftaran.titik_turun or '-' }}</div>
+                                    </div>
+                                </div>
+                            </td>
                         <td>
                             {% if santri.status_santri == 'Aktif' %}
                                 <span class="badge bg-success">Aktif</span>
@@ -1641,25 +1668,58 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    // Auto-reset filters on page load - tambahkan di awal setelah DOMContentLoaded
+function resetFiltersToDefault() {
+    // Reset semua input text
+    const textInputs = document.querySelectorAll('input[type="text"]');
+    textInputs.forEach(input => {
+        input.value = '';
+    });
     
-    // Auto-save filter preferences to localStorage
+    // Reset semua select ke opsi pertama (yang biasanya "-- Semua --")
+    const selectInputs = document.querySelectorAll('select');
+    selectInputs.forEach(select => {
+        select.selectedIndex = 0; // Pilih opsi pertama
+    });
+    
+    // Clear localStorage untuk filter
     const filterInputs = document.querySelectorAll('input[name], select[name]');
     filterInputs.forEach(input => {
-        // Load saved values
-        const savedValue = localStorage.getItem('filter_' + input.name);
-        if (savedValue && !input.value) {
-            input.value = savedValue;
-        }
-        
-        // Save on change
-        input.addEventListener('change', function() {
-            if (this.value) {
-                localStorage.setItem('filter_' + this.name, this.value);
-            } else {
-                localStorage.removeItem('filter_' + this.name);
-            }
-        });
+        localStorage.removeItem('filter_' + input.name);
     });
+    
+    // Reset filter buttons ke "Semua"
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    filterButtons.forEach(btn => {
+        btn.classList.remove('active', 'btn-primary');
+        btn.classList.add('btn-outline-primary');
+    });
+    
+    // Set tombol "Semua" sebagai active
+    const allButton = document.querySelector('.filter-btn[data-filter="all"]');
+    if (allButton) {
+        allButton.classList.add('active', 'btn-primary');
+        allButton.classList.remove('btn-outline-primary');
+    }
+}
+
+// Panggil fungsi reset saat halaman dimuat
+resetFiltersToDefault();
+    // Auto-save filter preferences to localStorage
+    // Save filter preferences tapi jangan auto-load
+const filterInputs = document.querySelectorAll('input[name], select[name]');
+filterInputs.forEach(input => {
+    // HAPUS bagian load saved values
+    
+    // Tetap save saat user mengubah
+    input.addEventListener('change', function() {
+        if (this.value) {
+            localStorage.setItem('filter_' + this.name, this.value);
+        } else {
+            localStorage.removeItem('filter_' + this.name);
+        }
+    });
+});
     
     // Clear saved filters on reset
     const resetBtn = document.querySelector('a[href*="manajemen_santri_wilayah"]:not([href*="?"])');
