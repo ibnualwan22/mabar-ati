@@ -1,7 +1,7 @@
 from . import admin_bp
 from flask import render_template, redirect, url_for, flash, request, jsonify, abort, Response, send_file, current_app
 from app.models import Absen, ActivityLog, Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, Transaksi, User, Edisi, Bus, Role, Wisuda
-from app.admin.forms import ChangePasswordForm, ImportWisudaForm, KonfirmasiSetoranForm, PengeluaranBusForm, PetugasLapanganForm, RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, SantriManualForm, TransaksiForm, UserForm, UserEditForm, EdisiForm, BusForm, WisudaForm
+from app.admin.forms import ChangePasswordForm, ImportPartisipanForm, ImportWisudaForm, KonfirmasiSetoranForm, PengeluaranBusForm, PetugasLapanganForm, RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, SantriManualForm, TransaksiForm, UserForm, UserEditForm, EdisiForm, BusForm, WisudaForm
 from app import db, login_manager
 import json, requests
 from collections import defaultdict
@@ -1668,117 +1668,76 @@ def data_partisipan():
 @login_required
 @role_required('Korpus', 'PJ Acara', 'Sekretaris', 'Korpuspi')
 def tambah_partisipan():
-    form = PartisipanForm()
+    manual_form = PartisipanForm()
+    import_form = ImportPartisipanForm() # <-- Buat instance form impor
     active_edisi = get_active_edisi()
 
-    if request.method == 'POST':
-        # Pastikan ada edisi aktif
-        if not active_edisi:
-            flash("Tidak bisa menambah status partisipan karena tidak ada edisi yang aktif.", "danger")
-            return redirect(url_for('admin.data_partisipan'))
+    if not active_edisi:
+        flash("Tidak bisa menambah status partisipan karena tidak ada edisi yang aktif.", "danger")
+        return redirect(url_for('admin.data_partisipan'))
 
-        # Ambil kategori dari form (WTForms) atau request (jaga-jaga)
-        kategori = getattr(form, 'kategori', None).data if hasattr(form, 'kategori') else request.form.get('kategori')
-
-        # 1) Prefer: multi-select baru -> name="santri_ids"
-        santri_ids_raw = request.form.getlist('santri_ids')
-
-        # 2) Fallback: form lama single -> form.santri
-        if not santri_ids_raw and hasattr(form, 'santri'):
-            # form.validate_on_submit() lama mungkin gagal jika field dihapus dari template.
-            # Kita tetap coba ambil value single jika ada.
-            single_id = getattr(form, 'santri').data
-            if single_id:
-                santri_ids_raw = [str(single_id)]
-
-        # Validasi minimal ada satu
-        if not santri_ids_raw:
-            flash("Pilih minimal satu santri.", "warning")
-            return redirect(request.url)
-
-        # Konversi ke int, pisahkan yang invalid
-        santri_ids = []
-        invalid_ids = []
-        for s in santri_ids_raw:
-            try:
-                santri_ids.append(int(s))
-            except Exception:
-                invalid_ids.append(s)
-
-        # Ambil santri yang ditemukan
-        santri_list = Santri.query.filter(Santri.id.in_(santri_ids)).all()
-        found_by_id = {s.id: s for s in santri_list}
-        not_found_ids = [sid for sid in santri_ids if sid not in found_by_id]
-
-        created_names = []
-        skipped_duplicate = []
-        skipped_inactive = []
-
-        # Proses setiap santri valid
-        for sid, santri in found_by_id.items():
-            if santri.status_santri != 'Aktif':
-                skipped_inactive.append(santri.nama or f'ID {sid}')
-                continue
-
-            # Cek duplikasi pada edisi aktif
-            exists = Partisipan.query.filter_by(santri_id=sid, edisi_id=active_edisi.id).first()
-            if exists:
-                skipped_duplicate.append(santri.nama or f'ID {sid}')
-                continue
-
-            # Buat record baru
-            new_partisipan = Partisipan(
-                edisi=active_edisi,
-                santri=santri,
-                kategori=kategori
-            )
-            # Update status santri
-            santri.status_santri = 'Partisipan'
-
-            db.session.add(new_partisipan)
-            log_activity(
-                'Tambah', 'Partisipan',
-                f"Menetapkan santri '{santri.nama}' sebagai partisipan dengan kategori '{kategori}'"
-            )
-            created_names.append(santri.nama or f'ID {sid}')
+    # --- Logika untuk Impor Massal ---
+    if 'submit_import' in request.form and import_form.validate_on_submit():
+        file = import_form.file.data
+        kategori = import_form.kategori.data
 
         try:
-            db.session.commit()
+            df = pd.read_excel(file)
+            if 'NIS' not in df.columns:
+                flash('File Excel harus memiliki kolom bernama "NIS".', 'danger')
+                return redirect(url_for('admin.tambah_partisipan'))
+
+            all_nis = df['NIS'].dropna().astype(str).tolist()
+            santri_map = {s.nis: s for s in Santri.query.filter(Santri.nis.in_(all_nis)).all()}
+            
+            new_participants = []
+            for nis in all_nis:
+                if nis in santri_map:
+                    santri = santri_map[nis]
+                    # Cek duplikat dan status
+                    is_already_participant = Partisipan.query.filter_by(santri_id=santri.id, edisi_id=active_edisi.id).first()
+                    if santri.status_santri == 'Aktif' and not is_already_participant:
+                        santri.status_santri = 'Partisipan'
+                        new_participants.append(Partisipan(
+                            santri_id=santri.id,
+                            edisi_id=active_edisi.id,
+                            kategori=kategori
+                        ))
+
+            if new_participants:
+                db.session.add_all(new_participants)
+                db.session.commit()
+                flash(f'{len(new_participants)} santri berhasil diimpor sebagai partisipan.', 'success')
+            else:
+                flash('Tidak ada santri baru yang diimpor. Mungkin semua sudah terdata atau tidak aktif.', 'info')
+
         except Exception as e:
-            db.session.rollback()
-            current_app.logger.exception("Gagal commit tambah_partisipan (bulk): %s", e)
-            flash("Terjadi kesalahan saat menyimpan partisipan. Silakan coba lagi.", "danger")
-            return redirect(url_for('admin.data_partisipan'))
-
-        # Susun ringkasan pesan
-        parts = []
-        if created_names:
-            daftar = ', '.join(created_names[:10]) + (' …' if len(created_names) > 10 else '')
-            parts.append(f"Ditambahkan: {len(created_names)} ({daftar})")
-
-        if skipped_duplicate:
-            daftar = ', '.join(skipped_duplicate[:10]) + (' …' if len(skipped_duplicate) > 10 else '')
-            parts.append(f"Sudah terdaftar (dilewati): {len(skipped_duplicate)} ({daftar})")
-
-        if skipped_inactive:
-            daftar = ', '.join(skipped_inactive[:10]) + (' …' if len(skipped_inactive) > 10 else '')
-            parts.append(f"Tidak Aktif (dilewati): {len(skipped_inactive)} ({daftar})")
-
-        if not_found_ids or invalid_ids:
-            # Info teknis singkat
-            nf = (f"tidak ditemukan: {len(not_found_ids)}" if not_found_ids else "")
-            iv = (f"invalid id: {len(invalid_ids)}" if invalid_ids else "")
-            extra = " & ".join([x for x in [nf, iv] if x])
-            if extra:
-                parts.append(extra)
-
-        message = " | ".join(parts) if parts else "Tidak ada perubahan."
-        flash(message, "success" if created_names else "info")
+            flash(f'Terjadi error saat memproses file: {e}', 'danger')
 
         return redirect(url_for('admin.data_partisipan'))
 
-    # GET: render form seperti biasa
-    return render_template('tambah_partisipan.html', form=form)
+    # --- Logika untuk Tambah Manual (sudah ada sebelumnya) ---
+    if 'submit_manual' in request.form and manual_form.validate_on_submit():
+        santri_ids = manual_form.santri_ids.data
+        kategori = manual_form.kategori.data
+        
+        for santri_id in santri_ids:
+            santri = Santri.query.get(santri_id)
+            is_already_participant = Partisipan.query.filter_by(santri_id=santri.id, edisi_id=active_edisi.id).first()
+            if santri and santri.status_santri == 'Aktif' and not is_already_participant:
+                santri.status_santri = 'Partisipan'
+                new_partisipan = Partisipan(
+                    edisi=active_edisi,
+                    santri=santri,
+                    kategori=kategori
+                )
+                db.session.add(new_partisipan)
+        
+        db.session.commit()
+        flash(f"{len(santri_ids)} santri telah ditetapkan sebagai partisipan.", "success")
+        return redirect(url_for('admin.data_partisipan'))
+
+    return render_template('tambah_partisipan.html', manual_form=manual_form, import_form=import_form)
 
 
 # Tambahkan API Helper baru ini

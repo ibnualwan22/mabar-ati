@@ -451,3 +451,15 @@ class BarangForm(FlaskForm):
     ])
     submit = SubmitField('Simpan Data Barang')
 
+class ImportPartisipanForm(FlaskForm):
+    """Form untuk impor data partisipan dari file Excel."""
+    file = FileField('Pilih File Excel (.xlsx)', validators=[
+        FileRequired(),
+        FileAllowed(['xlsx'], 'Hanya file .xlsx yang diizinkan!')
+    ])
+    kategori = StringField('Kategori Partisipan untuk Semua Data', 
+                                  validators=[DataRequired()],
+                                  description="Kategori ini akan diterapkan ke semua santri di dalam file.")
+    submit = SubmitField('Impor Data Partisipan')
+
+

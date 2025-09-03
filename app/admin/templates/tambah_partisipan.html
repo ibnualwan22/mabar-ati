@@ -72,37 +72,58 @@
     {% if current_user.role.name in ['Korpus', 'PJ Acara', 'Sekretaris', 'Korpuspi'] %}
     <div class="form-card">
         <div class="form-card-header">
-            <h5>Formulir Penambahan Partisipan</h5>
+            <h5><i class="fas fa-user-plus me-2"></i>Tambah Manual (Satu per Satu)</h5>
         </div>
         <div class="form-card-body">
             <form method="POST">
-                {{ form.hidden_tag() }}
+                {{ manual_form.hidden_tag() }}
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">
-  <label for="select-santri-partisipan">Pilih Santri (Bisa Lebih Dari 1)</label>
-  <select id="select-santri-partisipan" name="santri_ids" multiple placeholder="-- Cari Santri Aktif --"></select>
-</div>
-
+                            <label for="select-santri-partisipan">Pilih Santri (Bisa Lebih Dari 1)</label>
+                            {{ manual_form.santri_ids(id="select-santri-partisipan", multiple=True, placeholder="-- Cari Santri Aktif --") }}
+                        </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
-                            {{ form.kategori.label(class="form-label") }}
-                            {{ form.kategori(class="form-control", placeholder=form.kategori.description) }}
+                            {{ manual_form.kategori.label(class="form-label") }}
+                            {{ manual_form.kategori(class="form-control", placeholder=manual_form.kategori.description) }}
                         </div>
                     </div>
                 </div>
-
                 <div id="info-santri" class="info-box" style="display: none;"></div>
-
                 <div class="text-end mt-4">
-                    {{ form.submit(class="btn btn-primary") }}
+                    <button type="submit" name="submit_manual" class="btn btn-primary">
+                        {{ manual_form.submit.label.text }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="form-card">
+        <div class="form-card-header">
+            <h5><i class="fas fa-file-excel me-2"></i>Impor Massal dari Excel</h5>
+        </div>
+        <div class="form-card-body">
+            <form method="POST" enctype="multipart/form-data">
+                {{ import_form.hidden_tag() }}
+                <p class="text-muted">Unggah file Excel (.xlsx) dengan satu kolom bernama <strong>NIS</strong>.</p>
+                <div class="row g-3">
+                    <div class="col-md-6">{{ import_form.file(class="form-control") }}</div>
+                    <div class="col-md-4">{{ import_form.kategori(class="form-control", placeholder=import_form.kategori.description) }}</div>
+                    <div class="col-md-2">
+                        <button type="submit" name="submit_import" class="btn btn-success w-100">
+                            {{ import_form.submit.label.text }}
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
     {% endif %}
 </div>
+
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
