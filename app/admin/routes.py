@@ -1103,11 +1103,15 @@ def api_search_santri():
         })
     
     return jsonify({'results': results})
+# Di dalam app/admin/routes.py
+
 @admin_bp.route('/rombongan/<int:rombongan_id>/peserta')
 @login_required
 @role_required('Korpus', 'Korda', 'Korwil', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
 def daftar_peserta(rombongan_id):
     rombongan = Rombongan.query.get_or_404(rombongan_id)
+    
+    # Ambil semua pendaftar yang terkait dengan rombongan ini (baik pulang maupun kembali)
     pendaftar = Pendaftaran.query.filter(
         or_(
             Pendaftaran.rombongan_pulang_id == rombongan_id,
@@ -1117,51 +1121,46 @@ def daftar_peserta(rombongan_id):
         joinedload(Pendaftaran.santri),
         joinedload(Pendaftaran.bus_pulang),
         joinedload(Pendaftaran.bus_kembali),
+        joinedload(Pendaftaran.rombongan_pulang), # Pastikan rombongan pulang di-load
         joinedload(Pendaftaran.rombongan_kembali)
     ).all()
 
-    # --- BLOK PERHITUNGAN STATISTIK BARU ---
-    stats = {
-        'total_peserta': 0,
-        'sudah_bus_pulang': 0,
-        'sudah_bus_kembali': 0,
-        'lunas_pulang': 0,
-        'lunas_kembali': 0, # Statistik baru untuk lunas kembali
-    }
+    # --- AWAL BLOK PERBAIKAN LOGIKA STATISTIK ---
     
-    managed_rombongan_ids = []
-    is_manager = False
-    if current_user.role.name in ['Korwil', 'Korda']:
-        managed_rombongan_ids = [r.id for r in current_user.active_managed_rombongan]
-        is_manager = True
+    # Gunakan nama variabel yang lebih jelas
+    stats = {
+        'total_peserta': len(set(p.santri_id for p in pendaftar)), # Hitung santri unik
+        'peserta_pulang': 0,    # Ganti dari 'sudah_bus_pulang'
+        'peserta_kembali': 0,   # Ganti dari 'sudah_bus_kembali'
+        'lunas_pulang': 0,
+        'lunas_kembali': 0,
+    }
 
     for p in pendaftar:
-        # Hanya hitung peserta yang benar-benar ikut rombongan ini
-        is_pulang_in_this_rombongan = p.rombongan_pulang_id == rombongan_id
-        is_kembali_in_this_rombongan = (p.rombongan_kembali_id == rombongan_id) or \
-                                       (p.rombongan_kembali_id is None and p.rombongan_pulang_id == rombongan_id)
+        # Cek partisipasi pulang (hanya jika rombongan pulangnya adalah rombongan ini)
+        if p.rombongan_pulang_id == rombongan_id and p.status_pulang != 'Tidak Ikut':
+            stats['peserta_pulang'] += 1
+            if p.status_pulang == 'Lunas':
+                stats['lunas_pulang'] += 1
 
-        # Jika user adalah Korda/Korwil, pastikan rombongan ini milik mereka
-        is_managed = not is_manager or rombongan_id in managed_rombongan_ids
+        # Cek partisipasi kembali
+        # Santri dihitung ikut kembali dengan rombongan ini JIKA:
+        # 1. rombongan_kembali_id mereka adalah rombongan ini, ATAU
+        # 2. rombongan_kembali_id mereka KOSONG, TAPI rombongan_pulang_id mereka adalah rombongan ini
+        is_kembali_with_this_rombongan = (p.rombongan_kembali_id == rombongan_id) or \
+                                         (p.rombongan_kembali_id is None and p.rombongan_pulang_id == rombongan_id)
 
-        if is_managed and (is_pulang_in_this_rombongan or is_kembali_in_this_rombongan):
-            stats['total_peserta'] += 1
-            if is_pulang_in_this_rombongan:
-                if p.bus_pulang:
-                    stats['sudah_bus_pulang'] += 1
-                if p.status_pulang == 'Lunas':
-                    stats['lunas_pulang'] += 1
-            
-            if is_kembali_in_this_rombongan:
-                if p.bus_kembali:
-                    stats['sudah_bus_kembali'] += 1
-                if p.status_kembali == 'Lunas':
-                    stats['lunas_kembali'] += 1
+        if is_kembali_with_this_rombongan and p.status_kembali != 'Tidak Ikut':
+            stats['peserta_kembali'] += 1
+            if p.status_kembali == 'Lunas':
+                stats['lunas_kembali'] += 1
+
+    # --- AKHIR BLOK PERBAIKAN ---
 
     return render_template('daftar_peserta.html', 
                            rombongan=rombongan, 
                            pendaftar=pendaftar,
-                           stats=stats) # Kirim statistik ke template
+                           stats=stats) # Kirim statistik yang sudah benar ke template
 
 @admin_bp.route('/peserta-global')
 @login_required
