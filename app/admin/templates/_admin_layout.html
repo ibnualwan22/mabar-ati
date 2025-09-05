@@ -1369,7 +1369,7 @@ function confirmDelete(form, text) {
               const title = category.charAt(0).toUpperCase() + category.slice(1);
               await Swal.fire({
                 icon,
-                title,
+                title: 'Yeay Berhasil!',
                 text,
                 showConfirmButton: true,
                 timer: category === 'success' ? 10000 : undefined,
