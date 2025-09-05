@@ -48,7 +48,7 @@
         <i class="fas fa-info-circle me-2"></i>
         <span>Edisi ini belum memiliki rombongan. Anda bisa menyalin data dari edisi sebelumnya.</span>
     </div>
-    <form method="POST" action="{{ url_for('admin.salin_rombongan') }}" onsubmit="return confirm('Anda yakin ingin menyalin semua rombongan dari edisi sebelumnya?');">
+    <form method="POST" action="{{ url_for('admin.salin_rombongan') }}" onsubmit="return confirmDelete(this,'Anda yakin ingin menyalin semua rombongan dari edisi sebelumnya?');">
         <button type="submit" class="btn btn-success shadow-sm">
             <i class="fas fa-copy me-2"></i>Salin Rombongan
         </button>
@@ -219,7 +219,7 @@
                         {% endif %}
                         
         {% if current_user.role.name in ['Korpus', 'Korpuspi', 'Sekretaris'] %}
-                            <form method="POST" action="{{ url_for('admin.hapus_rombongan', id=rombongan.id) }}" style="display:inline;" onsubmit="return confirm('Anda yakin?');">
+                            <form method="POST" action="{{ url_for('admin.hapus_rombongan', id=rombongan.id) }}" style="display:inline;" onsubmit="return confirmDelete(this,'Anda yakin?');">
                                 <button type="submit" class="btn btn-outline-danger btn-sm shadow-sm">
                                     <i class="fas fa-trash me-1"></i>Hapus
                                 </button>

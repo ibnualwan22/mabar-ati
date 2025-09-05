@@ -1121,7 +1121,7 @@
     {% endif %}
     
     <main class="content-wrapper">
-        {% with messages = get_flashed_messages(with_categories=true) %}
+        <!-- {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
                     <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
@@ -1131,7 +1131,8 @@
                     </div>
                 {% endfor %}
             {% endif %}
-        {% endwith %}
+        {% endwith %} -->
+        
 
         {% block content %}
         <div class="row">
@@ -1177,6 +1178,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -1312,7 +1315,71 @@ document.addEventListener('DOMContentLoaded', function() {
         contentWrapper.classList.remove('expanded');
     }
 });
-</script>
+function confirmDelete(form, text) {
+  event.preventDefault(); // stop submit langsung
 
+  Swal.fire({
+    title: 'Anda yakin?',
+    text: text,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Ya, hapus!',
+    cancelButtonText: 'Batal'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      form.submit(); // submit manual kalau user setuju
+    }
+  });
+
+  return false; // supaya form tidak langsung submit
+}
+</script>
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <script type="text/javascript">
+      // Serialisasi aman → tidak pecah oleh kutip tunggal/ganda
+      window.__flashes = {{ messages|tojson }};
+
+      document.addEventListener('DOMContentLoaded', function () {
+        const iconMap = { success: 'success', error: 'error', warning: 'warning', info: 'info', message: 'info' };
+
+        // PILIH SATU: modal biasa (stack satu per satu) ATAU toast
+        const useToast = false; // ganti true jika ingin toast
+
+        if (useToast) {
+          const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+          });
+
+          (window.__flashes || []).forEach(([category, text]) => {
+            const icon = iconMap[category] || 'info';
+            Toast.fire({ icon, title: text });
+          });
+        } else {
+          // Modal biasa: tampilkan berurutan
+          (async () => {
+            for (const [category, text] of (window.__flashes || [])) {
+              const icon = iconMap[category] || 'info';
+              const title = category.charAt(0).toUpperCase() + category.slice(1);
+              await Swal.fire({
+                icon,
+                title,
+                text,
+                showConfirmButton: true,
+                timer: category === 'success' ? 1800 : undefined,
+              });
+            }
+          })();
+        }
+      });
+    </script>
+  {% endif %}
+{% endwith %}
 </body>
 </html>

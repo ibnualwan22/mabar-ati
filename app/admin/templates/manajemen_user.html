@@ -100,7 +100,7 @@
                                 <form method="POST" 
                                       action="{{ url_for('admin.hapus_user', user_id=user.id) }}" 
                                       style="display:inline;" 
-                                      onsubmit="return confirm('Anda yakin ingin menghapus user {{ user.username }}?');">
+                                      onsubmit="return confirmDelete(this,'Anda yakin ingin menghapus user {{ user.username }}?');">
                                     <button type="submit" 
                                             class="btn btn-delete" 
                                             title="Hapus User">

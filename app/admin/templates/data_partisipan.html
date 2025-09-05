@@ -131,7 +131,7 @@
                                 <td>
                                     <div class="d-flex gap-2">
                                         <a href="{{ url_for('admin.edit_partisipan', partisipan_id=partisipan.id) }}" class="btn btn-action btn-edit">Edit</a>
-                                        <form method="POST" action="{{ url_for('admin.hapus_partisipan', partisipan_id=partisipan.id) }}" style="display:inline;" onsubmit="return confirm('Anda yakin ingin menghapus status partisipan untuk \'{{ partisipan.santri.nama }}\'?');">
+                                        <form method="POST" action="{{ url_for('admin.hapus_partisipan', partisipan_id=partisipan.id) }}" style="display:inline;" onsubmit="return confirmDelete(this,'Anda yakin ingin menghapus status partisipan untuk \'{{ partisipan.santri.nama }}\'?');">
                                             <button type="submit" class="btn btn-action btn-danger">Hapus</button>
                                         </form>
                                     </div>

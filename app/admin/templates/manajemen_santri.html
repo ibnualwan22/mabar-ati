@@ -119,7 +119,7 @@
     <i class="fas fa-user-plus me-2"></i>Impor Santri Individual
 </button>
 
-<form method="POST" action="{{ url_for('admin.impor_semua_santri') }}" style="display: inline-block;" onsubmit="return confirm('Proses ini akan memakan waktu. Lanjutkan?');">
+<form method="POST" action="{{ url_for('admin.impor_semua_santri') }}" style="display: inline-block;" onsubmit="return confirmDelete(this,'Proses ini akan memakan waktu. Lanjutkan?');">
     <button type="submit" class="btn btn-info">
         <i class="fas fa-sync-alt me-2"></i>Impor & Sinkronkan Semua
     </button>
@@ -227,7 +227,7 @@
         {% endif %}
 
                             {% if current_user.role.name == 'Korpus' %}
-                            <form method="POST" action="{{ url_for('admin.hapus_santri', id=santri.id) }}" class="mt-1" onsubmit="return confirm('Anda yakin ingin menghapus \'{{ santri.nama }}\' dari sistem lokal?');">
+                            <form method="POST" action="{{ url_for('admin.hapus_santri', id=santri.id) }}" class="mt-1" onsubmit="return confirmDelete(this,'Anda yakin ingin menghapus \'{{ santri.nama }}\' dari sistem lokal?');">
                                 <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
                             </form>
                             {% endif %}

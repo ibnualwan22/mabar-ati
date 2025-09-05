@@ -417,7 +417,7 @@
                             <td>
                                 <div class="action-buttons">
                                     <a href="{{ url_for('admin.edit_pendaftaran', pendaftaran_id=pendaftaran.id) }}" class="btn btn-edit"><i class="fas fa-edit"></i> Edit</a>
-                                    <form method="POST" action="{{ url_for('admin.hapus_pendaftaran', pendaftaran_id=pendaftaran.id) }}" onsubmit="return confirm('Anda yakin?');">
+                                    <form method="POST" action="{{ url_for('admin.hapus_pendaftaran', pendaftaran_id=pendaftaran.id) }}" onsubmit="return confirmDelete(this,'Anda yakin?');">
                                         <button type="submit" class="btn btn-delete"><i class="fas fa-trash"></i> Hapus</button>
                                     </form>
                                 </div>

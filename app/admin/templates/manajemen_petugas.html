@@ -24,7 +24,7 @@
                             {% else %} - {% endif %}
                         </td>
                         <td>
-                            <form method="POST" action="{{ url_for('admin.hapus_petugas', user_id=user.id) }}" onsubmit="return confirm('Anda yakin?');">
+                            <form method="POST" action="{{ url_for('admin.hapus_petugas', user_id=user.id) }}" onsubmit="return confirmDelete(this,'Anda yakin?');">
                                 <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
                             </form>
                         </td>

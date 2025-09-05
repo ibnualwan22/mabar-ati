@@ -60,7 +60,7 @@
                         <td>{{ w.santri.kabupaten if w.santri else 'N/A' }}</td>
                                 {% if current_user.role.name in ['Korpus','Pj Acara'] %}
                         <td>
-                            <form method="POST" action="{{ url_for('admin.hapus_wisuda', wisuda_id=w.id) }}" onsubmit="return confirm('Yakin ingin menghapus status wisuda untuk {{ w.santri.nama if w.santri else '' }}?');">
+                            <form method="POST" action="{{ url_for('admin.hapus_wisuda', wisuda_id=w.id) }}" onsubmit="return confirmDelete(this,'Yakin ingin menghapus status wisuda untuk {{ w.santri.nama if w.santri else '' }}?');">
                                 <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
                             </form>
                         </td>
