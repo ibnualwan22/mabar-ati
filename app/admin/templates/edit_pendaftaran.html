@@ -16,7 +16,7 @@
                 <strong class="text-dark">{{ pendaftaran.santri.nama }}</strong>
             </div>
         </div>
-        <a href="{{ url_for('admin.daftar_peserta', rombongan_id=pendaftaran.rombongan_pulang_id) }}" 
+        <a href="{{ url_for('admin.daftar_peserta_global', rombongan_id=pendaftaran.rombongan_pulang_id) }}" 
            class="btn btn-outline-primary btn-sm d-flex align-items-center">
             <i class="fas fa-arrow-left me-2"></i>
             Kembali ke Daftar Peserta
@@ -142,7 +142,7 @@
             <div class="col-12">
                 <div class="d-flex flex-column flex-md-row gap-3 justify-content-center justify-content-md-start">
                     {{ form.submit(class="btn btn-primary btn-lg px-5 d-flex align-items-center justify-content-center") }}
-                    <a href="{{ url_for('admin.daftar_peserta', rombongan_id=pendaftaran.rombongan_pulang_id) }}" 
+                    <a href="{{ url_for('admin.daftar_peserta_global', rombongan_id=pendaftaran.rombongan_pulang_id) }}" 
                        class="btn btn-outline-secondary btn-lg px-5 d-flex align-items-center justify-content-center">
                         <i class="fas fa-times me-2"></i>
                         Batal

@@ -1,7 +1,8 @@
+import io
 from . import admin_bp
 from flask import render_template, redirect, url_for, flash, request, jsonify, abort, Response, send_file, current_app
 from app.models import Absen, ActivityLog, Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, Transaksi, User, Edisi, Bus, Role, Wisuda
-from app.admin.forms import ChangePasswordForm, ImportPartisipanForm, ImportWisudaForm, KonfirmasiSetoranForm, PengeluaranBusForm, PetugasLapanganForm, RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, SantriManualForm, TransaksiForm, UserForm, UserEditForm, EdisiForm, BusForm, WisudaForm
+from app.admin.forms import ChangePasswordForm, EditIzinForm, ImportPartisipanForm, ImportWisudaForm, KonfirmasiSetoranForm, PengeluaranBusForm, PetugasLapanganForm, RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, SantriManualForm, TransaksiForm, UserForm, UserEditForm, EdisiForm, BusForm, WisudaForm
 from app import db, login_manager
 import json, requests
 from collections import defaultdict
@@ -966,7 +967,7 @@ def edit_pendaftaran(pendaftaran_id):
         db.session.commit()
         
         flash(f"Data pendaftaran untuk {pendaftaran.santri.nama} berhasil diperbarui.", "success")
-        return redirect(url_for('admin.daftar_peserta', rombongan_id=pendaftaran.rombongan_pulang_id))
+        return redirect(url_for('admin.daftar_peserta_global', rombongan_id=pendaftaran.rombongan_pulang_id))
     
     # Isi data form awal untuk ditampilkan saat request GET
     if request.method == 'GET':
@@ -1005,7 +1006,7 @@ def hapus_pendaftaran(pendaftaran_id):
     db.session.commit()
     
     flash(f"Pendaftaran untuk '{nama_santri}' telah berhasil dihapus.", "info")
-    return redirect(url_for('admin.daftar_peserta', rombongan_id=rombongan_id))
+    return redirect(url_for('admin.daftar_peserta_global', rombongan_id=rombongan_id))
 
 # Route API helper BARU untuk mengambil detail rombongan
 @admin_bp.route('/api/rombongan-detail/<int:id>')
@@ -1162,90 +1163,652 @@ def daftar_peserta(rombongan_id):
                            pendaftar=pendaftar,
                            stats=stats) # Kirim statistik yang sudah benar ke template
 
+# Di dalam file app/admin/routes.py
+
+# Di dalam app/admin/routes.py
+
 @admin_bp.route('/peserta-global')
 @login_required
-@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'Sekretaris', 'Korpuspi')
+@role_required('Korpus', 'Korwil', 'Korda', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
 def daftar_peserta_global():
     active_edisi = get_active_edisi()
     if not active_edisi:
-        return render_template('daftar_peserta_global.html', pagination=None, all_rombongan=[], stats={})
+        flash("Tidak ada edisi aktif.", "warning")
+        return render_template('daftar_peserta_global.html', pagination=None, stats={}, all_rombongan=[])
 
-    # Siapkan filter dasar dan daftar rombongan untuk dropdown filter
-    base_query = Pendaftaran.query.filter(Pendaftaran.edisi_id == active_edisi.id)
-    all_rombongan_for_filter = Rombongan.query.filter_by(edisi_id=active_edisi.id).order_by(Rombongan.nama_rombongan).all()
-    
-    managed_rombongan_ids = []
-    stats = {}
+    page = request.args.get('page', 1, type=int)
+    per_page = 100
+    nama_filter = request.args.get('nama', '')
+    rombongan_id_filter = request.args.get('rombongan_id', type=int)
+    status_bayar_filter = request.args.get('status_bayar', '')
+    jenis_kelamin_filter = request.args.get('jenis_kelamin', '')
+    perjalanan_filter = request.args.get('perjalanan', '')
 
-    # --- BAGIAN LOGIKA STATISTIK & FILTER BARU ---
-    # Tentukan filter berdasarkan peran (role)
-    if current_user.role.name in ['Korwil', 'Korda']:
+    query = Pendaftaran.query.filter(Pendaftaran.edisi_id == active_edisi.id)
+
+    if current_user.role.name in ['Korda', 'Korwil']:
         managed_rombongan_ids = [r.id for r in current_user.active_managed_rombongan]
-        
-        if not managed_rombongan_ids:
-            base_query = base_query.filter(db.false())
-            stats = {'total_peserta': 0, 'sudah_bus_pulang': 0, 'sudah_bus_kembali': 0, 'lunas_pulang': 0, 'lunas_kembali': 0}
+        if managed_rombongan_ids:
+            query = query.filter(or_(Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids), Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids)))
         else:
-            # Filter query utama untuk tabel
-            base_query = base_query.filter(
-                or_(
-                    Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids),
-                    Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids)
-                )
-            )
-            all_rombongan_for_filter = [r for r in all_rombongan_for_filter if r.id in managed_rombongan_ids]
+            query = query.filter(db.false())
+    
+    # Get all pendaftaran for stats calculation
+    all_pendaftar_query = query
+    pendaftar_for_stats = all_pendaftar_query.all()
 
-            # Hitung statistik secara presisi untuk Korda/Korwil
-            stats['total_peserta'] = base_query.count()
-            stats['sudah_bus_pulang'] = Pendaftaran.query.filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.bus_pulang_id != None, Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids)).count()
-            stats['lunas_pulang'] = Pendaftaran.query.filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.status_pulang == 'Lunas', Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids)).count()
-            
-            # Untuk kembali, perhitungkan kasus lintas rombongan
-            kembali_filter = or_(
-                Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids),
-                and_(Pendaftaran.rombongan_kembali_id == None, Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids))
-            )
-            stats['sudah_bus_kembali'] = Pendaftaran.query.filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.bus_kembali_id != None, kembali_filter).count()
-            stats['lunas_kembali'] = Pendaftaran.query.filter(Pendaftaran.edisi_id == active_edisi.id, Pendaftaran.status_kembali == 'Lunas', kembali_filter).count()
+    # ADDED: Create tarif map for biaya calculation
+    tarif_map = {}
+    for p in pendaftar_for_stats:
+        # Tarif for pulang
+        if p.rombongan_pulang_id and p.titik_turun:
+            tarif_key = f"{p.rombongan_pulang_id}_{p.titik_turun}"
+            if tarif_key not in tarif_map:
+                tarif = Tarif.query.filter_by(
+                    rombongan_id=p.rombongan_pulang_id, 
+                    titik_turun=p.titik_turun
+                ).first()
+                if tarif:
+                    tarif_map[tarif_key] = tarif
+        
+        # Tarif for kembali
+        rombongan_kembali_id = p.rombongan_kembali_id or p.rombongan_pulang_id
+        titik_jemput_kembali = p.titik_jemput_kembali or p.titik_turun
+        if rombongan_kembali_id and titik_jemput_kembali:
+            tarif_key = f"{rombongan_kembali_id}_{titik_jemput_kembali}"
+            if tarif_key not in tarif_map:
+                tarif = Tarif.query.filter_by(
+                    rombongan_id=rombongan_kembali_id, 
+                    titik_turun=titik_jemput_kembali
+                ).first()
+                if tarif:
+                    tarif_map[tarif_key] = tarif
 
-    else: # Logika untuk Korpus (melihat semua)
-        stats['total_peserta'] = base_query.count()
-        stats['sudah_bus_pulang'] = base_query.filter(Pendaftaran.bus_pulang_id != None).count()
-        stats['sudah_bus_kembali'] = base_query.filter(Pendaftaran.bus_kembali_id != None).count()
-        stats['lunas_pulang'] = base_query.filter(Pendaftaran.status_pulang == 'Lunas').count()
-        stats['lunas_kembali'] = base_query.filter(Pendaftaran.status_kembali == 'Lunas').count()
+    # ADDED: Calculate biaya for each pendaftar and update stats
+    total_biaya_lunas = 0
+    total_biaya_belum_lunas = 0
+    total_biaya_cash = 0
+    total_biaya_transfer = 0
+    count_cash = 0
+    count_transfer = 0
 
-    # Terapkan filter dari form ke query utama
-    # (Logika filter ini tetap sama seperti sebelumnya)
-    nama = request.args.get('nama')
-    rombongan_id = request.args.get('rombongan_id', type=int)
-    status_bayar = request.args.get('status_bayar')
+    for p in pendaftar_for_stats:
+        # Calculate biaya pulang
+        biaya_pulang = 0
+        if p.status_pulang and p.status_pulang != 'Tidak Ikut':
+            if p.rombongan_pulang_id and p.titik_turun:
+                tarif_key = f"{p.rombongan_pulang_id}_{p.titik_turun}"
+                tarif = tarif_map.get(tarif_key)
+                if tarif:
+                    biaya_pulang = tarif.harga_bus + tarif.fee_korda + 10000
+        
+        # Calculate biaya kembali
+        biaya_kembali = 0
+        if p.status_kembali and p.status_kembali != 'Tidak Ikut':
+            rombongan_kembali_id = p.rombongan_kembali_id or p.rombongan_pulang_id
+            titik_jemput_kembali = p.titik_jemput_kembali or p.titik_turun
+            if rombongan_kembali_id and titik_jemput_kembali:
+                tarif_key = f"{rombongan_kembali_id}_{titik_jemput_kembali}"
+                tarif = tarif_map.get(tarif_key)
+                if tarif:
+                    biaya_kembali = tarif.harga_bus + tarif.fee_korda + 10000
+        
+        # Set calculated biaya to the object for template use
+        p.biaya_pulang_calculated = biaya_pulang
+        p.biaya_kembali_calculated = biaya_kembali
+        p.total_biaya_calculated = biaya_pulang + biaya_kembali
+        
+        # Update stats with calculated biaya
+        if p.status_pulang == 'Lunas' and p.status_kembali == 'Lunas':
+            total_biaya_lunas += p.total_biaya_calculated
+        else:
+            total_biaya_belum_lunas += p.total_biaya_calculated
+        
+        # Calculate payment method totals
+        if ('Cash' in (str(p.metode_pembayaran_pulang or '') + str(p.metode_pembayaran_kembali or ''))):
+            total_biaya_cash += p.total_biaya_calculated
+            count_cash += 1
+        if ('Transfer' in (str(p.metode_pembayaran_pulang or '') + str(p.metode_pembayaran_kembali or ''))):
+            total_biaya_transfer += p.total_biaya_calculated
+            count_transfer += 1
 
-    query = base_query.join(Pendaftaran.santri).options(
-        joinedload(Pendaftaran.rombongan_pulang),
-        joinedload(Pendaftaran.rombongan_kembali),
-        joinedload(Pendaftaran.bus_pulang),
-        joinedload(Pendaftaran.bus_kembali)
-    )
+    # MODIFIED: Enhanced stats with biaya information
+    stats = {
+        'total_peserta': len(pendaftar_for_stats),
+        'peserta_pulang': sum(1 for p in pendaftar_for_stats if p.status_pulang != 'Tidak Ikut'),
+        'peserta_kembali': sum(1 for p in pendaftar_for_stats if p.status_kembali != 'Tidak Ikut'),
+        'lunas_pulang': sum(1 for p in pendaftar_for_stats if p.status_pulang == 'Lunas'),
+        'lunas_kembali': sum(1 for p in pendaftar_for_stats if p.status_kembali == 'Lunas'),
+        'total_biaya_lunas': total_biaya_lunas,
+        'total_biaya_belum_lunas': total_biaya_belum_lunas,
+        'total_biaya_cash': total_biaya_cash,
+        'total_biaya_transfer': total_biaya_transfer,
+        'count_cash': count_cash,
+        'count_transfer': count_transfer
+    }
 
-    if nama:
-        query = query.filter(Santri.nama.ilike(f'%{nama}%'))
-    if rombongan_id:
-        query = query.filter(or_(Pendaftaran.rombongan_pulang_id == rombongan_id, Pendaftaran.rombongan_kembali_id == rombongan_id))
-    if status_bayar:
-        if status_bayar == 'Lunas':
-            query = query.filter(or_(Pendaftaran.status_pulang == 'Lunas', Pendaftaran.status_kembali == 'Lunas'))
-        elif status_bayar == 'Belum Lunas':
+    # Apply filters after stats calculation
+    query = query.join(Santri)
+
+    if nama_filter:
+        query = query.filter(Santri.nama.ilike(f'%{nama_filter}%'))
+    if rombongan_id_filter:
+        query = query.filter(or_(Pendaftaran.rombongan_pulang_id == rombongan_id_filter, Pendaftaran.rombongan_kembali_id == rombongan_id_filter))
+    
+    if jenis_kelamin_filter:
+        query = query.filter(Santri.jenis_kelamin == jenis_kelamin_filter)
+        
+    if perjalanan_filter == 'ikut_pulang':
+        query = query.filter(Pendaftaran.status_pulang != 'Tidak Ikut')
+    elif perjalanan_filter == 'tidak_ikut_pulang':
+        query = query.filter(Pendaftaran.status_pulang == 'Tidak Ikut')
+    elif perjalanan_filter == 'ikut_kembali':
+        query = query.filter(Pendaftaran.status_kembali != 'Tidak Ikut')
+    elif perjalanan_filter == 'tidak_ikut_kembali':
+        query = query.filter(Pendaftaran.status_kembali == 'Tidak Ikut')
+
+    if status_bayar_filter:
+        if status_bayar_filter == 'Lunas':
+            query = query.filter(and_(Pendaftaran.status_pulang == 'Lunas', Pendaftaran.status_kembali == 'Lunas'))
+        else:
             query = query.filter(or_(Pendaftaran.status_pulang == 'Belum Bayar', Pendaftaran.status_kembali == 'Belum Bayar'))
 
-    # Lakukan paginasi
-    page = request.args.get('page', 1, type=int)
-    pagination = query.order_by(Santri.nama).paginate(page=page, per_page=20, error_out=False)
+    # Get paginated results
+    pagination = query.order_by(Santri.nama).paginate(page=page, per_page=per_page, error_out=False)
+    
+    # ADDED: Calculate biaya for paginated results (for display in table)
+    for pendaftar in pagination.items:
+        # Calculate biaya pulang
+        biaya_pulang = 0
+        if pendaftar.status_pulang and pendaftar.status_pulang != 'Tidak Ikut':
+            if pendaftar.rombongan_pulang_id and pendaftar.titik_turun:
+                tarif_key = f"{pendaftar.rombongan_pulang_id}_{pendaftar.titik_turun}"
+                tarif = tarif_map.get(tarif_key)
+                if tarif:
+                    biaya_pulang = tarif.harga_bus + tarif.fee_korda + 10000
+        
+        # Calculate biaya kembali
+        biaya_kembali = 0
+        if pendaftar.status_kembali and pendaftar.status_kembali != 'Tidak Ikut':
+            rombongan_kembali_id = pendaftar.rombongan_kembali_id or pendaftar.rombongan_pulang_id
+            titik_jemput_kembali = pendaftar.titik_jemput_kembali or pendaftar.titik_turun
+            if rombongan_kembali_id and titik_jemput_kembali:
+                tarif_key = f"{rombongan_kembali_id}_{titik_jemput_kembali}"
+                tarif = tarif_map.get(tarif_key)
+                if tarif:
+                    biaya_kembali = tarif.harga_bus + tarif.fee_korda + 10000
+        
+        # Set calculated biaya to the object for template display
+        pendaftar.biaya_pulang_calculated = biaya_pulang
+        pendaftar.biaya_kembali_calculated = biaya_kembali
+        pendaftar.total_biaya_calculated = biaya_pulang + biaya_kembali
+
+    all_rombongan = Rombongan.query.filter_by(edisi=active_edisi).order_by(Rombongan.nama_rombongan).all()
 
     return render_template('daftar_peserta_global.html',
                            pagination=pagination,
-                           all_rombongan=all_rombongan_for_filter,
-                           stats=stats)
+                           stats=stats,
+                           all_rombongan=all_rombongan)
+
+# Di dalam app/admin/routes.py
+
+# Di dalam app/admin/routes.py
+
+# Export untuk Data Global (Pulang + Kembali)
+@admin_bp.route('/export-peserta-global')
+@login_required
+@role_required('Korpus', 'Korwil', 'Korda', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
+def export_peserta_global():
+    active_edisi = get_active_edisi()
+    query = Pendaftaran.query.filter(Pendaftaran.edisi_id == active_edisi.id)
+
+    if current_user.role.name in ['Korda', 'Korwil']:
+        managed_rombongan_ids = [r.id for r in current_user.active_managed_rombongan]
+        if managed_rombongan_ids:
+            query = query.filter(or_(Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids), Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids)))
+        else:
+            query = query.filter(db.false())
+
+    # Apply filters
+    query = apply_filters(query)
+    semua_pendaftar = query.order_by(Santri.nama).all()
+
+    # ADDED: Create tarif map for calculation
+    tarif_map = {}
+    for p in semua_pendaftar:
+        # Tarif for pulang
+        if p.rombongan_pulang_id and p.titik_turun:
+            tarif_key = f"{p.rombongan_pulang_id}_{p.titik_turun}"
+            if tarif_key not in tarif_map:
+                tarif = Tarif.query.filter_by(
+                    rombongan_id=p.rombongan_pulang_id, 
+                    titik_turun=p.titik_turun
+                ).first()
+                if tarif:
+                    tarif_map[tarif_key] = tarif
+        
+        # Tarif for kembali
+        rombongan_kembali_id = p.rombongan_kembali_id or p.rombongan_pulang_id
+        titik_jemput_kembali = p.titik_jemput_kembali or p.titik_turun
+        if rombongan_kembali_id and titik_jemput_kembali:
+            tarif_key = f"{rombongan_kembali_id}_{titik_jemput_kembali}"
+            if tarif_key not in tarif_map:
+                tarif = Tarif.query.filter_by(
+                    rombongan_id=rombongan_kembali_id, 
+                    titik_turun=titik_jemput_kembali
+                ).first()
+                if tarif:
+                    tarif_map[tarif_key] = tarif
+
+    # MODIFIED: Calculate biaya using tarif data
+    total_lunas = 0
+    total_belum_lunas = 0
+    cash_data = []
+    transfer_data = []
+
+    for p in semua_pendaftar:
+        # Calculate biaya pulang
+        biaya_pulang = 0
+        if p.status_pulang and p.status_pulang != 'Tidak Ikut':
+            if p.rombongan_pulang_id and p.titik_turun:
+                tarif_key = f"{p.rombongan_pulang_id}_{p.titik_turun}"
+                tarif = tarif_map.get(tarif_key)
+                if tarif:
+                    biaya_pulang = tarif.harga_bus + tarif.fee_korda + 10000
+        
+        # Calculate biaya kembali
+        biaya_kembali = 0
+        if p.status_kembali and p.status_kembali != 'Tidak Ikut':
+            rombongan_kembali_id = p.rombongan_kembali_id or p.rombongan_pulang_id
+            titik_jemput_kembali = p.titik_jemput_kembali or p.titik_turun
+            if rombongan_kembali_id and titik_jemput_kembali:
+                tarif_key = f"{rombongan_kembali_id}_{titik_jemput_kembali}"
+                tarif = tarif_map.get(tarif_key)
+                if tarif:
+                    biaya_kembali = tarif.harga_bus + tarif.fee_korda + 10000
+        
+        # Set calculated biaya to the object for later use
+        p.biaya_pulang_calculated = biaya_pulang
+        p.biaya_kembali_calculated = biaya_kembali
+        p.total_biaya_calculated = biaya_pulang + biaya_kembali
+        
+        # Calculate totals
+        if p.status_pulang == 'Lunas' and p.status_kembali == 'Lunas':
+            total_lunas += p.total_biaya_calculated
+        else:
+            total_belum_lunas += p.total_biaya_calculated
+        
+        # Track payment methods
+        total_biaya_p = p.total_biaya_calculated
+        if ('Cash' in (str(p.metode_pembayaran_pulang or '') + str(p.metode_pembayaran_kembali or ''))):
+            cash_data.append(p)
+        if ('Transfer' in (str(p.metode_pembayaran_pulang or '') + str(p.metode_pembayaran_kembali or ''))):
+            transfer_data.append(p)
+    
+    total_cash = sum(p.total_biaya_calculated for p in cash_data)
+    total_transfer = sum(p.total_biaya_calculated for p in transfer_data)
+    jumlah_orang_cash = len(cash_data)
+    jumlah_orang_transfer = len(transfer_data)
+
+    data_for_excel = []
+    for index, p in enumerate(semua_pendaftar, 1):
+        data_for_excel.append({
+            'No.': index,
+            'Nama Santri': p.santri.nama if p.santri else 'N/A',
+            'Jenis Kelamin': p.santri.jenis_kelamin if p.santri else 'N/A',
+            'Asrama': p.santri.asrama if p.santri else 'N/A',
+            'Kabupaten': p.santri.kabupaten if p.santri else 'N/A',
+            'Rombongan Pulang': p.rombongan_pulang.nama_rombongan if p.rombongan_pulang else 'N/A',
+            'Rombongan Kembali': p.rombongan_kembali.nama_rombongan if p.rombongan_kembali else 'N/A',
+            'Titik Turun': p.titik_turun or '-',
+            'Titik Jemput': p.titik_jemput_kembali or p.titik_turun or '-',
+            'Bus Pulang': p.bus_pulang.nama_armada if p.bus_pulang else '-',
+            'Bus Kembali': p.bus_kembali.nama_armada if p.bus_kembali else '-',
+            'Status Pulang': p.status_pulang,
+            'Metode Bayar Pulang': p.metode_pembayaran_pulang or '-',
+            'Status Kembali': p.status_kembali,
+            'Metode Bayar Kembali': p.metode_pembayaran_kembali or '-',
+            'Biaya Pulang': f"Rp. {p.biaya_pulang_calculated:,.0f}" if p.biaya_pulang_calculated else "Rp. 0",
+            'Biaya Kembali': f"Rp. {p.biaya_kembali_calculated:,.0f}" if p.biaya_kembali_calculated else "Rp. 0",
+            'Total Biaya': f"Rp. {p.total_biaya_calculated:,.0f}" if p.total_biaya_calculated else "Rp. 0"
+        })
+
+    summary_data = {
+        'total_lunas': total_lunas,
+        'total_belum_lunas': total_belum_lunas,
+        'total_cash': total_cash,
+        'total_transfer': total_transfer,
+        'jumlah_orang_cash': jumlah_orang_cash,
+        'jumlah_orang_transfer': jumlah_orang_transfer
+    }
+
+    return create_excel_file(data_for_excel, summary_data, 'Data_Peserta_Global.xlsx', 'GLOBAL')
+
+# Export untuk Data Pulang
+@admin_bp.route('/export-peserta-pulang')
+@login_required
+@role_required('Korpus', 'Korwil', 'Korda', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
+def export_peserta_pulang():
+    active_edisi = get_active_edisi()
+    query = Pendaftaran.query.filter(Pendaftaran.edisi_id == active_edisi.id)
+    
+    # Filter hanya yang ikut pulang
+    query = query.filter(Pendaftaran.status_pulang != 'Tidak Ikut')
+
+    if current_user.role.name in ['Korda', 'Korwil']:
+        managed_rombongan_ids = [r.id for r in current_user.active_managed_rombongan]
+        if managed_rombongan_ids:
+            query = query.filter(Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids))
+        else:
+            query = query.filter(db.false())
+
+    # Apply other filters
+    query = apply_filters(query, exclude_perjalanan=True)
+    semua_pendaftar = query.order_by(Santri.nama).all()
+
+    # ADDED: Create tarif map for pulang
+    tarif_map = {}
+    for p in semua_pendaftar:
+        if p.rombongan_pulang_id and p.titik_turun:
+            tarif_key = f"{p.rombongan_pulang_id}_{p.titik_turun}"
+            if tarif_key not in tarif_map:
+                tarif = Tarif.query.filter_by(
+                    rombongan_id=p.rombongan_pulang_id, 
+                    titik_turun=p.titik_turun
+                ).first()
+                if tarif:
+                    tarif_map[tarif_key] = tarif
+
+    # MODIFIED: Kalkulasi untuk perjalanan pulang menggunakan tarif sebenarnya
+    total_lunas = 0
+    total_belum_lunas = 0
+    total_cash = 0
+    total_transfer = 0
+    jumlah_orang_cash = 0
+    jumlah_orang_transfer = 0
+    
+    for p in semua_pendaftar:
+        # Calculate biaya pulang using tarif
+        biaya_pulang = 0
+        if p.status_pulang and p.status_pulang != 'Tidak Ikut':
+            if p.rombongan_pulang_id and p.titik_turun:
+                tarif_key = f"{p.rombongan_pulang_id}_{p.titik_turun}"
+                tarif = tarif_map.get(tarif_key)
+                if tarif:
+                    biaya_pulang = tarif.harga_bus + tarif.fee_korda + 10000
+        
+        # Set calculated biaya to the object
+        p.biaya_pulang_calculated = biaya_pulang
+        
+        # Kalkulasi berdasarkan status pembayaran
+        if p.status_pulang == 'Lunas':
+            total_lunas += biaya_pulang
+        else:
+            total_belum_lunas += biaya_pulang
+        
+        # Kalkulasi berdasarkan metode pembayaran
+        if p.metode_pembayaran_pulang == 'Cash':
+            total_cash += biaya_pulang
+            jumlah_orang_cash += 1
+        elif p.metode_pembayaran_pulang == 'Transfer':
+            total_transfer += biaya_pulang
+            jumlah_orang_transfer += 1
+
+    data_for_excel = []
+    for index, p in enumerate(semua_pendaftar, 1):
+        data_for_excel.append({
+            'No.': index,
+            'Nama Santri': p.santri.nama if p.santri else 'N/A',
+            'Jenis Kelamin': p.santri.jenis_kelamin if p.santri else 'N/A',
+            'Asrama': p.santri.asrama if p.santri else 'N/A',
+            'Kabupaten': p.santri.kabupaten if p.santri else 'N/A',
+            'Rombongan Pulang': p.rombongan_pulang.nama_rombongan if p.rombongan_pulang else 'N/A',
+            'Titik Turun': p.titik_turun or '-',
+            'Bus Pulang': p.bus_pulang.nama_armada if p.bus_pulang else '-',
+            'Status Pulang': p.status_pulang,
+            'Metode Bayar': p.metode_pembayaran_pulang or '-',
+            'Biaya Pulang': f"Rp. {p.biaya_pulang_calculated:,.0f}"
+        })
+
+    summary_data = {
+        'total_lunas': total_lunas,
+        'total_belum_lunas': total_belum_lunas,
+        'total_cash': total_cash,
+        'total_transfer': total_transfer,
+        'jumlah_orang_cash': jumlah_orang_cash,
+        'jumlah_orang_transfer': jumlah_orang_transfer
+    }
+
+    return create_excel_file(data_for_excel, summary_data, 'Data_Peserta_Pulang.xlsx', 'PULANG')
+
+# Export untuk Data Kembali
+@admin_bp.route('/export-peserta-kembali')
+@login_required
+@role_required('Korpus', 'Korwil', 'Korda', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
+def export_peserta_kembali():
+    active_edisi = get_active_edisi()
+    query = Pendaftaran.query.filter(Pendaftaran.edisi_id == active_edisi.id)
+    
+    # Filter hanya yang ikut kembali
+    query = query.filter(Pendaftaran.status_kembali != 'Tidak Ikut')
+
+    if current_user.role.name in ['Korda', 'Korwil']:
+        managed_rombongan_ids = [r.id for r in current_user.active_managed_rombongan]
+        if managed_rombongan_ids:
+            query = query.filter(Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids))
+        else:
+            query = query.filter(db.false())
+
+    # Apply other filters
+    query = apply_filters(query, exclude_perjalanan=True)
+    semua_pendaftar = query.order_by(Santri.nama).all()
+
+    # ADDED: Create tarif map for kembali
+    tarif_map = {}
+    for p in semua_pendaftar:
+        rombongan_kembali_id = p.rombongan_kembali_id or p.rombongan_pulang_id
+        titik_jemput_kembali = p.titik_jemput_kembali or p.titik_turun
+        if rombongan_kembali_id and titik_jemput_kembali:
+            tarif_key = f"{rombongan_kembali_id}_{titik_jemput_kembali}"
+            if tarif_key not in tarif_map:
+                tarif = Tarif.query.filter_by(
+                    rombongan_id=rombongan_kembali_id, 
+                    titik_turun=titik_jemput_kembali
+                ).first()
+                if tarif:
+                    tarif_map[tarif_key] = tarif
+
+    # MODIFIED: Kalkulasi untuk perjalanan kembali menggunakan tarif sebenarnya
+    total_lunas = 0
+    total_belum_lunas = 0
+    total_cash = 0
+    total_transfer = 0
+    jumlah_orang_cash = 0
+    jumlah_orang_transfer = 0
+    
+    for p in semua_pendaftar:
+        # Calculate biaya kembali using tarif
+        biaya_kembali = 0
+        if p.status_kembali and p.status_kembali != 'Tidak Ikut':
+            rombongan_kembali_id = p.rombongan_kembali_id or p.rombongan_pulang_id
+            titik_jemput_kembali = p.titik_jemput_kembali or p.titik_turun
+            if rombongan_kembali_id and titik_jemput_kembali:
+                tarif_key = f"{rombongan_kembali_id}_{titik_jemput_kembali}"
+                tarif = tarif_map.get(tarif_key)
+                if tarif:
+                    biaya_kembali = tarif.harga_bus + tarif.fee_korda + 10000
+        
+        # Set calculated biaya to the object
+        p.biaya_kembali_calculated = biaya_kembali
+        
+        # Kalkulasi berdasarkan status pembayaran
+        if p.status_kembali == 'Lunas':
+            total_lunas += biaya_kembali
+        else:
+            total_belum_lunas += biaya_kembali
+        
+        # Kalkulasi berdasarkan metode pembayaran
+        if p.metode_pembayaran_kembali == 'Cash':
+            total_cash += biaya_kembali
+            jumlah_orang_cash += 1
+        elif p.metode_pembayaran_kembali == 'Transfer':
+            total_transfer += biaya_kembali
+            jumlah_orang_transfer += 1
+
+    data_for_excel = []
+    for index, p in enumerate(semua_pendaftar, 1):
+        data_for_excel.append({
+            'No.': index,
+            'Nama Santri': p.santri.nama if p.santri else 'N/A',
+            'Jenis Kelamin': p.santri.jenis_kelamin if p.santri else 'N/A',
+            'Asrama': p.santri.asrama if p.santri else 'N/A',
+            'Kabupaten': p.santri.kabupaten if p.santri else 'N/A',
+            'Rombongan Kembali': p.rombongan_kembali.nama_rombongan if p.rombongan_kembali else (p.rombongan_pulang.nama_rombongan if p.rombongan_pulang else 'N/A'),
+            'Titik Jemput': p.titik_jemput_kembali or p.titik_turun or '-',
+            'Bus Kembali': p.bus_kembali.nama_armada if p.bus_kembali else '-',
+            'Status Kembali': p.status_kembali,
+            'Metode Bayar': p.metode_pembayaran_kembali or '-',
+            'Biaya Kembali': f"Rp. {p.biaya_kembali_calculated:,.0f}"
+        })
+
+    summary_data = {
+        'total_lunas': total_lunas,
+        'total_belum_lunas': total_belum_lunas,
+        'total_cash': total_cash,
+        'total_transfer': total_transfer,
+        'jumlah_orang_cash': jumlah_orang_cash,
+        'jumlah_orang_transfer': jumlah_orang_transfer
+    }
+
+    return create_excel_file(data_for_excel, summary_data, 'Data_Peserta_Kembali.xlsx', 'KEMBALI')
+
+# Helper function untuk apply filters
+def apply_filters(query, exclude_perjalanan=False):
+    nama_filter = request.args.get('nama', '')
+    rombongan_id_filter = request.args.get('rombongan_id', type=int)
+    status_bayar_filter = request.args.get('status_bayar', '')
+    jenis_kelamin_filter = request.args.get('jenis_kelamin', '')
+    
+    # Gabungkan dengan tabel Santri untuk filter
+    query = query.join(Santri)
+    
+    if nama_filter:
+        query = query.filter(Santri.nama.ilike(f'%{nama_filter}%'))
+    if rombongan_id_filter:
+        query = query.filter(or_(Pendaftaran.rombongan_pulang_id == rombongan_id_filter, Pendaftaran.rombongan_kembali_id == rombongan_id_filter))
+    if jenis_kelamin_filter:
+        query = query.filter(Santri.jenis_kelamin == jenis_kelamin_filter)
+    
+    if not exclude_perjalanan:
+        perjalanan_filter = request.args.get('perjalanan', '')
+        if perjalanan_filter == 'ikut_pulang':
+            query = query.filter(Pendaftaran.status_pulang != 'Tidak Ikut')
+        elif perjalanan_filter == 'tidak_ikut_pulang':
+            query = query.filter(Pendaftaran.status_pulang == 'Tidak Ikut')
+        elif perjalanan_filter == 'ikut_kembali':
+            query = query.filter(Pendaftaran.status_kembali != 'Tidak Ikut')
+        elif perjalanan_filter == 'tidak_ikut_kembali':
+            query = query.filter(Pendaftaran.status_kembali == 'Tidak Ikut')
+
+    if status_bayar_filter:
+        if status_bayar_filter == 'Lunas':
+            query = query.filter(and_(Pendaftaran.status_pulang == 'Lunas', Pendaftaran.status_kembali == 'Lunas'))
+        else:
+            query = query.filter(or_(Pendaftaran.status_pulang == 'Belum Bayar', Pendaftaran.status_kembali == 'Belum Bayar'))
+    
+    return query
+
+# Helper function untuk membuat file Excel (unchanged)
+def create_excel_file(data_for_excel, summary_data, filename, report_type):
+    if not data_for_excel:
+        flash('Tidak ada data untuk diekspor sesuai filter yang dipilih.', 'warning')
+        return redirect(url_for('admin.daftar_peserta_global', **request.args))
+
+    df = pd.DataFrame(data_for_excel)
+    output = io.BytesIO()
+    
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name=f'Data Peserta {report_type}', startrow=6)
+        
+        workbook = writer.book
+        worksheet = writer.sheets[f'Data Peserta {report_type}']
+        
+        # Import untuk styling
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from openpyxl.utils import get_column_letter
+        
+        # Menambahkan header dan summary
+        worksheet['A1'] = f'LAPORAN DATA PESERTA {report_type}'
+        worksheet['A1'].font = Font(bold=True, size=16)
+        
+        worksheet['A3'] = 'RINGKASAN PEMBAYARAN'
+        worksheet['A3'].font = Font(bold=True, size=14)
+        
+        worksheet['A4'] = f'Total Sudah Lunas: Rp. {summary_data["total_lunas"]:,.0f}'
+        worksheet['A5'] = f'Total Belum Lunas: Rp. {summary_data["total_belum_lunas"]:,.0f}'
+        
+        worksheet['D4'] = f'Total Bayar Cash: Rp. {summary_data["total_cash"]:,.0f} ({summary_data["jumlah_orang_cash"]} orang)'
+        worksheet['D5'] = f'Total Bayar Transfer: Rp. {summary_data["total_transfer"]:,.0f} ({summary_data["jumlah_orang_transfer"]} orang)'
+        
+        # Styling untuk summary
+        for cell in ['A4', 'A5', 'D4', 'D5']:
+            worksheet[cell].font = Font(bold=True)
+        
+        # Styling untuk header data (baris 7, karena data mulai dari baris 7)
+        header_fill = PatternFill(start_color='0066CC', end_color='0066CC', fill_type='solid')
+        header_font = Font(color='FFFFFF', bold=True)
+        header_alignment = Alignment(horizontal='center', vertical='center')
+        
+        thin_border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # Aplikasikan styling ke header
+        for col_num in range(1, len(df.columns) + 1):
+            cell = worksheet.cell(row=7, column=col_num)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = header_alignment
+            cell.border = thin_border
+        
+        # Auto-adjust column width
+        for col_num in range(1, len(df.columns) + 1):
+            column_letter = get_column_letter(col_num)
+            max_length = 0
+            column = worksheet[column_letter]
+            
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            
+            adjusted_width = min(max_length + 2, 50)
+            worksheet.column_dimensions[column_letter].width = adjusted_width
+        
+        # Styling untuk data rows
+        data_fill_even = PatternFill(start_color='F8F9FA', end_color='F8F9FA', fill_type='solid')
+        
+        for row_num in range(8, len(df) + 8):  # Data mulai dari baris 8
+            for col_num in range(1, len(df.columns) + 1):
+                cell = worksheet.cell(row=row_num, column=col_num)
+                cell.border = thin_border
+                cell.alignment = Alignment(vertical='center')
+                
+                if row_num % 2 == 0:
+                    cell.fill = data_fill_even
+
+    output.seek(0)
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=filename
+    )
 
 # Ganti fungsi perizinan() di routes.py dengan ini
 

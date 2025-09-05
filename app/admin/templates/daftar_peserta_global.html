@@ -1,6 +1,6 @@
 {% extends "_admin_layout.html" %}
 
-{% block title %}Data Peserta Global{% endblock %}
+{% block title %}Data Peserta Rombongan{% endblock %}
 
 {% block content %}
 <style>
@@ -268,10 +268,22 @@
   }
 }
 
+.status-tidak-ikut {
+    background-color: #fde68a; /* kuning muda */
+    color: #92400e; /* teks coklat biar kontras */
+}
+.payment-method {
+        font-size: 0.65rem;
+        color: var(--text-secondary);
+        font-style: italic;
+    }
+    .location-info .asrama-badge { background: #eef2ff; color: #4338ca; font-weight: 600; padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.75rem; display: inline-block; }
+
+
 </style>
 
 <div class="page-header">
-    <div class="page-title">Data Peserta Global</div>
+    <div class="page-title">Data Peserta Rombongan</div>
     <div class="page-subtitle">
         {% if current_user.role.name in ['Korwil', 'Korda'] %}
             Menampilkan semua peserta dari rombongan yang Anda kelola.
@@ -280,27 +292,27 @@
         {% endif %}
     </div>
     <div class="stats-grid">
-        <div class="stat-card">
-            <span class="stat-number">{{ stats.total_peserta }}</span>
-            <div class="stat-label">Total Peserta</div>
-        </div>
-        <div class="stat-card">
-            <span class="stat-number">{{ stats.sudah_bus_pulang }}</span>
-            <div class="stat-label">Ada Bus Pulang</div>
-        </div>
-        <div class="stat-card">
-            <span class="stat-number">{{ stats.sudah_bus_kembali }}</span>
-            <div class="stat-label">Ada Bus Kembali</div>
-        </div>
-        <div class="stat-card">
-            <span class="stat-number">{{ stats.lunas_pulang }}</span>
-            <div class="stat-label">Lunas Pulang</div>
-        </div>
-        <div class="stat-card">
-            <span class="stat-number">{{ stats.lunas_kembali }}</span>
-            <div class="stat-label">Lunas Kembali</div>
-        </div>
+    <div class="stat-card">
+        <span class="stat-number">{{ stats.total_peserta }}</span>
+        <div class="stat-label">Total Peserta</div>
     </div>
+    <div class="stat-card">
+        <span class="stat-number">{{ stats.peserta_pulang }}</span>
+        <div class="stat-label">Peserta Pulang</div>
+    </div>
+    <div class="stat-card">
+        <span class="stat-number">{{ stats.peserta_kembali }}</span>
+        <div class="stat-label">Peserta Kembali</div>
+    </div>
+    <div class="stat-card">
+        <span class="stat-number">{{ stats.lunas_pulang }}</span>
+        <div class="stat-label">Lunas Pulang</div>
+    </div>
+    <div class="stat-card">
+        <span class="stat-number">{{ stats.lunas_kembali }}</span>
+        <div class="stat-label">Lunas Kembali</div>
+    </div>
+</div>
 </div>
 
 <div class="filter-card card">
@@ -316,6 +328,14 @@
                 <div class="col-md-4">
                     <input type="text" name="nama" class="form-control" placeholder="Cari Nama Santri..." value="{{ request.args.get('nama', '') }}">
                 </div>
+                
+                <div class="col-md-3">
+                    <select name="jenis_kelamin" class="form-select">
+                        <option value="">-- Semua Jenis Kelamin --</option>
+                        <option value="PUTRA" {% if request.args.get('jenis_kelamin') == 'PUTRA' %}selected{% endif %}>Putra</option>
+                        <option value="PUTRI" {% if request.args.get('jenis_kelamin') == 'PUTRI' %}selected{% endif %}>Putri</option>
+                    </select>
+                </div>
                 <div class="col-md-4">
                     <select name="rombongan_id" class="form-select">
                         <option value="">-- Semua Rombongan --</option>
@@ -327,6 +347,15 @@
                     </select>
                 </div>
                 <div class="col-md-4">
+            <select name="perjalanan" class="form-select">
+                <option value="">-- Semua Status Perjalanan --</option>
+                <option value="ikut_pulang" {% if request.args.get('perjalanan') == 'ikut_pulang' %}selected{% endif %}>Ikut Pulang</option>
+                <option value="tidak_ikut_pulang" {% if request.args.get('perjalanan') == 'tidak_ikut_pulang' %}selected{% endif %}>Tidak Ikut Pulang</option>
+                <option value="ikut_kembali" {% if request.args.get('perjalanan') == 'ikut_kembali' %}selected{% endif %}>Ikut Kembali</option>
+                <option value="tidak_ikut_kembali" {% if request.args.get('perjalanan') == 'tidak_ikut_kembali' %}selected{% endif %}>Tidak Ikut Kembali</option>
+            </select>
+        </div>
+                <div class="col-md-4">
                     <select name="status_bayar" class="form-select">
                         <option value="">-- Semua Status Bayar --</option>
                         <option value="Lunas" {% if request.args.get('status_bayar') == 'Lunas' %}selected{% endif %}>Lunas</option>
@@ -336,7 +365,36 @@
                 <div class="col-12 text-end">
                     <button type="submit" class="btn btn-primary">Filter</button>
                     <a href="{{ url_for('admin.daftar_peserta_global') }}" class="btn btn-secondary">Reset</a>
-                </div>
+                    <div class="btn-group" role="group" aria-label="Export Options">
+                        
+            <!-- Tombol Export Global (yang sudah ada sebelumnya) -->
+            <a href="{{ url_for('admin.export_peserta_global', **request.args) }}" 
+               class="btn btn-success">
+                <i class="fas fa-file-excel"></i> Export Global
+            </a>
+            
+            <!-- Tombol Export Pulang -->
+            <a href="{{ url_for('admin.export_peserta_pulang', **request.args) }}" 
+               class="btn btn-primary">
+                <i class="fas fa-file-excel"></i> Export Data Pulang
+            </a>
+            
+            <!-- Tombol Export Kembali -->
+            <a href="{{ url_for('admin.export_peserta_kembali', **request.args) }}" 
+               class="btn btn-info">
+                <i class="fas fa-file-excel"></i> Export Data Kembali
+            </a>
+        </div>
+        
+        <!-- Info badges untuk memberitahu user apa yang akan di-export -->
+        <div class="mt-2">
+            <small class="text-muted">
+                <span class="badge badge-success">Global:</span> Semua data pulang & kembali |
+                <span class="badge badge-primary">Pulang:</span> Hanya data perjalanan pulang |
+                <span class="badge badge-info">Kembali:</span> Hanya data perjalanan kembali
+            </small>
+        </div>
+    </div>
             </div>
         </form>
     </div>
@@ -346,7 +404,7 @@
     <div class="card-header">
         <h5>
             <div class="header-icon"><i class="fas fa-users"></i></div>
-            Daftar Peserta Global (Total ditemukan: {{ pagination.total }})
+            Daftar Peserta Rombongan (Total ditemukan: {{ pagination.total }})
         </h5>
     </div>
     
@@ -358,12 +416,14 @@
                         <tr>
                             <th>No.</th>
                             <th>Data Santri</th>
+                            <th>Asrama & Alamat</th>
                             <th>Rombongan</th>
                             <th>Titik Turun & Jemput</th>
-                            <th>Bus Pulang</th>
-                            <th>Bus Kembali</th>
+                            <th>Bus Pulang & Kembali</th>
                             <th>Status Pembayaran</th>
+                            <th>Biaya Pulang & Kembali</th>
                             <th>Total Biaya</th>
+                            <th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -378,6 +438,14 @@
                                     {% elif pendaftaran.santri.jenis_kelamin == 'PUTRI' %}
                                         <div class="gender-badge gender-putri">Putri</div>
                                     {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="location-info">
+                                    {% if pendaftaran.santri.asrama %}
+                                        <div class="asrama-badge">{{ pendaftaran.santri.asrama }}</div>
+                                    {% endif %}
+                                    <small class="text-muted mt-1">{{ pendaftaran.santri.kabupaten or '-' }}</small>
                                 </div>
                             </td>
                             <td>
@@ -405,37 +473,93 @@
                                 </div>
                             </td>
                             <td>
-                                {% if pendaftaran.bus_pulang %}
-                                    <div class="bus-badge">
-                                        {{ pendaftaran.bus_pulang.nama_armada }}
-                                    </div>
-                                {% else %}<span class="text-muted">-</span>{% endif %}
-                            </td>
-                            <td>
-                                {% if pendaftaran.bus_kembali %}
-                                    <div class="bus-badge">
-                                        {{ pendaftaran.bus_kembali.nama_armada }}
-                                    </div>
-                                {% else %}<span class="text-muted">-</span>{% endif %}
-                            </td>
+    <div>
+        {% if pendaftaran.bus_pulang %}
+            <small class="text-muted">Bus Pulang:</small><br>
+            <div class="bus-badge">
+                {{ pendaftaran.bus_pulang.nama_armada }}
+            </div>
+        {% else %}
+            <span class="text-muted">-</span>
+        {% endif %}
+    </div>
+    
+    <div>
+        {% if pendaftaran.bus_kembali %}
+            <small class="text-muted">Bus Kembali:</small><br>
+            <div class="bus-badge">
+                {{ pendaftaran.bus_kembali.nama_armada }}
+            </div>
+        {% else %}
+            <span class="text-muted">-</span>
+        {% endif %}
+    </div>
+</td>
                             <td>
                                 <div class="status-container">
-                                    <div class="status-badge {{ 'status-lunas' if pendaftaran.status_pulang == 'Lunas' else 'status-belum' }}">
-                                        Pulang: {{ pendaftaran.status_pulang }}
-                                    </div>
-                                    <div class="status-badge {{ 'status-lunas' if pendaftaran.status_kembali == 'Lunas' else 'status-belum' }}">
-                                        Kembali: {{ pendaftaran.status_kembali }}
-                                    </div>
+                                    <div class="status-badge 
+    {% if pendaftaran.status_pulang == 'Lunas' %}
+        status-lunas
+    {% elif pendaftaran.status_pulang == 'Tidak Ikut' %}
+        status-tidak-ikut
+    {% else %}
+        status-belum
+    {% endif %}
+">
+    Pulang: {{ pendaftaran.status_pulang }}
+</div>
+                                    <div class="payment-method">{{ pendaftaran.metode_pembayaran_pulang or '-' }}</div>
+                                    
+                                    <div class="status-badge 
+    {% if pendaftaran.status_kembali == 'Lunas' %}
+        status-lunas
+    {% elif pendaftaran.status_kembali == 'Tidak Ikut' %}
+        status-tidak-ikut
+    {% else %}
+        status-belum
+    {% endif %}
+">
+    Kembali: {{ pendaftaran.status_kembali }}
+</div>
+                                    <div class="payment-method">{{ pendaftaran.metode_pembayaran_kembali or '-' }}</div>
+
                                 </div>
+                            </td>
+                             <td>
+            <small class="text-muted">Biaya Pulang:</small><br>
+  <div class="cost-badge">
+    Rp {{ "{:,.0f}".format(pendaftaran.biaya_pulang_calculated|default(0, true)).replace(',', '.') }}
+  </div>
+  <br>
+   <small class="text-muted">Biaya Kembali:</small><br>
+  <div class="cost-badge">
+    Rp {{ "{:,.0f}".format(pendaftaran.biaya_kembali_calculated|default(0, true)).replace(',', '.') }}
+  </div>    
+</td>
+
                             </td>
                             <td>
                                 <div class="cost-badge">
                                     Rp {{ "{:,.0f}".format(pendaftaran.total_biaya).replace(',', '.') }}
                                 </div>
                             </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
+                            {% if current_user.role.name in ['Korpus', 'Korda', 'Korwil'] %}
+                <td>
+                    <div class="d-flex flex-column gap-2">
+                        <a href="{{ url_for('admin.edit_pendaftaran', pendaftaran_id=pendaftaran.id) }}" class="btn btn-warning btn-sm">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <form method="POST" action="{{ url_for('admin.hapus_pendaftaran', pendaftaran_id=pendaftaran.id) }}" onsubmit="return confirm('Anda yakin ingin menghapus pendaftaran untuk {{ pendaftaran.santri.nama }}?');">
+                            <button type="submit" class="btn btn-danger btn-sm w-100">
+                                <i class="fas fa-trash"></i> Hapus
+                            </button>
+                        </form>
+                    </div>
+                </td>
+                {% endif %}
+                </tr>
+            {% endfor %}
+        </tbody>
                 </table>
             </div>
             

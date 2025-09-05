@@ -965,11 +965,11 @@
             </a>
         </li>
         {% endif %}
-        {% if current_user.role.name in ['Korpus', 'Korwil', 'Korpuspi', 'Sekretaris'] %}
+        {% if current_user.role.name in ['Korpus', 'Korda', 'Korwil', 'Korpuspi', 'Sekretaris'] %}
         <li class="nav-item">
             <a href="{{ url_for('admin.daftar_peserta_global') }}" 
                class="nav-link {{ 'active' if 'daftar_peserta_global' in request.endpoint else '' }}">
-                <i class="fas fa-users"></i> Data Peserta Global
+                <i class="fas fa-users"></i> Lihat Peserta Rombongan
             </a>
         </li>
         {% endif %}

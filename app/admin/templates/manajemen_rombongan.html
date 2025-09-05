@@ -14,13 +14,6 @@
         </a>
     {% endif %}
 
-    {% if current_user.role.name in roles_global %}
-    <a href="{{ url_for('admin.daftar_peserta_global') }}"
-       <button type="button" class="btn btn-outline-primary">
-      <i class="fas fa-users me-2"></i>Lihat Semua Peserta</button>
-    </a>
-  {% endif %}
-
 <div class="dropdown">
   <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
           
@@ -32,7 +25,7 @@
     {% for romb in (semua_rombongan or []) %}
       <li>
         <a class="dropdown-item d-flex align-items-center py-2"
-           href="{{ url_for('admin.daftar_peserta', rombongan_id=romb.id) }}">
+           href="{{ url_for('admin.daftar_peserta_global', rombongan_id=romb.id) }}">
           <i class="fas fa-users me-2 text-muted"></i>
           <span>{{ romb.nama_rombongan }}</span>
         </a>
