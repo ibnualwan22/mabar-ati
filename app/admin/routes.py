@@ -857,7 +857,7 @@ def pendaftaran_rombongan():
         # MODIFIKASI: Flash message dengan semua nama santri
         if berhasil_didaftarkan > 0:
             if berhasil_didaftarkan == 1:
-                flash(f'Santri {nama_santri_berhasil[0]} berhasil didaftarkan.', 'success')
+                flash(f'Santri {nama_santri_berhasil[0]} udah berhasil didaftarin yaa.', 'success')
             else:
                 # Tampilkan semua nama dengan format yang rapi
                 nama_str = ', '.join(nama_santri_berhasil[:-1]) + f' dan {nama_santri_berhasil[-1]}'

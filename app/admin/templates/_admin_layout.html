@@ -1319,14 +1319,14 @@ function confirmDelete(form, text) {
   event.preventDefault(); // stop submit langsung
 
   Swal.fire({
-    title: 'Anda yakin?',
+    title: 'Yakin nihh?',
     text: text,
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#d33',
     cancelButtonColor: '#3085d6',
-    confirmButtonText: 'Ya, hapus!',
-    cancelButtonText: 'Batal'
+    confirmButtonText: 'Yaudh deh hapus ajaa!',
+    cancelButtonText: 'Engga dulu deh'
   }).then((result) => {
     if (result.isConfirmed) {
       form.submit(); // submit manual kalau user setuju
@@ -1372,7 +1372,7 @@ function confirmDelete(form, text) {
                 title,
                 text,
                 showConfirmButton: true,
-                timer: category === 'success' ? 1800 : undefined,
+                timer: category === 'success' ? 10000 : undefined,
               });
             }
           })();

@@ -550,7 +550,7 @@
                             <i class="fas fa-edit"></i> Edit
                         </a>
                         <form method="POST" action="{{ url_for('admin.hapus_pendaftaran', pendaftaran_id=pendaftaran.id) }}" 
-                        onsubmit="return confirmDelete(this, 'Anda yakin ingin menghapus pendaftaran untuk {{ pendaftaran.santri.nama }}?');">
+                        onsubmit="return confirmDelete(this, '{{ pendaftaran.santri.nama }} mau dihapus dari peserta rombongan?');">
                             <button type="submit" class="btn btn-danger btn-sm w-100">
                                 <i class="fas fa-trash"></i> Hapus
                             </button>

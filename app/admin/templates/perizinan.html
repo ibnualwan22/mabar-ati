@@ -534,7 +534,7 @@
                                     <i class="fas fa-edit me-1"></i>Edit
                                 </button>
                                 <form method="POST" action="{{ url_for('admin.cabut_izin', izin_id=izin.id) }}"
-                                      onsubmit="return confirmDelete(this,'⚠️ Anda yakin ingin mencabut izin ini?');">
+                                      onsubmit="return confirmDelete(this,'Tenan ora ned, {{ izin.santri.nama }} izine meh dicabut?');">
                                     <button type="submit" class="btn btn-action btn-danger">
                                         <i class="fas fa-times me-1"></i>Cabut
                                     </button>

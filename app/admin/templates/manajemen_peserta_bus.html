@@ -336,7 +336,7 @@
                                         <form method="POST"
                                           action="{{ url_for('admin.hapus_bus', bus_id=bus.id) }}" 
                                           style="display:inline;" 
-                                          onsubmit="return confirmDelete(this,'Yakin ingin menghapus bus ini?');">
+                                          onsubmit="return confirmDelete(this,'Bus {{ bus.nama_armada }} mau dihapus?');">
                                         <button type="submit" class="btn btn-outline-danger">
                                             <i class="fas fa-trash me-1"></i>Hapus
                                         </button>
