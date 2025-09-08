@@ -227,6 +227,9 @@
                    class="btn btn-primary btn-sm shadow-sm">
                   <i class="fas fa-users me-1"></i>Lihat Peserta
                 </a>
+                <a href="{{ url_for('admin.atur_url_grup', rombongan_id=rombongan.id) }}" class="btn btn-success btn-sm shadow-sm">
+        <i class="fab fa-whatsapp me-1"></i>Atur Link Grup
+    </a>
 
                 {% if rombongan.buses %}
                   <div class="btn-group">
@@ -245,7 +248,7 @@
                   </div>
                 {% endif %}
               </div>
-
+              
               <div class="d-flex gap-2">
                 <a href="{{ url_for('admin.edit_rombongan', id=rombongan.id) }}"
                    class="btn btn-outline-secondary btn-sm shadow-sm">

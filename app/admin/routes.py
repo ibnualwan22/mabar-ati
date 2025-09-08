@@ -2,7 +2,7 @@ import io
 from . import admin_bp
 from flask import render_template, redirect, url_for, flash, request, jsonify, abort, Response, send_file, current_app
 from app.models import Absen, ActivityLog, Rombongan, Tarif, Santri, Pendaftaran, Izin, Partisipan, Transaksi, User, Edisi, Bus, Role, Wisuda
-from app.admin.forms import ChangePasswordForm, EditIzinForm, ImportPartisipanForm, ImportWisudaForm, KonfirmasiSetoranForm, PengeluaranBusForm, PetugasLapanganForm, RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, SantriManualForm, TransaksiForm, UserForm, UserEditForm, EdisiForm, BusForm, WisudaForm
+from app.admin.forms import ChangePasswordForm, EditIzinForm, GrupWaliURLForm, ImportPartisipanForm, ImportWisudaForm, KonfirmasiSetoranForm, PengeluaranBusForm, PetugasLapanganForm, RombonganForm, SantriEditForm, PendaftaranForm, PendaftaranEditForm, IzinForm, PartisipanForm, PartisipanEditForm, LoginForm, SantriManualForm, TransaksiForm, UserForm, UserEditForm, EdisiForm, BusForm, WisudaForm
 from app import db, login_manager
 import json, requests
 from collections import defaultdict
@@ -392,7 +392,7 @@ def tambah_rombongan():
 
 @admin_bp.route('/rombongan/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
-@role_required('Korpus', 'Korda', 'Sekretaris', 'Korpuspi')
+@role_required('Korpus', 'Sekretaris', 'Korpuspi')
 def edit_rombongan(id):
     """Route untuk edit rombongan dengan manajemen bus"""
     active_edisi = get_active_edisi()
@@ -746,7 +746,7 @@ def edit_santri(id):
 
 @admin_bp.route('/santri/hapus/<int:id>', methods=['POST'])
 @login_required
-@role_required('Korpus', 'Sekretaris') # Hanya Korpus yang bisa buat rombongan baru
+@role_required('Korpus', 'Korpuspi', 'Sekretaris') # Hanya Korpus yang bisa buat rombongan baru
 def hapus_santri(id):
     santri = Santri.query.get_or_404(id)
     nama_santri = santri.nama
@@ -3528,10 +3528,6 @@ def manajemen_santri_wilayah():
                            pendaftaran_map=pendaftaran_map,
                            active_edisi=active_edisi)
 
-# Di dalam file app/admin/routes.py
-
-# Di dalam file app/admin/routes.py
-
 @admin_bp.route('/laporan-wali')
 @login_required
 @role_required('Korda', 'Korwil')
@@ -3540,102 +3536,141 @@ def laporan_grup_wali():
     if not active_edisi:
         return jsonify({'error': 'Edisi tidak aktif'}), 404
 
-    # --- LOGIKA BARU ---
-
-    # 1. Ambil rombongan yang dikelola user
+    # 1. Ambil data dasar Korda/Korwil
     managed_rombongan = current_user.active_managed_rombongan
     if not managed_rombongan:
         return jsonify({'report_text': 'Anda tidak mengelola rombongan apapun.'})
     
     managed_rombongan_ids = [r.id for r in managed_rombongan]
-    
-    # Ambil URL grup dari rombongan pertama yang dikelola (asumsi Korda hanya kelola satu)
     grup_url = managed_rombongan[0].grup_wali_url if managed_rombongan[0].grup_wali_url else None
-
-    # 2. Ambil semua PESERTA yang TERDAFTAR di rombongan yang dikelola
-    sudah_daftar_pendaftaran = Pendaftaran.query.options(
-        joinedload(Pendaftaran.santri)
-    ).filter(
-        Pendaftaran.edisi_id == active_edisi.id,
-        or_(
-            Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids),
-            Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids)
-        )
-    ).all()
     
-    sudah_daftar_santri_ids = {p.santri_id for p in sudah_daftar_pendaftaran}
-
-    # 3. Ambil semua SANTRI dari WILAYAH yang dikelola
     managed_regions = {
         wilayah.get('label')
         for rombongan in managed_rombongan
         if rombongan.cakupan_wilayah
         for wilayah in rombongan.cakupan_wilayah
     }
-    
-    # 4. Tentukan siapa yang BELUM DAFTAR
-    belum_daftar = []
-    if managed_regions:
-        belum_daftar = Santri.query.filter(
-            Santri.kabupaten.in_(list(managed_regions)),
-            Santri.id.notin_(sudah_daftar_santri_ids) # Filter santri yang belum ada di daftar
-        ).order_by(Santri.nama).all()
 
-    # 5. Buat teks laporan
+    # 2. Ambil semua pendaftaran yang relevan
+    all_pendaftaran = Pendaftaran.query.options(
+        joinedload(Pendaftaran.santri),
+        joinedload(Pendaftaran.rombongan_pulang)
+    ).filter(Pendaftaran.edisi_id == active_edisi.id).all()
+    
+    # 3. Ambil semua santri dari wilayah Korda (kecuali yang Izin)
+    all_santri_in_region = Santri.query.filter(
+        Santri.kabupaten.in_(list(managed_regions)),
+        Santri.status_santri != 'Izin'
+    ).all()
+    
+    # Buat map untuk akses cepat
+    pendaftaran_map = {p.santri_id: p for p in all_pendaftaran}
+    
+    # 4. Kategorikan santri berdasarkan logika baru
+    sudah_daftar_rombongan_ini = []
+    sudah_daftar_rombongan_lain = []
+    belum_daftar_partisipan = []
+    belum_daftar_wisuda = []
+    belum_daftar_aktif = []
+
+    # Proses santri yang terdaftar di rombongan Korda
+    for p in all_pendaftaran:
+        is_in_managed_rombongan = p.rombongan_pulang_id in managed_rombongan_ids or p.rombongan_kembali_id in managed_rombongan_ids
+        if is_in_managed_rombongan:
+            is_from_region = p.santri.kabupaten in managed_regions
+            tanda = "" if is_from_region else "(!)" # Tanda (*) untuk santri dari luar wilayah
+            sudah_daftar_rombongan_ini.append((p, tanda))
+
+    # Proses santri dari wilayah Korda
+    santri_terdaftar_di_rombongan_ini_ids = {p.santri_id for p, tanda in sudah_daftar_rombongan_ini}
+    
+    for santri in all_santri_in_region:
+        if santri.id in pendaftaran_map:
+            # Jika santri ada di map pendaftaran TAPI tidak di rombongan ini, berarti dia ikut rombongan lain
+            if santri.id not in santri_terdaftar_di_rombongan_ini_ids:
+                 p_lain = pendaftaran_map[santri.id]
+                 nama_romb_lain = p_lain.rombongan_pulang.nama_rombongan if p_lain.rombongan_pulang else "Lain"
+                 sudah_daftar_rombongan_lain.append((santri, nama_romb_lain))
+        else:
+            # Santri dari wilayah ini dan belum terdaftar sama sekali
+            if santri.status_santri == 'Partisipan':
+                belum_daftar_partisipan.append(santri)
+            elif santri.status_santri == 'Wisuda':
+                belum_daftar_wisuda.append(santri)
+            else: # Aktif
+                belum_daftar_aktif.append(santri)
+    
+    # 5. Susun teks laporan
     today_date = datetime.now().strftime('%d %B %Y')
-    nama_rombongan = ", ".join(r.nama_rombongan for r in managed_rombongan)
+    nama_rombongan_str = ", ".join(r.nama_rombongan for r in managed_rombongan)
     
     report_lines = [
         f"Assalamualaikum wr. wb.",
-        f"Berikut adalah rekapitulasi pendaftaran santri Rombongan *{nama_rombongan}* per tanggal *{today_date}*:\n",
-        "*SUDAH TERDAFTAR DI ROMBONGAN INI*",
-        "------------------------------------"
+        f"Berikut rekap pendaftaran santri *Rombongan {nama_rombongan_str}* per *{today_date}*:\n",
+        "*SUDAH TERDAFTAR*",
+        "-------------------"
     ]
-
-    if not sudah_daftar_pendaftaran:
-        report_lines.append("_(Belum ada santri yang terdaftar)_")
-    else:
-        # Urutkan berdasarkan nama santri
-        sudah_daftar_pendaftaran.sort(key=lambda p: p.santri.nama)
-        for p in sudah_daftar_pendaftaran:
-            lunas_p = p.status_pulang == 'Lunas'
-            lunas_k = p.status_kembali == 'Lunas'
-            emoji = ""
-            if lunas_p and lunas_k: emoji = "✅✅"
-            elif lunas_p or lunas_k: emoji = "✅"
-            
-            metode_p = 'C' if p.metode_pembayaran_pulang == 'Cash' else 'TF' if p.metode_pembayaran_pulang == 'Transfer' else '-'
-            metode_k = 'C' if p.metode_pembayaran_kembali == 'Cash' else 'TF' if p.metode_pembayaran_kembali == 'Transfer' else '-'
-            payment_str = ""
-            if lunas_p and lunas_k: payment_str = f"({metode_p}, {metode_k})"
-            elif lunas_p: payment_str = f"({metode_p})"
-            elif lunas_k: payment_str = f"({metode_k})"
-
-            report_lines.append(f"{emoji} {p.santri.nama} {payment_str}".strip())
-
-    report_lines.extend([
-        "\n*SANTRI DARI WILAYAH ANDA (BELUM DAFTAR)*",
-        "-----------------------------------------"
-    ])
     
-    if not belum_daftar:
-        report_lines.append("_(Semua santri di wilayah Anda sudah terdaftar di suatu rombongan)_")
-    else:
-        for santri in belum_daftar:
-            report_lines.append(f"- {santri.nama}")
+    # Urutkan berdasarkan nama
+    sudah_daftar_rombongan_ini.sort(key=lambda x: x[0].santri.nama)
+    sudah_daftar_rombongan_lain.sort(key=lambda x: x[0].nama)
+
+    for p, tanda in sudah_daftar_rombongan_ini:
+        # (Logika emoji dan payment_str tetap sama)
+        lunas_p = p.status_pulang == 'Lunas'
+        lunas_k = p.status_kembali == 'Lunas'
+        emoji = "✅✅" if lunas_p and lunas_k else "✅" if lunas_p or lunas_k else ""
+        metode_p = 'C' if p.metode_pembayaran_pulang == 'Cash' else 'TF' if p.metode_pembayaran_pulang == 'Transfer' else '-'
+        metode_k = 'C' if p.metode_pembayaran_kembali == 'Cash' else 'TF' if p.metode_pembayaran_kembali == 'Transfer' else '-'
+        payment_str = f"({metode_p}, {metode_k})" if p.status_pulang != 'Tidak Ikut' and p.status_kembali != 'Tidak Ikut' else f"({metode_p})" if p.status_pulang != 'Tidak Ikut' else f"({metode_k})" if p.status_kembali != 'Tidak Ikut' else ""
+        report_lines.append(f"{emoji} {p.santri.nama} {tanda} {payment_str}".strip())
+
+    for santri, nama_romb_lain in sudah_daftar_rombongan_lain:
+        report_lines.append(f"- {santri.nama} _(ikut rombongan {nama_romb_lain})_")
+        
+    # Tambahkan bagian BELUM DAFTAR jika ada isinya
+    def add_section(title, santri_list):
+        if santri_list:
+            report_lines.append(f"\n*{title}*")
+            report_lines.append("-------------------")
+            santri_list.sort(key=lambda s: s.nama)
+            for santri in santri_list:
+                report_lines.append(f"- {santri.nama}")
+
+    add_section("PARTISIPAN", belum_daftar_partisipan)
+    add_section("WISUDA", belum_daftar_wisuda)
+    add_section("BELUM DAFTAR", belum_daftar_aktif)
 
     report_lines.extend([
-        "\nKeterangan:",
-        "✅✅: Lunas Pulang & Kembali",
-        "✅: Lunas salah satu (Pulang/Kembali)",
+        "\nKeterangan:", "✅✅: Lunas Pulang & Kembali", "✅: Lunas salah satu",
+        "(!): Santri dari luar daerah yang ikut rombongan", "(nama rombongan): Ikut rombongan lain",
         "(C): Cash", "(TF): Transfer",
-        "\nTerima kasih atas perhatiannya.",
-        "Wassalamualaikum wr. wb."
+        "\nTerima kasih.", "Wassalamualaikum wr. wb."
     ])
     
     final_report_text = "\n".join(report_lines)
-
+    
     return jsonify({'report_text': final_report_text, 'grup_url': grup_url})
+
+@admin_bp.route('/rombongan/<int:rombongan_id>/url-grup', methods=['GET', 'POST'])
+@login_required
+@role_required('Korpus', 'Korda', 'Korwil')
+def atur_url_grup(rombongan_id):
+    rombongan = Rombongan.query.get_or_404(rombongan_id)
+    
+    # Keamanan: Pastikan Korda hanya bisa mengedit rombongan mereka
+    if current_user.role.name in ['Korda', 'Korwil'] and rombongan not in current_user.active_managed_rombongan:
+        flash('Anda tidak memiliki hak akses untuk rombongan ini.', 'danger')
+        return redirect(url_for('admin.manajemen_rombongan'))
+
+    form = GrupWaliURLForm(obj=rombongan)
+    if form.validate_on_submit():
+        rombongan.grup_wali_url = form.grup_wali_url.data
+        db.session.commit()
+        flash(f'Link grup WhatsApp untuk {rombongan.nama_rombongan} berhasil diperbarui.', 'success')
+        return redirect(url_for('admin.manajemen_rombongan'))
+        
+    return render_template('atur_url_grup.html', form=form, rombongan=rombongan, title="Atur Link Grup Wali")
 
 @admin_bp.route('/export-santri-wilayah')
 @login_required

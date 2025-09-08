@@ -226,7 +226,7 @@
              <a href="{{ url_for('admin.pendaftaran_rombongan', santri_id=santri.id) }}" class="btn btn-primary btn-sm">+ Daftarkan</a>
         {% endif %}
 
-                            {% if current_user.role.name == 'Korpus' %}
+        {% if current_user.role.name in ['Korpus', 'Korpuspi'] %}
                             <form method="POST" action="{{ url_for('admin.hapus_santri', id=santri.id) }}" class="mt-1" onsubmit="return confirmDelete(this,'Anda yakin ingin menghapus \'{{ santri.nama }}\' dari sistem lokal?');">
                                 <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
                             </form>

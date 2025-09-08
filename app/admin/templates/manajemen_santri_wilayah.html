@@ -1865,8 +1865,11 @@ filterInputs.forEach(input => {
         copyReportText();
         // Beri jeda sedikit agar user sadar teksnya tersalin
         setTimeout(() => {
-            alert("Teks laporan sudah disalin ke clipboard. Sekarang Anda akan diarahkan ke grup WhatsApp untuk menempel (paste) pesan.");
-        }, 300);
+Swal.fire({
+  title: "Good job!",
+  text: "Teks laporan sudah disalin ke clipboard. Sekarang Anda akan diarahkan ke grup WhatsApp untuk menempel (paste) pesan.",
+  icon: "success"
+});        }, 300);
     });
 });
 </script>

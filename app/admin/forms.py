@@ -40,6 +40,13 @@ class RombonganForm(FlaskForm):
 def rombongan_query():
     return Rombongan.query.order_by(Rombongan.nama_rombongan).all()
 
+class GrupWaliURLForm(FlaskForm):
+    """Form simpel untuk mengedit URL Grup Wali Santri."""
+    grup_wali_url = StringField('URL Grup WhatsApp',
+                                validators=[Optional(), URL(message="URL yang Anda masukkan tidak valid.")],
+                                render_kw={"placeholder": "https://chat.whatsapp.com/..."})
+    submit = SubmitField('Simpan Link')
+
 class SantriEditForm(FlaskForm):
     # Field untuk mendaftarkan santri ke rombongan.
     # QuerySelectField akan otomatis membuat dropdown dari data Rombongan.
