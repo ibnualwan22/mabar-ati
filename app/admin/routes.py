@@ -3528,6 +3528,114 @@ def manajemen_santri_wilayah():
                            pendaftaran_map=pendaftaran_map,
                            active_edisi=active_edisi)
 
+# Di dalam file app/admin/routes.py
+
+# Di dalam file app/admin/routes.py
+
+@admin_bp.route('/laporan-wali')
+@login_required
+@role_required('Korda', 'Korwil')
+def laporan_grup_wali():
+    active_edisi = get_active_edisi()
+    if not active_edisi:
+        return jsonify({'error': 'Edisi tidak aktif'}), 404
+
+    # --- LOGIKA BARU ---
+
+    # 1. Ambil rombongan yang dikelola user
+    managed_rombongan = current_user.active_managed_rombongan
+    if not managed_rombongan:
+        return jsonify({'report_text': 'Anda tidak mengelola rombongan apapun.'})
+    
+    managed_rombongan_ids = [r.id for r in managed_rombongan]
+    
+    # Ambil URL grup dari rombongan pertama yang dikelola (asumsi Korda hanya kelola satu)
+    grup_url = managed_rombongan[0].grup_wali_url if managed_rombongan[0].grup_wali_url else None
+
+    # 2. Ambil semua PESERTA yang TERDAFTAR di rombongan yang dikelola
+    sudah_daftar_pendaftaran = Pendaftaran.query.options(
+        joinedload(Pendaftaran.santri)
+    ).filter(
+        Pendaftaran.edisi_id == active_edisi.id,
+        or_(
+            Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids),
+            Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids)
+        )
+    ).all()
+    
+    sudah_daftar_santri_ids = {p.santri_id for p in sudah_daftar_pendaftaran}
+
+    # 3. Ambil semua SANTRI dari WILAYAH yang dikelola
+    managed_regions = {
+        wilayah.get('label')
+        for rombongan in managed_rombongan
+        if rombongan.cakupan_wilayah
+        for wilayah in rombongan.cakupan_wilayah
+    }
+    
+    # 4. Tentukan siapa yang BELUM DAFTAR
+    belum_daftar = []
+    if managed_regions:
+        belum_daftar = Santri.query.filter(
+            Santri.kabupaten.in_(list(managed_regions)),
+            Santri.id.notin_(sudah_daftar_santri_ids) # Filter santri yang belum ada di daftar
+        ).order_by(Santri.nama).all()
+
+    # 5. Buat teks laporan
+    today_date = datetime.now().strftime('%d %B %Y')
+    nama_rombongan = ", ".join(r.nama_rombongan for r in managed_rombongan)
+    
+    report_lines = [
+        f"Assalamualaikum wr. wb.",
+        f"Berikut adalah rekapitulasi pendaftaran santri Rombongan *{nama_rombongan}* per tanggal *{today_date}*:\n",
+        "*SUDAH TERDAFTAR DI ROMBONGAN INI*",
+        "------------------------------------"
+    ]
+
+    if not sudah_daftar_pendaftaran:
+        report_lines.append("_(Belum ada santri yang terdaftar)_")
+    else:
+        # Urutkan berdasarkan nama santri
+        sudah_daftar_pendaftaran.sort(key=lambda p: p.santri.nama)
+        for p in sudah_daftar_pendaftaran:
+            lunas_p = p.status_pulang == 'Lunas'
+            lunas_k = p.status_kembali == 'Lunas'
+            emoji = ""
+            if lunas_p and lunas_k: emoji = "✅✅"
+            elif lunas_p or lunas_k: emoji = "✅"
+            
+            metode_p = 'C' if p.metode_pembayaran_pulang == 'Cash' else 'TF' if p.metode_pembayaran_pulang == 'Transfer' else '-'
+            metode_k = 'C' if p.metode_pembayaran_kembali == 'Cash' else 'TF' if p.metode_pembayaran_kembali == 'Transfer' else '-'
+            payment_str = ""
+            if lunas_p and lunas_k: payment_str = f"({metode_p}, {metode_k})"
+            elif lunas_p: payment_str = f"({metode_p})"
+            elif lunas_k: payment_str = f"({metode_k})"
+
+            report_lines.append(f"{emoji} {p.santri.nama} {payment_str}".strip())
+
+    report_lines.extend([
+        "\n*SANTRI DARI WILAYAH ANDA (BELUM DAFTAR)*",
+        "-----------------------------------------"
+    ])
+    
+    if not belum_daftar:
+        report_lines.append("_(Semua santri di wilayah Anda sudah terdaftar di suatu rombongan)_")
+    else:
+        for santri in belum_daftar:
+            report_lines.append(f"- {santri.nama}")
+
+    report_lines.extend([
+        "\nKeterangan:",
+        "✅✅: Lunas Pulang & Kembali",
+        "✅: Lunas salah satu (Pulang/Kembali)",
+        "(C): Cash", "(TF): Transfer",
+        "\nTerima kasih atas perhatiannya.",
+        "Wassalamualaikum wr. wb."
+    ])
+    
+    final_report_text = "\n".join(report_lines)
+
+    return jsonify({'report_text': final_report_text, 'grup_url': grup_url})
 
 @admin_bp.route('/export-santri-wilayah')
 @login_required

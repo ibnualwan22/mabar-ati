@@ -139,6 +139,8 @@ class Rombongan(db.Model):
     total_setoran_bus_kembali = db.Column(db.Integer, default=0)
     total_setoran_pondok_pulang = db.Column(db.Integer, default=0)
     total_setoran_pondok_kembali = db.Column(db.Integer, default=0)
+    grup_wali_url = db.Column(db.String(255), nullable=True)
+
 
     # Relasi
     tarifs = db.relationship('Tarif', backref='rombongan', cascade="all, delete-orphan")

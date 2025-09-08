@@ -26,6 +26,8 @@ class RombonganForm(FlaskForm):
     penanggung_jawab_putri = StringField('PJ Putri', validators=[Optional()])
     kontak_person_putri = StringField('Kontak PJ Putri (WA)', validators=[Optional()])
     nomor_rekening = StringField('Nomor Rekening', validators=[Optional()])
+    grup_wali_url = StringField('URL Grup WhatsApp Wali Santri', validators=[Optional(), URL(message="URL tidak valid.")])
+
     cakupan_wilayah = HiddenField('Cakupan Wilayah')
     jadwal_pulang = DateTimeLocalField('Jadwal Pulang (dari Pondok)', format='%Y-%m-%dT%H:%M', validators=[Optional()])
     batas_pembayaran_pulang = DateField('Batas Bayar Pulang', format='%Y-%m-%d', validators=[Optional()])

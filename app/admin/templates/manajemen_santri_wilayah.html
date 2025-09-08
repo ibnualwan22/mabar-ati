@@ -1228,9 +1228,14 @@
             <a href="{{ url_for('admin.export_santri_wilayah', type='kembali', **request.args) }}" class="btn-export btn-export-kembali">
                 <i class="fas fa-plane-arrival"></i> Export Data Kembali
             </a>
+{% if current_user.role.name in ['Korpus', 'Korpuspi',] %}
+            <button type="button" class="btn btn-info" id="btn-buat-laporan" style="background: linear-gradient(135deg, #0ea5e9, #2563eb); border:none;">
+        <i class="fab fa-whatsapp"></i> Buat Laporan Grup Wali
+    </button>
+        {% endif %}
+
         </div>
     </div>
-    
     <div class="filter-section">
         <form method="GET" id="filterForm">
             <div class="filter-grid">
@@ -1335,6 +1340,7 @@
       <small>Silakan isi nomor WhatsApp Wali Santri</small>
     {% endif %}
   </div>
+  
 </td>
 
                         <td>
@@ -1798,5 +1804,102 @@ filterInputs.forEach(input => {
             this.style.transform = 'scale(1)';
         });
     });
+
+    document.addEventListener('DOMContentLoaded', function() {
+    const openModalButton = document.getElementById('btn-buat-laporan');
+    const laporanModal = new bootstrap.Modal(document.getElementById('laporanWaliModal'));
+    const laporanTextArea = document.getElementById('laporan-text');
+    const salinButton = document.getElementById('btn-salin-laporan');
+    const kirimButton = document.getElementById('btn-kirim-whatsapp');
+
+    openModalButton.addEventListener('click', function() {
+        laporanModal.show();
+        laporanTextArea.value = 'Membuat laporan, harap tunggu...';
+        salinButton.disabled = true;
+        kirimButton.classList.add('disabled');
+        kirimButton.removeAttribute('href');
+
+        fetch("{{ url_for('admin.laporan_grup_wali') }}")
+            .then(response => response.json())
+            .then(data => {
+                if (data.report_text) {
+                    laporanTextArea.value = data.report_text;
+                    salinButton.disabled = false;
+                    
+                    if (data.grup_url) {
+                        kirimButton.href = data.grup_url;
+                        kirimButton.classList.remove('disabled');
+                        kirimButton.innerHTML = '<i class="fab fa-whatsapp me-2"></i>Buka Grup & Kirim';
+                    } else {
+                        kirimButton.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>URL Grup Belum Diatur';
+                    }
+                } else {
+                    laporanTextArea.value = `Terjadi kesalahan: ${data.error || 'Tidak ada data laporan.'}`;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching report:', error);
+                laporanTextArea.value = 'Gagal memuat laporan. Periksa koneksi atau hubungi administrator.';
+            });
+    });
+
+    // Fungsi untuk menyalin teks
+    function copyReportText() {
+        laporanTextArea.select();
+        document.execCommand('copy');
+        
+        const originalText = salinButton.innerHTML;
+        salinButton.innerHTML = '<i class="fas fa-check me-2"></i>Tersalin!';
+        setTimeout(() => {
+            salinButton.innerHTML = originalText;
+        }, 2000);
+    }
+
+    salinButton.addEventListener('click', copyReportText);
+    
+    // Saat tombol Kirim di-klik, salin dulu teksnya baru buka link
+    kirimButton.addEventListener('click', function(e){
+        if(!this.hasAttribute('href')) {
+            e.preventDefault();
+            alert('URL grup WhatsApp belum diatur di halaman Edit Rombongan.');
+            return;
+        }
+        copyReportText();
+        // Beri jeda sedikit agar user sadar teksnya tersalin
+        setTimeout(() => {
+            alert("Teks laporan sudah disalin ke clipboard. Sekarang Anda akan diarahkan ke grup WhatsApp untuk menempel (paste) pesan.");
+        }, 300);
+    });
+});
 </script>
+<div class="modal fade" id="laporanWaliModal" tabindex="-1" aria-labelledby="laporanWaliModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="laporanWaliModalLabel"><i class="fab fa-whatsapp me-2"></i>Laporan untuk Grup Wali Santri</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted">Laporan ini dibuat berdasarkan data santri yang Anda kelola. Salin teks di bawah ini dan teruskan ke grup WhatsApp wali santri.</p>
+        
+        <textarea id="laporan-text" class="form-control" rows="15" readonly style="font-family: monospace; white-space: pre; background-color: #f8f9fa;">Memuat laporan, harap tunggu...</textarea>
+        
+        <div class="alert alert-warning mt-3 small">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Perhatian:</strong> Pastikan Anda telah memeriksa kembali semua data sebelum mengirimkan laporan ini.
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+        <button type="button" class="btn btn-info" id="btn-salin-laporan">
+            <i class="fas fa-copy me-2"></i>Salin Laporan
+        </button>
+        <a href="#" id="btn-kirim-whatsapp" class="btn btn-success" target="_blank">
+            <i class="fab fa-whatsapp me-2"></i>Kirim via WhatsApp
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
