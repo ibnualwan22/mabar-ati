@@ -1228,7 +1228,7 @@
             <a href="{{ url_for('admin.export_santri_wilayah', type='kembali', **request.args) }}" class="btn-export btn-export-kembali">
                 <i class="fas fa-plane-arrival"></i> Export Data Kembali
             </a>
-{% if current_user.role.name in ['Korpus', 'Korpuspi',] %}
+{% if current_user.role.name in ['Korpus', 'Korpuspi', 'Korwil'] %}
             <button type="button" class="btn btn-info" id="btn-buat-laporan" style="background: linear-gradient(135deg, #0ea5e9, #2563eb); border:none;">
         <i class="fab fa-whatsapp"></i> Buat Laporan Grup Wali
     </button>
