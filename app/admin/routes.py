@@ -613,7 +613,7 @@ def search_student_proxy():
 
     try:
         # Panggil API sebenarnya dari backend. Tambahkan limit untuk mendapatkan lebih banyak hasil.
-        api_url = f"https://dev.amtsilatipusat.com/api/student?search={query}&limit=20"
+        api_url = f"https://sigap.amtsilatipusat.com/api/student?search={query}&limit=20"
         response = requests.get(api_url, timeout=10)
         response.raise_for_status()
         return jsonify(response.json())
