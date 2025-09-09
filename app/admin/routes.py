@@ -623,38 +623,54 @@ def search_student_proxy():
         return jsonify({"error": "Gagal mengambil data dari API"}), 500
 
 
-# Route ini untuk memproses aksi "Impor"
 @admin_bp.route('/santri/impor', methods=['POST'])
 @login_required
-@role_required('Korpus', 'Sekretaris') # Hanya Korpus yang bisa buat rombongan baru
+@role_required('Korpus', 'Sekretaris', 'Korpuspi') # Menambahkan Korpuspi untuk konsistensi
 def impor_santri():
     data = request.get_json()
-    if not data:
-        return jsonify({"success": False, "message": "Data tidak valid"}), 400
+    if not data or not data.get('id'):
+        return jsonify({"success": False, "message": "Data tidak valid dari API."}), 400
 
     # Cek apakah santri dengan api_student_id ini sudah ada di database lokal
-    existing_santri = Santri.query.filter_by(api_student_id=data['id']).first()
-    if existing_santri:
-        return jsonify({"success": False, "message": "Santri ini sudah pernah diimpor"}), 409 # 409 = Conflict
+    santri = Santri.query.filter_by(api_student_id=str(data['id'])).first()
 
-    # Buat record Santri baru (snapshot)
-    new_santri = Santri(
-        api_student_id=data['id'],
-        nis=data.get('nis', 'N/A'),
-        nama=data.get('name', 'Tanpa Nama'),
-        kabupaten=data.get('regency'),
-        asrama=data.get('activeDormitory'),
-        no_hp_wali=data.get('parrentPhone'),
-        # Terapkan logika jenis kelamin: jika 'gender' tidak ada/null, default ke 'Putra'
-        jenis_kelamin=data.get('gender') or 'Putra' 
-    )
-    
-    db.session.add(new_santri)
-    db.session.commit()
-    log_activity('Tambah', 'Santri', f"Mengimpor santri individual: '{new_santri.nama}'")
+    # Logika baru: Jika santri sudah ada, perbarui datanya. Jika tidak, buat baru.
+    if santri:
+        # --- BLOK UNTUK MEMPERBARUI DATA ---
+        action = 'Edit'
+        message = f"Data {santri.nama} berhasil diperbarui."
+        
+        # Timpa field yang ada dengan data baru dari API
+        santri.nis = data.get('nis', santri.nis)
+        santri.nama = data.get('name', santri.nama)
+        santri.kabupaten = data.get('regency', santri.kabupaten)
+        santri.asrama = data.get('activeDormitory', santri.asrama)
+        santri.no_hp_wali = data.get('parrentPhone', santri.no_hp_wali)
+        santri.jenis_kelamin = data.get('gender') or santri.jenis_kelamin or 'PUTRA'
+        
+    else:
+        # --- BLOK UNTUK MEMBUAT DATA BARU (LOGIKA LAMA) ---
+        action = 'Tambah'
+        message = f"{data.get('name', 'Santri baru')} berhasil diimpor."
+        
+        santri = Santri(
+            api_student_id=str(data['id']),
+            nis=data.get('nis', 'N/A'),
+            nama=data.get('name', 'Tanpa Nama'),
+            kabupaten=data.get('regency'),
+            asrama=data.get('activeDormitory'),
+            no_hp_wali=data.get('parrentPhone'),
+            jenis_kelamin=data.get('gender') or 'PUTRA'
+        )
+        db.session.add(santri)
 
-    
-    return jsonify({"success": True, "message": f"{new_santri.nama} berhasil diimpor."})
+    try:
+        db.session.commit()
+        log_activity(action, 'Santri', f"Impor/Update individual: '{santri.nama}' (ID API: {santri.api_student_id})")
+        return jsonify({"success": True, "message": message})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": f"Terjadi kesalahan database: {e}"}), 500
 
 @admin_bp.route('/santri/impor-semua', methods=['POST'])
 @login_required
