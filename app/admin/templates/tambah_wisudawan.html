@@ -25,16 +25,24 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     new TomSelect('#select-santri-wisuda', {
-        valueField: 'nis', // Menggunakan NIS sebagai nilai
+        valueField: 'nis', 
         searchField: 'nama',
+        
+        // ▼▼▼ BAGIAN YANG DIUBAH ▼▼▼
+        maxItems: 100, // Izinkan pemilihan hingga 100 santri sekaligus
+        plugins: ['remove_button'], // Tambahkan tombol 'x' untuk menghapus pilihan
+        
         load: (query, callback) => {
             const url = `/admin/api/search-santri-for-wisuda?q=${encodeURIComponent(query)}`;
             fetch(url).then(res => res.json()).then(json => callback(json.results)).catch(() => callback());
         },
-        onChange: (value) => {
-            // value sekarang adalah NIS
-            document.getElementById('santri').value = value;
+        onChange: (values) => {
+            // 'values' sekarang adalah array berisi NIS. 
+            // Kita gabungkan menjadi satu string dipisahkan koma.
+            document.getElementById('santri').value = values.join(',');
         },
+        // ▲▲▲ AKHIR BAGIAN YANG DIUBAH ▲▲▲
+
         render: {
             option: function(data, escape) {
                 return `<div><strong>${escape(data.nama)}</strong><br><small>NIS: ${escape(data.nis)} | ${escape(data.asrama || '')}</small></div>`;

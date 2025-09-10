@@ -4412,27 +4412,57 @@ def manajemen_wisuda():
                            active_edisi=active_edisi)
 
 # 2. Halaman untuk menambah wisudawan manual
-@admin_bp.route('/tambah-wisudawan', methods=['GET', 'POST'])
+# Di dalam file app/admin/routes.py
+
+@admin_bp.route('/wisuda/tambah', methods=['GET', 'POST'])
 @login_required
-@role_required('Korpus', 'Sekretaris', 'Korpuspi')
+@role_required('Korpus', 'PJ Acara', 'Sekretaris', 'Korpuspi')
 def tambah_wisudawan():
     form = WisudaForm()
+    active_edisi = get_active_edisi()
+
+    if not active_edisi:
+        flash("Tidak ada edisi aktif untuk menambahkan wisudawan.", "warning")
+        return redirect(url_for('admin.manajemen_wisuda'))
+
     if form.validate_on_submit():
-        santri = Santri.query.filter_by(nis=form.santri.data).first()
-        if santri and not santri.wisuda_info:
-            santri.status_santri = 'Wisuda'
-            new_wisuda = Wisuda(
-                santri_nis=santri.nis,
-                edisi_id=get_active_edisi().id,
-                kategori_wisuda=form.kategori_wisuda.data
-            )
-            db.session.add(new_wisuda)
+        # 1. Ambil string NIS dan ubah menjadi list
+        nis_list_str = form.santri.data
+        all_nis = [nis.strip() for nis in nis_list_str.split(',') if nis.strip()]
+        
+        if not all_nis:
+            flash("Anda belum memilih santri.", "danger")
+            return redirect(url_for('admin.tambah_wisudawan'))
+
+        kategori = form.kategori_wisuda.data
+        
+        # 2. Cari semua santri yang relevan dalam satu query
+        santri_to_process = Santri.query.filter(Santri.nis.in_(all_nis)).all()
+        
+        newly_graduated_count = 0
+        for santri in santri_to_process:
+            # 3. Cek duplikat dan proses setiap santri
+            if not santri.wisuda_info and santri.status_santri == 'Aktif':
+                santri.status_santri = 'Wisuda' # Update status santri
+                
+                new_wisuda = Wisuda(
+                    santri_nis=santri.nis,
+                    edisi_id=active_edisi.id,
+                    kategori_wisuda=kategori
+                )
+                db.session.add(new_wisuda)
+                newly_graduated_count += 1
+        
+        # 4. Simpan semua perubahan ke database sekaligus
+        if newly_graduated_count > 0:
             db.session.commit()
-            flash(f'{santri.nama} berhasil ditandai sebagai wisudawan.', 'success')
-            return redirect(url_for('admin.manajemen_wisuda'))
+            flash(f'{newly_graduated_count} santri berhasil ditetapkan sebagai wisudawan.', 'success')
         else:
-            flash('Santri tidak ditemukan atau sudah menjadi wisudawan.', 'warning')
-    return render_template('tambah_wisudawan.html', form=form, title="Tambah Wisudawan Manual")
+            flash('Tidak ada santri baru yang ditambahkan. Mungkin semua sudah terdata sebagai wisudawan atau statusnya tidak aktif.', 'info')
+
+        return redirect(url_for('admin.manajemen_wisuda'))
+        
+    return render_template('tambah_wisudawan.html', form=form, title="Tambah Wisudawan")
 
 # 3. Route untuk menghapus status wisuda
 @admin_bp.route('/hapus-wisuda/<int:wisuda_id>', methods=['POST'])
