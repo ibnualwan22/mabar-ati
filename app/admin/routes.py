@@ -892,114 +892,83 @@ def pendaftaran_rombongan():
 
     return render_template('pendaftaran_rombongan.html', form=form, title="Form Pendaftaran Rombongan")
 
-@admin_bp.route('/pendaftaran/edit/<int:pendaftaran_id>', methods=['GET', 'POST'])
+# Di dalam file app/admin/routes.py
+
+@admin_bp.route('/pendaftaran/<int:pendaftaran_id>/edit', methods=['GET', 'POST'])
 @login_required
-@role_required('Korpus', 'Korda', 'Korpuspi')
+@role_required('Korpus', 'Korwil', 'Korda', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
 def edit_pendaftaran(pendaftaran_id):
-    pendaftaran = Pendaftaran.query.options(
-        joinedload(Pendaftaran.santri),
-        joinedload(Pendaftaran.rombongan_pulang),
-        joinedload(Pendaftaran.rombongan_kembali)
-    ).get_or_404(pendaftaran_id)
-    
-    # Verifikasi Kepemilikan Korda
-    if current_user.role.name == 'Korda':
-        managed_ids = {r.id for r in current_user.active_managed_rombongan}
-        if (pendaftaran.rombongan_pulang_id and pendaftaran.rombongan_pulang_id not in managed_ids) or \
-           (pendaftaran.rombongan_kembali_id and pendaftaran.rombongan_kembali_id not in managed_ids):
-            abort(403)
-    
+    pendaftaran = Pendaftaran.query.get_or_404(pendaftaran_id)
     form = PendaftaranEditForm(obj=pendaftaran)
     
-     # --- LOGIKA PENGISIAN CHOICES DINAMIS ---
-    # Selalu isi pilihan untuk perjalanan pulang
+    # --- LOGIKA HAK AKSES BARU ---
+    can_edit_pulang = False
+    can_edit_kembali = False
+    
+    if current_user.role.name in ['Korpus', 'Korwil', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi']:
+        can_edit_pulang = True
+        can_edit_kembali = True
+    elif current_user.role.name == 'Korda':
+        managed_ids = {r.id for r in current_user.active_managed_rombongan}
+        if pendaftaran.rombongan_pulang_id in managed_ids:
+            can_edit_pulang = True
+        if pendaftaran.rombongan_kembali_id in managed_ids:
+            can_edit_kembali = True
+
+    if not can_edit_pulang and not can_edit_kembali:
+        flash('Anda tidak memiliki hak akses untuk mengedit pendaftaran ini.', 'danger')
+        return redirect(url_for('admin.daftar_peserta_global'))
+    
+    
+
+    # Mengisi pilihan dropdown secara dinamis
     if pendaftaran.rombongan_pulang:
         form.titik_turun.choices = [(t.titik_turun, t.titik_turun) for t in pendaftaran.rombongan_pulang.tarifs]
-        form.bus_pulang.choices = [('', '-- Pilih Bus --')] + [(b.id, f"{b.nama_armada}...") for b in pendaftaran.rombongan_pulang.buses]
-
-    # Tentukan rombongan kembali yang relevan (baik dari GET maupun POST)
-    rombongan_kembali_terpilih = pendaftaran.rombongan_kembali
-    if request.method == 'POST':
-        rombongan_kembali_id_form = request.form.get('rombongan_kembali')
-        if rombongan_kembali_id_form:
-            rombongan_kembali_terpilih = Rombongan.query.get(rombongan_kembali_id_form)
+        form.bus_pulang.choices = [("", "-- Pilih Bus --")] + [(b.id, f"{b.nama_armada} - {b.nomor_lambung or b.plat_nomor}") for b in pendaftaran.rombongan_pulang.buses]
     
-    # Jika tidak ada rombongan kembali, gunakan rombongan pulang
-    if not rombongan_kembali_terpilih:
-        rombongan_kembali_terpilih = pendaftaran.rombongan_pulang
-
-    # Isi pilihan untuk perjalanan kembali
+    rombongan_kembali_terpilih = pendaftaran.rombongan_kembali or pendaftaran.rombongan_pulang
     if rombongan_kembali_terpilih:
         form.titik_jemput_kembali.choices = [(t.titik_turun, t.titik_turun) for t in rombongan_kembali_terpilih.tarifs]
-        form.bus_kembali.choices = [('', '-- Pilih Bus --')] + [(b.id, f"{b.nama_armada}...") for b in rombongan_kembali_terpilih.buses]
-    # -----------------------------------------------
+        form.bus_kembali.choices = [("", "-- Pilih Bus --")] + [(b.id, f"{b.nama_armada} - {b.nomor_lambung or b.plat_nomor}") for b in rombongan_kembali_terpilih.buses]
+    
+    
+    initial_data_dict = {
+        'rombonganPulangId': pendaftaran.rombongan_pulang_id,
+        'rombonganKembaliId': pendaftaran.rombongan_kembali_id,
+        'busPulangId': pendaftaran.bus_pulang_id,
+        'busKembaliId': pendaftaran.bus_kembali_id,
+        'titikTurun': pendaftaran.titik_turun or '',
+        'titikJemputKembali': pendaftaran.titik_jemput_kembali or ''
+    }
+    # Ubah dictionary menjadi string JSON
+    initial_data_json = json.dumps(initial_data_dict)
+
 
     if form.validate_on_submit():
-        # Update data pendaftaran dari form
-        pendaftaran.status_pulang = form.status_pulang.data
-        pendaftaran.metode_pembayaran_pulang = form.metode_pembayaran_pulang.data or None
-        pendaftaran.bus_pulang_id = int(form.bus_pulang.data) if form.bus_pulang.data else None
-        pendaftaran.titik_turun = form.titik_turun.data
-        
-        pendaftaran.status_kembali = form.status_kembali.data
-        pendaftaran.metode_pembayaran_kembali = form.metode_pembayaran_kembali.data or None
-        pendaftaran.bus_kembali_id = int(form.bus_kembali.data) if form.bus_kembali.data else None
-        pendaftaran.titik_jemput_kembali = form.titik_jemput_kembali.data
-        
-        # Tentukan rombongan kembali
-        pendaftaran.rombongan_kembali = form.rombongan_kembali.data or pendaftaran.rombongan_pulang
+        # Hanya simpan data yang berhak diubah oleh user
+        if can_edit_pulang:
+            pendaftaran.status_pulang = form.status_pulang.data
+            pendaftaran.metode_pembayaran_pulang = form.metode_pembayaran_pulang.data
+            pendaftaran.titik_turun = form.titik_turun.data
+            pendaftaran.bus_pulang_id = form.bus_pulang.data or None
 
-        rombongan_kembali_terpilih = form.rombongan_kembali.data or pendaftaran.rombongan_pulang
+        if can_edit_kembali:
+            pendaftaran.rombongan_kembali = form.rombongan_kembali.data
+            pendaftaran.status_kembali = form.status_kembali.data
+            pendaftaran.metode_pembayaran_kembali = form.metode_pembayaran_kembali.data
+            pendaftaran.titik_jemput_kembali = form.titik_jemput_kembali.data
+            pendaftaran.bus_kembali_id = form.bus_kembali.data or None
 
+        try:
+            db.session.commit()
+            flash('Perubahan data pendaftaran berhasil disimpan.', 'success')
+            return redirect(url_for('admin.daftar_peserta', rombongan_id=pendaftaran.rombongan_pulang_id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Terjadi kesalahan: {e}', 'danger')
 
-         # Hitung ulang total biaya
-        total_biaya = 0
-        tarif_pulang = Tarif.query.filter_by(rombongan_id=pendaftaran.rombongan_pulang_id, titik_turun=form.titik_turun.data).first()
-        if form.status_pulang.data != 'Tidak Ikut' and tarif_pulang:
-            total_biaya += tarif_pulang.harga_bus + tarif_pulang.fee_korda + 10000
-        
-        if form.status_kembali.data != 'Tidak Ikut' and rombongan_kembali_terpilih and form.titik_jemput_kembali.data:
-            tarif_kembali = Tarif.query.filter_by(rombongan_id=rombongan_kembali_terpilih.id, titik_turun=form.titik_jemput_kembali.data).first()
-            if tarif_kembali:
-                total_biaya += tarif_kembali.harga_bus + tarif_kembali.fee_korda + 10000
-
-        # Bangun perintah UPDATE secara manual
-        stmt = update(Pendaftaran).where(Pendaftaran.id == pendaftaran_id).values(
-            status_pulang=form.status_pulang.data,
-            metode_pembayaran_pulang=form.metode_pembayaran_pulang.data or None,
-            bus_pulang_id=int(form.bus_pulang.data) if form.bus_pulang.data else None,
-            titik_turun=form.titik_turun.data,
-            
-            rombongan_kembali_id=rombongan_kembali_terpilih.id if rombongan_kembali_terpilih else None,
-            status_kembali=form.status_kembali.data,
-            metode_pembayaran_kembali=form.metode_pembayaran_kembali.data or None,
-            bus_kembali_id=int(form.bus_kembali.data) if form.bus_kembali.data else None,
-            titik_jemput_kembali=form.titik_jemput_kembali.data or None,
-            total_biaya=total_biaya
-        )
-        
-        db.session.execute(stmt)
-        log_activity('Edit', 'Pendaftaran', f"Mengubah pendaftaran untuk santri: '{pendaftaran.santri.nama}'")
-        db.session.commit()
-        
-        flash(f"Data pendaftaran untuk {pendaftaran.santri.nama} berhasil diperbarui.", "success")
-        return redirect(url_for('admin.daftar_peserta_global', rombongan_id=pendaftaran.rombongan_pulang_id))
-    
-    # Isi data form awal untuk ditampilkan saat request GET
-    if request.method == 'GET':
-        if pendaftaran.rombongan_pulang:
-            form.rombongan_pulang_nama.data = pendaftaran.rombongan_pulang.nama_rombongan
-        if pendaftaran.rombongan_pulang_id == pendaftaran.rombongan_kembali_id:
-            form.rombongan_kembali.data = None
-        else:
-            form.rombongan_kembali.data = pendaftaran.rombongan_kembali
-        
-        form.titik_turun.data = pendaftaran.titik_turun
-        form.titik_jemput_kembali.data = getattr(pendaftaran, 'titik_jemput_kembali', None)
-        form.bus_pulang.data = str(pendaftaran.bus_pulang_id) if pendaftaran.bus_pulang_id else ''
-        form.bus_kembali.data = str(pendaftaran.bus_kembali_id) if pendaftaran.bus_kembali_id else ''
-
-    return render_template('edit_pendaftaran.html', form=form, pendaftaran=pendaftaran)
+    return render_template('edit_pendaftaran.html', form=form, pendaftaran=pendaftaran,
+                           can_edit_pulang=can_edit_pulang, can_edit_kembali=can_edit_kembali)
 
 @admin_bp.route('/pendaftaran/hapus/<int:pendaftaran_id>', methods=['POST'])
 @login_required
@@ -1071,7 +1040,7 @@ def api_search_santri():
     query_id = request.args.get('q_id')
 
     # Query dasar untuk semua santri aktif, tanpa filter status pendaftaran
-    base_query = Santri.query.filter(Santri.status_santri == 'Aktif')
+    base_query = Santri.query.filter(Santri.status_santri.in_(['Aktif', 'Partisipan', 'Wisuda', 'Izin']))
 
     if q:
         base_query = base_query.filter(Santri.nama.ilike(f'%{q}%'))

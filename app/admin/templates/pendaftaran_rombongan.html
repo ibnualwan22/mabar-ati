@@ -549,23 +549,42 @@ document.addEventListener('DOMContentLoaded', function() {
         searchField: 'nama',
         maxItems: 100, // Izinkan pemilihan lebih dari satu (atur batasnya)
         plugins: ['remove_button'],
-        render: {
-            option: (data, escape) => {
-                let statusHtml = '';
-                // Cek jika santri sudah terdaftar
-                if (data.is_registered) {
-                    statusHtml = `<br><small class="text-danger"><strong>Sudah terdaftar di rombongan ${escape(data.rombongan_nama)}</strong></small>`;
-                }
-                // Tambahkan class 'disabled' jika sudah terdaftar agar tidak bisa dipilih
-                return `<div class="${data.is_registered ? 'disabled' : ''}">
-                            <strong>${escape(data.nama)}</strong>
-                            <br>
-                            <small class="text-muted">${escape(data.asrama || '')} - ${escape(data.kabupaten || '')}</small>
-                            ${statusHtml}
-                        </div>`;
-            },
-            item: (data, escape) => `<div>${escape(data.nama)}</div>`
-        },
+        // Di dalam file pendaftaran_rombongan.html
+render: {
+    option: (data, escape) => {
+        let statusLabel = '';
+        let isDisabled = data.is_registered; // Opsi dinonaktifkan jika sudah terdaftar
+        let reason = '';
+
+        // Tambahkan logika untuk status Partisipan, Wisuda, dan Izin
+        if (data.status_santri === 'Partisipan') {
+            statusLabel = '<span class="badge bg-info text-dark ms-2">Partisipan</span>';
+        } else if (data.status_santri === 'Wisuda') {
+            statusLabel = '<span class="badge bg-secondary ms-2">Wisuda</span>';
+        } else if (data.status_santri === 'Izin') {
+            statusLabel = '<span class="badge bg-warning text-dark ms-2">Izin</span>';
+            isDisabled = true; // Nonaktifkan juga jika statusnya Izin
+            reason = `<br><small class="text-danger"><strong>Santri berstatus Izin tidak bisa didaftarkan.</strong></small>`;
+        }
+
+        if (data.is_registered) {
+            reason = `<br><small class="text-danger"><strong>Sudah terdaftar di rombongan ${escape(data.rombongan_nama)}</strong></small>`;
+        }
+
+        // Tentukan kelas 'disabled' berdasarkan kondisi
+        const disabledClass = isDisabled ? 'disabled' : '';
+        
+        return `<div class="${disabledClass}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong>${escape(data.nama)}</strong>
+                        ${statusLabel}
+                    </div>
+                    <small class="text-muted">${escape(data.asrama || '')} - ${escape(data.kabupaten || '')}</small>
+                    ${reason}
+                </div>`;
+    },
+    item: (data, escape) => `<div>${escape(data.nama)}</div>`
+},
         load: (query, callback) => {
             const url = `/admin/api/search-santri?q=${encodeURIComponent(query)}`;
             fetch(url).then(res => res.json()).then(json => callback(json.results)).catch(() => callback());

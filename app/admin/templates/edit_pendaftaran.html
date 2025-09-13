@@ -51,39 +51,27 @@
                         </div>
 
                         <!-- Status Pulang -->
-                        <div class="mb-4">
-                            {{ form.status_pulang.label(class="form-label fw-semibold text-dark") }}
-                            <i class="fas fa-info-circle me-1 text-primary"></i>
-                            {{ form.status_pulang(class="form-select") }}
-                            {% if form.status_pulang.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.status_pulang.errors %}
-                                        <small class="text-danger">{{ error }}</small>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
+                            <div class="mb-4">
+        {{ form.status_pulang.label(class="form-label fw-semibold text-dark") }}
+        {{ form.status_pulang(class="form-select", disabled=not can_edit_pulang) }}
+    </div>
 
                         <!-- Metode Pembayaran Pulang -->
                         <div class="mb-4">
-                            {{ form.metode_pembayaran_pulang.label(class="form-label fw-semibold text-dark") }}
-                            <i class="fas fa-credit-card me-1 text-primary"></i>
-                            {{ form.metode_pembayaran_pulang(class="form-select") }}
-                        </div>
+        {{ form.metode_pembayaran_pulang.label(class="form-label fw-semibold text-dark") }}
+        {{ form.metode_pembayaran_pulang(class="form-select", disabled=not can_edit_pulang) }}
+    </div>
 
                         <!-- Titik Turun -->
                         <div class="mb-4">
-                            {{ form.titik_turun.label(class="form-label fw-semibold text-dark") }}
-                            <i class="fas fa-map-marker-alt me-1 text-primary"></i>
-                            {{ form.titik_turun(class="form-select", id="titik_turun") }}
-                        </div>
+        {{ form.titik_turun.label(class="form-label fw-semibold text-dark") }}
+        {{ form.titik_turun(class="form-select", id="titik_turun", disabled=not can_edit_pulang) }}
+    </div>
 
-                        <!-- Bus Pulang -->
-                        <div class="mb-0">
-                            {{ form.bus_pulang.label(class="form-label fw-semibold text-dark") }}
-                            <i class="fas fa-bus me-1 text-primary"></i>
-                            {{ form.bus_pulang(class="form-select", id="bus_pulang") }}
-                        </div>
+    <div class="mb-0">
+        {{ form.bus_pulang.label(class="form-label fw-semibold text-dark") }}
+        {{ form.bus_pulang(class="form-select", id="bus_pulang", disabled=not can_edit_pulang) }}
+    </div>
                     </div>
                 </div>
             </div>
@@ -268,14 +256,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
 
     // Data awal dari server
-    const initialData = {
-        rombonganPulangId: {{ pendaftaran.rombongan_pulang_id or 'null' }},
-        rombonganKembaliId: {{ pendaftaran.rombongan_kembali_id or 'null' }},
-        busPulangId: {{ pendaftaran.bus_pulang_id or 'null' }},
-        busKembaliId: {{ pendaftaran.bus_kembali_id or 'null' }},
-        titikTurun: "{{ pendaftaran.titik_turun or '' }}",
-        titikJemputKembali: "{{ pendaftaran.titik_jemput_kembali or '' }}"
-    };
+     const initialDataJsonString = '{{ initial_data_json | safe }}';
+    const initialData = JSON.parse(initialDataJsonString);
 
     console.log('Initial data:', initialData);
 
