@@ -957,6 +957,13 @@
             </a>
         </li>
         {% endif %}
+        {% if current_user.role.name in ['Korpus', 'Korpuspi', 'Korwil'] %}
+    <li class="nav-item">
+        <a href="{{ url_for('admin.rekapitulasi_global') }}" class="nav-link {{ 'active' if 'rekapitulasi_global' in request.endpoint else '' }}">
+            <i class="fas fa-globe-asia"></i> Rekapitulasi Global
+        </a>
+    </li>
+    {% endif %}
         {% if current_user.role.name in ['Korpus', 'Korda', 'Korpuspi'] %}
         <li class="nav-item">
             <a href="{{ url_for('admin.pendaftaran_rombongan') }}" 

@@ -5024,3 +5024,76 @@ def alokasi_bus(bus_id):
                            peserta_no_bus=peserta_no_bus,
                            perjalanan=perjalanan)
 
+# Di dalam file app/admin/routes.py
+
+@admin_bp.route('/rekapitulasi-global')
+@login_required
+@role_required('Korpus', 'Korpuspi', 'Korwil')
+def rekapitulasi_global():
+    active_edisi = get_active_edisi()
+    if not active_edisi:
+        flash("Tidak ada edisi aktif untuk menampilkan rekapitulasi.", "warning")
+        return render_template('rekapitulasi_global.html', title="Rekapitulasi Global", global_stats={}, rekap_rombongan=[], terdaftar_tidak_ikut=[], belum_terdaftar=[])
+
+    # ... (Bagian 1-4 untuk mengambil data tetap sama persis) ...
+    # 1. Ambil semua data pendaftaran yang relevan
+    semua_pendaftaran = Pendaftaran.query.filter_by(edisi_id=active_edisi.id).options(
+        joinedload(Pendaftaran.santri)
+    ).all()
+    
+    # 2. Hitung statistik global
+    peserta_ikut_pulang = sum(1 for p in semua_pendaftaran if p.status_pulang != 'Tidak Ikut')
+    peserta_ikut_kembali = sum(1 for p in semua_pendaftaran if p.status_kembali != 'Tidak Ikut')
+    peserta_tidak_ikut_pulang = sum(1 for p in semua_pendaftaran if p.status_pulang == 'Tidak Ikut')
+    peserta_tidak_ikut_kembali = sum(1 for p in semua_pendaftaran if p.status_kembali == 'Tidak Ikut')
+
+    global_stats = {
+        'pulang': peserta_ikut_pulang,
+        'kembali': peserta_ikut_kembali,
+        'tidak_pulang': peserta_tidak_ikut_pulang,
+        'tidak_kembali': peserta_tidak_ikut_kembali
+    }
+    
+    # 3. Buat rekap per rombongan
+    rekap_rombongan = []
+    semua_rombongan = Rombongan.query.filter_by(edisi=active_edisi).order_by(Rombongan.nama_rombongan).all()
+    
+    for rombongan in semua_rombongan:
+        pendaftar_rombongan = [p for p in semua_pendaftaran if p.rombongan_pulang_id == rombongan.id or p.rombongan_kembali_id == rombongan.id]
+        rekap_rombongan.append({
+            'nama': rombongan.nama_rombongan,
+            'peserta_pulang': sum(1 for p in pendaftar_rombongan if p.status_pulang != 'Tidak Ikut' and p.rombongan_pulang_id == rombongan.id),
+            'peserta_kembali': sum(1 for p in pendaftar_rombongan if p.status_kembali != 'Tidak Ikut' and (p.rombongan_kembali_id == rombongan.id or (p.rombongan_kembali_id is None and p.rombongan_pulang_id == rombongan.id)))
+        })
+        
+    # 4. Ambil daftar santri yang terdaftar tapi tidak ikut
+    terdaftar_tidak_ikut = [p for p in semua_pendaftaran if p.status_pulang == 'Tidak Ikut' or p.status_kembali == 'Tidak Ikut']
+    
+    # 5. Ambil daftar santri yang belum terdaftar
+    santri_terdaftar_ids = {p.santri_id for p in semua_pendaftaran}
+    belum_terdaftar = Santri.query.filter(
+        Santri.status_santri != 'Izin',
+        Santri.id.notin_(santri_terdaftar_ids)
+    ).order_by(Santri.nama).all()
+
+    # --- ▼▼▼ BLOK BARU: Buat format pesan WhatsApp baru ▼▼▼ ---
+    pesan_wa_pulang_list = ["*Laporan Peserta Pulang:*"]
+    for i, data in enumerate(rekap_rombongan, 1):
+        pesan_wa_pulang_list.append(f"{i}. {data['nama']} = {data['peserta_pulang']} peserta")
+    pesan_wa_pulang = "\n".join(pesan_wa_pulang_list)
+
+    pesan_wa_kembali_list = ["*Laporan Peserta Kembali:*"]
+    for i, data in enumerate(rekap_rombongan, 1):
+        pesan_wa_kembali_list.append(f"{i}. {data['nama']} = {data['peserta_kembali']} peserta")
+    pesan_wa_kembali = "\n".join(pesan_wa_kembali_list)
+    # --- ▲▲▲ AKHIR BLOK BARU ▲▲▲ ---
+
+    return render_template('rekapitulasi_global.html',
+                           title="Rekapitulasi Global",
+                           global_stats=global_stats,
+                           rekap_rombongan=rekap_rombongan,
+                           terdaftar_tidak_ikut=terdaftar_tidak_ikut,
+                           belum_terdaftar=belum_terdaftar,
+                           link_grup_wa="https://chat.whatsapp.com/HGBju7zp1aV1KrfKOBkbWo",
+                           pesan_wa_pulang=pesan_wa_pulang,      # <-- Kirim pesan baru ke template
+                           pesan_wa_kembali=pesan_wa_kembali)  # <-- Kirim pesan baru ke template
