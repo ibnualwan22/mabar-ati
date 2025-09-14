@@ -438,6 +438,11 @@
                                     {% elif pendaftaran.santri.jenis_kelamin == 'PUTRI' %}
                                         <div class="gender-badge gender-putri">Putri</div>
                                     {% endif %}
+                                    {% if pendaftaran.santri.keterangan_manual %}
+            <div class="text-muted small fst-italic mt-1" title="{{ pendaftaran.santri.keterangan_manual }}">
+                <i class="fas fa-info-circle"></i> {{ pendaftaran.santri.keterangan_manual[:30] }}...
+            </div>
+            {% endif %}
                                 </div>
                             </td>
                             <td>
@@ -549,6 +554,13 @@
                         <a href="{{ url_for('admin.edit_pendaftaran', pendaftaran_id=pendaftaran.id) }}" class="btn btn-warning btn-sm">
                             <i class="fas fa-edit"></i> Edit
                         </a>
+                        <button type="button" class="btn btn-info btn-sm edit-keterangan-btn"
+                    data-bs-toggle="modal" data-bs-target="#editKeteranganModal"
+                    data-santri-id="{{ pendaftaran.santri.id }}"
+                    data-santri-nama="{{ pendaftaran.santri.nama }}"
+                    data-keterangan="{{ pendaftaran.santri.keterangan_manual or '' }}">
+                <i class="fas fa-comment-dots"></i> Keterangan
+            </button>
                         <form method="POST" action="{{ url_for('admin.hapus_pendaftaran', pendaftaran_id=pendaftaran.id) }}" 
                         onsubmit="return confirmDelete(this, '{{ pendaftaran.santri.nama }} mau dihapus dari peserta rombongan?');">
                             <button type="submit" class="btn btn-danger btn-sm w-100">
@@ -596,4 +608,65 @@
         {% endif %}
     </div>
 </div>
+<div class="modal fade" id="editKeteranganModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Keterangan Santri</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="edit-keterangan-form">
+        <div class="modal-body">
+            <input type="hidden" id="modal-santri-id" name="santri_id">
+            <div class="mb-3">
+                <label class="form-label">Nama Santri</label>
+                <input type="text" id="modal-santri-nama" class="form-control" readonly>
+            </div>
+            <div class="mb-3">
+                <label for="modal-keterangan" class="form-label">Keterangan</label>
+                <textarea id="modal-keterangan" name="keterangan_manual" class="form-control" rows="4"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-primary">Simpan Keterangan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const editKeteranganModal = document.getElementById('editKeteranganModal');
+    const modalForm = document.getElementById('edit-keterangan-form');
+
+    editKeteranganModal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        document.getElementById('modal-santri-id').value = button.dataset.santriId;
+        document.getElementById('modal-santri-nama').value = button.dataset.santriNama;
+        document.getElementById('modal-keterangan').value = button.dataset.keterangan;
+    });
+
+    modalForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const santriId = document.getElementById('modal-santri-id').value;
+        const formData = new FormData(this);
+
+        fetch(`/admin/santri/update-keterangan/${santriId}`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                alert(data.message);
+                window.location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

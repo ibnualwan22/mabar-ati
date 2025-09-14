@@ -471,4 +471,8 @@ class ImportPartisipanForm(FlaskForm):
                                   description="Kategori ini akan diterapkan ke semua santri di dalam file.")
     submit = SubmitField('Impor Data Partisipan')
 
-
+class KeteranganSantriForm(FlaskForm):
+    """Form simpel untuk mengedit keterangan manual santri."""
+    keterangan_manual = TextAreaField('Keterangan', 
+                                      render_kw={"placeholder": "Masukkan catatan khusus untuk santri ini...", "rows": 4})
+    submit = SubmitField('Simpan Keterangan')

@@ -111,6 +111,7 @@
                                 <th>No.</th>
                                 <th>Nama Santri</th>
                                 <th>Asrama</th>
+                                <th>Alamat</th>
                                 <th>Kelas Formal</th>
                                 <th>Kelas Ngaji</th>
                                 {% if current_user.role.name in ['Korpus', 'PJ Acara'] %}
@@ -124,6 +125,7 @@
                                 <td>{{ loop.index }}</td>
                                 <td><strong>{{ partisipan.santri.nama }}</strong></td>
                                 <td>{{ partisipan.santri.asrama }}</td>
+                                <td>{{ partisipan.santri.kabupaten }}</td>
                                 <td>{{ partisipan.santri.kelas_formal or '-' }}</td>
                                 <td>{{ partisipan.santri.kelas_ngaji or '-' }}</td>
                                 

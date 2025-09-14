@@ -4858,6 +4858,22 @@ def tambah_santri_manual():
     
     return render_template('tambah_santri_manual.html', title="Tambah Santri Manual", form=form)
 
+# Di dalam file app/admin/routes.py
+
+@admin_bp.route('/santri/update-keterangan/<int:santri_id>', methods=['POST'])
+@login_required
+def update_keterangan_santri(santri_id):
+    santri = Santri.query.get_or_404(santri_id)
+    
+    # Langsung ambil data dari request form yang dikirim oleh JavaScript
+    keterangan = request.form.get('keterangan_manual')
+    
+    # Update data di database
+    santri.keterangan_manual = keterangan
+    db.session.commit()
+    
+    # Kirim respons sukses
+    return jsonify({'success': True, 'message': 'Keterangan berhasil disimpan.'})
 
 # API endpoints untuk provinsi dan kabupaten
 @admin_bp.route('/api/get-provinsi')

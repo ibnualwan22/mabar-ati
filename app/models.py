@@ -90,6 +90,7 @@ class Santri(db.Model):
     status_santri = db.Column(db.String(20), default='Aktif')
     nama_jabatan = db.Column(db.String(100), nullable=True)
     status_jabatan = db.Column(db.String(100), nullable=True)
+    keterangan_manual = db.Column(db.Text, nullable=True)
     wisuda_info = db.relationship('Wisuda', 
                                   foreign_keys='Wisuda.santri_nis', 
                                   primaryjoin='Santri.nis == Wisuda.santri_nis', 
