@@ -14,6 +14,8 @@
         --text-primary: #1e293b;
         --text-secondary: #64748b;
         --border-color: #e2e8f0;
+        --success-green: #10b981;
+        --warning-orange: #f59e0b;
     }
     .page-container { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
     .page-header {
@@ -27,14 +29,98 @@
     .page-header h1 { color: var(--text-primary); font-size: 1.75rem; font-weight: 700; margin: 0; }
     .page-header p { color: var(--text-secondary); margin-top: 0.25rem; }
 
+    /* Filter Section */
+    .filter-section {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        border: 1px solid var(--border-color);
+    }
+    .filter-row {
+        display: flex;
+        gap: 1rem;
+        align-items: end;
+        flex-wrap: wrap;
+    }
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+    }
+    .filter-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 0.9rem;
+    }
+    .filter-group select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: white;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+    }
+    .filter-group select:focus {
+        outline: none;
+        border-color: var(--primary-blue);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    /* Button Styles */
     .btn-primary {
         background: var(--primary-blue); border: none; border-radius: 8px; padding: 0.6rem 1.2rem;
         font-weight: 600; color: white; transition: all 0.3s ease;
         box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
     }
     .btn-primary:hover {
         background: var(--dark-blue); transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        color: white;
+        text-decoration: none;
+    }
+    .btn-success {
+        background: var(--success-green);
+        border: none;
+        border-radius: 8px;
+        padding: 0.6rem 1.2rem;
+        font-weight: 600;
+        color: white;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+    }
+    .btn-success:hover {
+        background: #059669;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        color: white;
+        text-decoration: none;
+    }
+    .btn-secondary {
+        background: var(--text-secondary);
+        border: none;
+        border-radius: 8px;
+        padding: 0.6rem 1.2rem;
+        font-weight: 600;
+        color: white;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+    }
+    .btn-secondary:hover {
+        background: #475569;
+        color: white;
+        text-decoration: none;
     }
 
     .data-card {
@@ -46,6 +132,9 @@
         padding: 1rem 1.5rem;
         background: var(--background);
         border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
     .card-header h3 {
         margin: 0;
@@ -53,6 +142,15 @@
         font-weight: 600;
         color: var(--text-primary);
     }
+    .card-stats {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        background: white;
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        border: 1px solid var(--border-color);
+    }
+
     .table { margin: 0; }
     .table thead th {
         background: #f8fafc; color: var(--text-secondary); font-weight: 600;
@@ -77,6 +175,46 @@
 
     .empty-state { text-align: center; padding: 3rem; color: var(--text-secondary); }
     .empty-state i { font-size: 3rem; margin-bottom: 1rem; opacity: 0.4; }
+
+    /* Header Actions */
+    .header-actions {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    /* Summary Stats */
+    .summary-stats {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        border: 1px solid var(--border-color);
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+        background: var(--background);
+        border-radius: 8px;
+    }
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: var(--primary-blue);
+        margin-bottom: 0.5rem;
+    }
+    .stat-label {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
 </style>
 
 <div class="page-container">
@@ -85,24 +223,97 @@
             <h1>Data Partisipan</h1>
             <p>Halaman ini menampilkan semua santri yang berstatus sebagai partisipan, dikelompokkan berdasarkan kategorinya.</p>
         </div>
-        {% if current_user.role.name in ['Korpus', 'PJ Acara', 'Sekretaris', 'Korpuspi'] %}
-        <a href="{{ url_for('admin.tambah_partisipan') }}" class="btn btn-primary">
-            <i class="fas fa-plus me-2"></i>Tambah Partisipan
-        </a>
-        {% endif %}
+        <div class="header-actions">
+            <!-- Export Button -->
+            <form method="GET" action="{{ url_for('admin.export_partisipan') }}" style="display: inline;">
+                <input type="hidden" name="alamat_filter" value="{{ request.args.get('alamat_filter', '') }}">
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-file-excel me-2"></i>Export Excel
+                </button>
+            </form>
+            
+            {% if current_user.role.name in ['Korpus', 'PJ Acara', 'Sekretaris', 'Korpuspi'] %}
+            <a href="{{ url_for('admin.tambah_partisipan') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Tambah Partisipan
+            </a>
+            {% endif %}
+        </div>
     </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <form method="GET" action="{{ url_for('admin.data_partisipan') }}">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="alamat_filter">Filter Alamat</label>
+                    <select name="alamat_filter" id="alamat_filter" onchange="this.form.submit()">
+                        <option value="">Semua Alamat</option>
+                        {% for alamat in available_alamat %}
+                        <option value="{{ alamat }}" {% if alamat == request.args.get('alamat_filter') %}selected{% endif %}>
+                            {{ alamat }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group" style="flex: 0;">
+                    <a href="{{ url_for('admin.data_partisipan') }}" class="btn btn-secondary">
+                        <i class="fas fa-times me-2"></i>Reset Filter
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Summary Stats -->
+    {% if grouped_partisipan %}
+    <div class="summary-stats">
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-number">{{ total_partisipan }}</div>
+                <div class="stat-label">Total Partisipan</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ grouped_partisipan|length }}</div>
+                <div class="stat-label">Kategori</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ total_alamat }}</div>
+                <div class="stat-label">Alamat Berbeda</div>
+            </div>
+            {% if request.args.get('alamat_filter') %}
+            <div class="stat-item">
+                <div class="stat-number">{{ filtered_count }}</div>
+                <div class="stat-label">Dari {{ request.args.get('alamat_filter') }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 
     {% if not grouped_partisipan %}
         <div class="empty-state">
             <i class="fas fa-users-slash"></i>
-            <h5>Belum Ada Data</h5>
-            <p>Saat ini belum ada data partisipan yang ditambahkan.</p>
+            <h5>
+                {% if request.args.get('alamat_filter') %}
+                    Tidak Ada Partisipan dari {{ request.args.get('alamat_filter') }}
+                {% else %}
+                    Belum Ada Data
+                {% endif %}
+            </h5>
+            <p>
+                {% if request.args.get('alamat_filter') %}
+                    Tidak ditemukan partisipan dari alamat yang dipilih.
+                {% else %}
+                    Saat ini belum ada data partisipan yang ditambahkan.
+                {% endif %}
+            </p>
         </div>
     {% else %}
         {% for kategori, partisipan_list in grouped_partisipan.items()|sort %}
             <div class="data-card">
                 <div class="card-header">
-                    <h3>Kategori: {{ kategori }} (Jumlah: {{ partisipan_list|length }} orang)</h3>
+                    <h3>Kategori: {{ kategori }}</h3>
+                    <div class="card-stats">{{ partisipan_list|length }} orang</div>
                 </div>
                 <div class="table-responsive">
                     <table class="table">

@@ -2171,17 +2171,26 @@ def search_active_santri_api():
 
 # Di dalam file app/admin/routes.py
 
+from collections import defaultdict
+from flask import request, make_response, send_file
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+from openpyxl.utils import get_column_letter
+import io
+from datetime import datetime
+
 @admin_bp.route('/partisipan')
 @role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
 @login_required
 def data_partisipan():
     active_edisi = get_active_edisi()
+    alamat_filter = request.args.get('alamat_filter', '').strip()
     
     semua_partisipan = []
     if active_edisi:
         # Mulai dengan query dasar untuk mengambil semua partisipan di edisi aktif
         query = Partisipan.query.filter_by(edisi=active_edisi)
-
+        
         # Terapkan filter HANYA JIKA rolenya Korda atau Korwil
         if current_user.role.name in ['Korda', 'Korwil']:
             # 1. Kumpulkan semua cakupan wilayah yang dikelola oleh user saat ini
@@ -2199,16 +2208,205 @@ def data_partisipan():
             else:
                 # Jika Korda/Korwil tidak punya cakupan wilayah, jangan tampilkan data apapun
                 query = query.filter(db.false())
-
+        
         # Eksekusi query setelah semua filter yang diperlukan diterapkan
         semua_partisipan = query.all()
     
-    # Kelompokkan data berdasarkan kategori (logika ini tidak berubah)
+    # Dapatkan semua alamat unik dari partisipan (untuk dropdown filter)
+    all_alamat = set()
+    for p in semua_partisipan:
+        if p.santri.kabupaten:
+            all_alamat.add(p.santri.kabupaten)
+    available_alamat = sorted(list(all_alamat))
+    
+    # Filter berdasarkan alamat jika ada
+    if alamat_filter:
+        semua_partisipan = [p for p in semua_partisipan if p.santri.kabupaten == alamat_filter]
+    
+    # Kelompokkan data berdasarkan kategori
     grouped_partisipan = defaultdict(list)
     for p in semua_partisipan:
         grouped_partisipan[p.kategori].append(p)
+    
+    # Hitung statistik
+    total_partisipan = len(semua_partisipan)
+    total_alamat = len(all_alamat)
+    filtered_count = len(semua_partisipan) if alamat_filter else 0
+    
+    return render_template(
+        'data_partisipan.html',
+        grouped_partisipan=grouped_partisipan,
+        available_alamat=available_alamat,
+        total_partisipan=total_partisipan,
+        total_alamat=total_alamat,
+        filtered_count=filtered_count
+    )
+
+
+@admin_bp.route('/partisipan/export')
+@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
+@login_required
+def export_partisipan():
+    active_edisi = get_active_edisi()
+    alamat_filter = request.args.get('alamat_filter', '').strip()
+    
+    if not active_edisi:
+        flash('Tidak ada edisi aktif saat ini.', 'error')
+        return redirect(url_for('admin.data_partisipan'))
+    
+    # Query data partisipan (sama dengan fungsi data_partisipan)
+    query = Partisipan.query.filter_by(edisi=active_edisi)
+    
+    # Terapkan filter role
+    if current_user.role.name in ['Korda', 'Korwil']:
+        managed_regions = {
+            wilayah.get('label')
+            for rombongan in current_user.active_managed_rombongan
+            if rombongan.cakupan_wilayah
+            for wilayah in rombongan.cakupan_wilayah
+        }
         
-    return render_template('data_partisipan.html', grouped_partisipan=grouped_partisipan)
+        if managed_regions:
+            query = query.join(Santri).filter(Santri.kabupaten.in_(list(managed_regions)))
+        else:
+            query = query.filter(db.false())
+    
+    semua_partisipan = query.all()
+    
+    # Filter berdasarkan alamat jika ada
+    if alamat_filter:
+        semua_partisipan = [p for p in semua_partisipan if p.santri.kabupaten == alamat_filter]
+    
+    # Kelompokkan data berdasarkan kategori
+    grouped_partisipan = defaultdict(list)
+    for p in semua_partisipan:
+        grouped_partisipan[p.kategori].append(p)
+    
+    # Buat workbook Excel
+    wb = Workbook()
+    
+    # Hapus sheet default
+    wb.remove(wb.active)
+    
+    # Style untuk header
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    header_alignment = Alignment(horizontal="center", vertical="center")
+    
+    # Style untuk border
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'), 
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Style untuk kategori header
+    kategori_font = Font(bold=True, color="FFFFFF")
+    kategori_fill = PatternFill(start_color="2F5597", end_color="2F5597", fill_type="solid")
+    
+    # Buat sheet ringkasan
+    summary_sheet = wb.create_sheet("Ringkasan")
+    
+    # Header ringkasan
+    summary_headers = ["Kategori", "Jumlah Partisipan"]
+    for col, header in enumerate(summary_headers, 1):
+        cell = summary_sheet.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+        cell.border = thin_border
+    
+    # Data ringkasan
+    row = 2
+    total_semua = 0
+    for kategori, partisipan_list in sorted(grouped_partisipan.items()):
+        summary_sheet.cell(row=row, column=1, value=kategori).border = thin_border
+        jumlah = len(partisipan_list)
+        summary_sheet.cell(row=row, column=2, value=jumlah).border = thin_border
+        total_semua += jumlah
+        row += 1
+    
+    # Total
+    summary_sheet.cell(row=row, column=1, value="TOTAL").font = Font(bold=True)
+    summary_sheet.cell(row=row, column=1).border = thin_border
+    summary_sheet.cell(row=row, column=2, value=total_semua).font = Font(bold=True)
+    summary_sheet.cell(row=row, column=2).border = thin_border
+    
+    # Auto-width untuk kolom ringkasan
+    for column in summary_sheet.columns:
+        max_length = 0
+        column_letter = get_column_letter(column[0].column)
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)
+        summary_sheet.column_dimensions[column_letter].width = adjusted_width
+    
+    # Buat sheet untuk setiap kategori
+    for kategori, partisipan_list in sorted(grouped_partisipan.items()):
+        # Buat nama sheet yang valid (maksimal 31 karakter, tanpa karakter khusus)
+        sheet_name = kategori[:31].replace('/', '-').replace('\\', '-').replace('*', '-').replace('?', '-').replace(':', '-').replace('[', '-').replace(']', '-')
+        ws = wb.create_sheet(sheet_name)
+        
+        # Header tabel
+        headers = ["No", "Nama Santri", "Asrama", "Alamat", "Kelas Formal", "Kelas Ngaji"]
+        
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+            cell.border = thin_border
+        
+        # Data partisipan (diurutkan berdasarkan nama)
+        partisipan_sorted = sorted(partisipan_list, key=lambda x: x.santri.nama)
+        
+        for row, partisipan in enumerate(partisipan_sorted, 2):
+            ws.cell(row=row, column=1, value=row-1).border = thin_border  # No
+            ws.cell(row=row, column=2, value=partisipan.santri.nama).border = thin_border  # Nama
+            ws.cell(row=row, column=3, value=partisipan.santri.asrama).border = thin_border  # Asrama
+            ws.cell(row=row, column=4, value=partisipan.santri.kabupaten).border = thin_border  # Alamat
+            ws.cell(row=row, column=5, value=partisipan.santri.kelas_formal or '-').border = thin_border  # Kelas Formal
+            ws.cell(row=row, column=6, value=partisipan.santri.kelas_ngaji or '-').border = thin_border  # Kelas Ngaji
+        
+        # Auto-width untuk kolom
+        for column in ws.columns:
+            max_length = 0
+            column_letter = get_column_letter(column[0].column)
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column_letter].width = adjusted_width
+    
+    # Jika tidak ada data
+    if not grouped_partisipan:
+        ws = wb.create_sheet("Tidak Ada Data")
+        ws.cell(row=1, column=1, value="Tidak ada data partisipan untuk diekspor.")
+    
+    # Simpan ke BytesIO
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    # Generate nama file
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filter_text = f"_{alamat_filter}" if alamat_filter else ""
+    filename = f"Data_Partisipan_{active_edisi.nama}{filter_text}_{timestamp}.xlsx"
+    
+    # Buat response
+    response = make_response(output.getvalue())
+    response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    
+    return response
 
 # Buat route placeholder untuk form tambah agar link-nya tidak error
 @admin_bp.route('/partisipan/tambah', methods=['GET', 'POST'])
