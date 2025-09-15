@@ -1360,11 +1360,35 @@ def export_peserta_global():
         else:
             query = query.filter(db.false())
 
-    # Apply filters
-    query = apply_filters(query)
+    # Ambil semua filter dari URL, termasuk filter gelombang
+    nama_filter = request.args.get('nama', '')
+    rombongan_id_filter = request.args.get('rombongan_id', type=int)
+    status_bayar_filter = request.args.get('status_bayar', '')
+    jenis_kelamin_filter = request.args.get('jenis_kelamin', '')
+    gelombang_filter = request.args.get('gelombang', type=int)  # Filter gelombang
+
+    query = query.join(Santri)
+    
+    # Terapkan semua filter yang ada
+    if nama_filter:
+        query = query.filter(Santri.nama.ilike(f'%{nama_filter}%'))
+    if rombongan_id_filter:
+        query = query.filter(or_(Pendaftaran.rombongan_pulang_id == rombongan_id_filter, Pendaftaran.rombongan_kembali_id == rombongan_id_filter))
+    if jenis_kelamin_filter:
+        query = query.filter(Santri.jenis_kelamin == jenis_kelamin_filter)
+    if status_bayar_filter:
+        if status_bayar_filter == 'Lunas':
+            query = query.filter(and_(Pendaftaran.status_pulang == 'Lunas', Pendaftaran.status_kembali == 'Lunas'))
+        else:
+            query = query.filter(or_(Pendaftaran.status_pulang == 'Belum Bayar', Pendaftaran.status_kembali == 'Belum Bayar'))
+    
+    # Filter gelombang
+    if gelombang_filter:
+        query = query.filter(Pendaftaran.gelombang_pulang == gelombang_filter)
+    
     semua_pendaftar = query.order_by(Santri.nama).all()
 
-    # ADDED: Create tarif map for calculation
+    # Create tarif map for calculation
     tarif_map = {}
     for p in semua_pendaftar:
         # Tarif for pulang
@@ -1391,7 +1415,7 @@ def export_peserta_global():
                 if tarif:
                     tarif_map[tarif_key] = tarif
 
-    # MODIFIED: Calculate biaya using tarif data
+    # Calculate biaya using tarif data
     total_lunas = 0
     total_belum_lunas = 0
     cash_data = []
@@ -1430,7 +1454,6 @@ def export_peserta_global():
             total_belum_lunas += p.total_biaya_calculated
         
         # Track payment methods
-        total_biaya_p = p.total_biaya_calculated
         if ('Cash' in (str(p.metode_pembayaran_pulang or '') + str(p.metode_pembayaran_kembali or ''))):
             cash_data.append(p)
         if ('Transfer' in (str(p.metode_pembayaran_pulang or '') + str(p.metode_pembayaran_kembali or ''))):
@@ -1443,14 +1466,18 @@ def export_peserta_global():
 
     data_for_excel = []
     for index, p in enumerate(semua_pendaftar, 1):
+        # Tentukan tanggal pulang berdasarkan gelombang
+        tanggal_pulang = "26 September" if p.gelombang_pulang == 1 else "27 September" if p.gelombang_pulang == 2 else "-"
+        
         data_for_excel.append({
             'No.': index,
             'Nama Santri': p.santri.nama if p.santri else 'N/A',
             'Jenis Kelamin': p.santri.jenis_kelamin if p.santri else 'N/A',
+            'Tanggal Pulang': tanggal_pulang if p.status_pulang != 'Tidak Ikut' else 'Tidak Ikut',
             'Asrama': p.santri.asrama if p.santri else 'N/A',
             'Kabupaten': p.santri.kabupaten if p.santri else 'N/A',
             'Rombongan Pulang': p.rombongan_pulang.nama_rombongan if p.rombongan_pulang else 'N/A',
-            'Rombongan Kembali': p.rombongan_kembali.nama_rombongan if p.rombongan_kembali else 'N/A',
+            'Rombongan Kembali': p.rombongan_kembali.nama_rombongan if p.rombongan_kembali else (p.rombongan_pulang.nama_rombongan if p.rombongan_pulang else 'N/A'),
             'Titik Turun': p.titik_turun or '-',
             'Titik Jemput': p.titik_jemput_kembali or p.titik_turun or '-',
             'Bus Pulang': p.bus_pulang.nama_armada if p.bus_pulang else '-',
@@ -1464,16 +1491,86 @@ def export_peserta_global():
             'Total Biaya': f"Rp. {p.total_biaya_calculated:,.0f}" if p.total_biaya_calculated else "Rp. 0"
         })
 
-    summary_data = {
-        'total_lunas': total_lunas,
-        'total_belum_lunas': total_belum_lunas,
-        'total_cash': total_cash,
-        'total_transfer': total_transfer,
-        'jumlah_orang_cash': jumlah_orang_cash,
-        'jumlah_orang_transfer': jumlah_orang_transfer
-    }
+    if not data_for_excel:
+        flash('Tidak ada data untuk diekspor sesuai filter yang dipilih.', 'warning')
+        return redirect(url_for('admin.daftar_peserta_global', **request.args))
 
-    return create_excel_file(data_for_excel, summary_data, 'Data_Peserta_Global.xlsx', 'GLOBAL')
+    # Create Excel with styling
+    df = pd.DataFrame(data_for_excel)
+    output = io.BytesIO()
+    
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        # Write main data
+        df.to_excel(writer, index=False, sheet_name='Data Peserta Global', startrow=0)
+        
+        # Get workbook and worksheet
+        workbook = writer.book
+        worksheet = writer.sheets['Data Peserta Global']
+        
+        # Define styles
+        from openpyxl.styles import PatternFill, Font, Alignment
+        
+        # Header styling - Blue background with white text
+        header_fill = PatternFill(start_color='0066CC', end_color='0066CC', fill_type='solid')
+        header_font = Font(color='FFFFFF', bold=True)
+        header_alignment = Alignment(horizontal='center', vertical='center')
+        
+        # Apply header styling
+        for cell in worksheet[1]:  # First row (header)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = header_alignment
+        
+        # Auto-adjust column widths
+        for column in worksheet.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            worksheet.column_dimensions[column_letter].width = adjusted_width
+        
+        # Add summary data at the bottom
+        summary_start_row = len(df) + 3
+        
+        summary_data = [
+            ['RINGKASAN PEMBAYARAN', ''],
+            ['Total Lunas', f"Rp. {total_lunas:,.0f}"],
+            ['Total Belum Lunas', f"Rp. {total_belum_lunas:,.0f}"],
+            ['Total Pembayaran Cash', f"Rp. {total_cash:,.0f}"],
+            ['Jumlah Orang Cash', jumlah_orang_cash],
+            ['Total Pembayaran Transfer', f"Rp. {total_transfer:,.0f}"],
+            ['Jumlah Orang Transfer', jumlah_orang_transfer],
+            ['Total Keseluruhan', f"Rp. {(total_lunas + total_belum_lunas):,.0f}"]
+        ]
+        
+        for idx, (label, value) in enumerate(summary_data):
+            row_num = summary_start_row + idx
+            worksheet[f'A{row_num}'] = label
+            worksheet[f'B{row_num}'] = value
+            
+            # Style summary header
+            if idx == 0:
+                worksheet[f'A{row_num}'].fill = header_fill
+                worksheet[f'A{row_num}'].font = header_font
+                worksheet[f'B{row_num}'].fill = header_fill
+                worksheet[f'B{row_num}'].font = header_font
+            else:
+                # Style other summary rows
+                worksheet[f'A{row_num}'].font = Font(bold=True)
+
+    output.seek(0)
+
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name='Data_Peserta_Global.xlsx'
+    )
 
 # Export untuk Data Pulang
 @admin_bp.route('/export-peserta-pulang')
