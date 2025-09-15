@@ -362,6 +362,14 @@
                         <option value="Belum Lunas" {% if request.args.get('status_bayar') == 'Belum Lunas' %}selected{% endif %}>Belum Lunas</option>
                     </select>
                 </div>
+                <div class="col-md-4">
+            <label class="form-label">Gelombang Kepulangan</label>
+            <select name="gelombang" class="form-select">
+                <option value="">-- Semua Gelombang --</option>
+                <option value="1" {% if request.args.get('gelombang')|int == 1 %}selected{% endif %}>Gelombang 1 (26 Sept)</option>
+                <option value="2" {% if request.args.get('gelombang')|int == 2 %}selected{% endif %}>Gelombang 2 (27 Sept)</option>
+            </select>
+        </div>
                 <div class="col-12 text-end">
                     <button type="submit" class="btn btn-primary">Filter</button>
                     <a href="{{ url_for('admin.daftar_peserta_global') }}" class="btn btn-secondary">Reset</a>

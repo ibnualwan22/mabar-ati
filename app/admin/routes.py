@@ -1170,6 +1170,8 @@ def daftar_peserta_global():
     status_bayar_filter = request.args.get('status_bayar', '')
     jenis_kelamin_filter = request.args.get('jenis_kelamin', '')
     perjalanan_filter = request.args.get('perjalanan', '')
+    gelombang_filter = request.args.get('gelombang', type=int) # <-- BARIS BARU
+
 
     query = Pendaftaran.query.filter(Pendaftaran.edisi_id == active_edisi.id)
 
@@ -1284,6 +1286,8 @@ def daftar_peserta_global():
     
     if jenis_kelamin_filter:
         query = query.filter(Santri.jenis_kelamin == jenis_kelamin_filter)
+    if gelombang_filter:
+        query = query.filter(Pendaftaran.gelombang_pulang == gelombang_filter)
         
     if perjalanan_filter == 'ikut_pulang':
         query = query.filter(Pendaftaran.status_pulang != 'Tidak Ikut')
