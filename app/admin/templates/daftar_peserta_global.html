@@ -438,6 +438,16 @@
                                     {% elif pendaftaran.santri.jenis_kelamin == 'PUTRI' %}
                                         <div class="gender-badge gender-putri">Putri</div>
                                     {% endif %}
+                                    {% if pendaftaran.status_pulang != 'Tidak Ikut' %}
+        <div class="badge bg-light text-dark mt-1">
+            <i class="fas fa-calendar-alt me-1"></i>
+            {% if pendaftaran.gelombang_pulang == 1 %}
+                Pulang Tgl 26 Sept
+            {% elif pendaftaran.gelombang_pulang == 2 %}
+                Pulang Tgl 27 Sept
+            {% endif %}
+        </div>
+        {% endif %}
                                     {% if pendaftaran.santri.keterangan_manual %}
             <div class="text-muted small fst-italic mt-1" title="{{ pendaftaran.santri.keterangan_manual }}">
                 <i class="fas fa-info-circle"></i> {{ pendaftaran.santri.keterangan_manual[:30] }}...

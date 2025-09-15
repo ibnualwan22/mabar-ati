@@ -5,69 +5,100 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h2">{{ title }}</h1>
 </div>
-<p class="text-muted">Dasbor pemantauan global untuk Korpus & Korwil. Semua data di halaman ini adalah rekapitulasi dari seluruh rombongan.</p>
+<p class="text-muted">Dasbor pemantauan global untuk Korpus & Korwil, dipisahkan berdasarkan gelombang kepulangan.</p>
 
-<div class="card mb-4 shadow-sm">
-    <div class="card-header bg-primary text-white">
-        <h5><i class="fas fa-globe-asia me-2"></i>Statistik & Laporan Global</h5>
-    </div>
-    <div class="card-body">
-        <div class="row align-items-center">
-            <div class="col-md-6 border-end">
-                <h6 class="text-center text-muted">PERJALANAN PULANG</h6>
-                <div class="text-center my-3">
-                    <div class="display-4 fw-bold text-primary">{{ global_stats.pulang }}</div>
-                    <div class="fw-light">Peserta Ikut Pulang</div>
-                </div>
-                <div class="text-center text-danger small">
-                    ({{ global_stats.tidak_pulang }} santri terdaftar tidak ikut pulang)
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-primary text-white text-center">
+                <h5 class="mb-0">Pulang Gelombang 1 (26 Sept)</h5>
+            </div>
+            <div class="card-body text-center d-flex flex-column justify-content-between">
+                <div>
+                    <div class="display-4 fw-bold text-primary">{{ global_stats.pulang_g1 }}</div>
+                    <div class="fw-light">Peserta Terdaftar</div>
                 </div>
                 <div class="d-grid mt-3">
-    <a href="https://wa.me/6281227225453?text={{ pesan_wa_pulang | urlencode }}" data-action="share/whatsapp/share" target="_blank" class="btn btn-success">
-        <i class="fab fa-whatsapp me-2"></i>Lapor Jumlah Pulang
-    </a>
-</div>
+                    <a href="https://wa.me/6281227225453?text={{ pesan_wa_pulang_g1 | urlencode }}" data-action="share/whatsapp/share" target="_blank" class="btn btn-success">
+                        <i class="fab fa-whatsapp me-2"></i>Lapor Gelombang 1
+                    </a>
+                </div>
             </div>
-            <div class="col-md-6">
-                <h6 class="text-center text-muted">PERJALANAN KEMBALI</h6>
-                <div class="text-center my-3">
-                    <div class="display-4 fw-bold text-info">{{ global_stats.kembali }}</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-info text-white text-center">
+                <h5 class="mb-0">Pulang Gelombang 2 (27 Sept)</h5>
+            </div>
+            <div class="card-body text-center d-flex flex-column justify-content-between">
+                <div>
+                    <div class="display-4 fw-bold text-info">{{ global_stats.pulang_g2 }}</div>
+                    <div class="fw-light">Peserta Terdaftar</div>
+                </div>
+                <div class="d-grid mt-3">
+                     <a href="https://wa.me/6281227225453?text={{ pesan_wa_pulang_g2 | urlencode }}" data-action="share/whatsapp/share" target="_blank" class="btn btn-success">
+                        <i class="fab fa-whatsapp me-2"></i>Lapor Gelombang 2
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-secondary text-white text-center">
+                <h5 class="mb-0">Perjalanan Kembali</h5>
+            </div>
+            <div class="card-body text-center d-flex flex-column justify-content-between">
+                <div>
+                    <div class="display-4 fw-bold text-secondary">{{ global_stats.kembali }}</div>
                     <div class="fw-light">Peserta Ikut Kembali</div>
                 </div>
-                <div class="text-center text-danger small">
-                    ({{ global_stats.tidak_kembali }} santri terdaftar tidak ikut kembali)
-                </div>
                 <div class="d-grid mt-3">
-    <a href="https://wa.me/6281227225453?text={{ pesan_wa_kembali | urlencode }}" data-action="share/whatsapp/share" target="_blank" class="btn btn-success">
-        <i class="fab fa-whatsapp me-2"></i>Lapor Jumlah Kembali
-    </a>
-</div>
+                    <a href="https://wa.me/6281227225453?text={{ pesan_wa_kembali | urlencode }}" data-action="share/whatsapp/share" target="_blank" class="btn btn-success">
+                        <i class="fab fa-whatsapp me-2"></i>Lapor Jumlah Kembali
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="card mb-4">
-    <div class="card-header">
-        <h5><i class="fas fa-chart-bar me-2"></i>Ringkasan per Rombongan</h5>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header"><h5><i class="fas fa-chart-bar me-2"></i>Ringkasan Pulang Gelombang 1</h5></div>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0">
+                    <thead><tr><th>Nama Rombongan</th><th class="text-center">Jumlah Peserta</th></tr></thead>
+                    <tbody>
+                        {% for data in rekap_rombongan_g1 %}
+                        <tr><td class="fw-bold">{{ data.nama }}</td><td class="text-center">{{ data.peserta_pulang }}</td></tr>
+                        {% else %}
+                        <tr><td colspan="2" class="text-center text-muted py-4">Tidak ada peserta.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
-    <div class="table-responsive">
-        <table class="table table-striped table-hover mb-0">
-            <thead>
-                <tr><th>Nama Rombongan</th><th class="text-center">Peserta Pulang</th><th class="text-center">Peserta Kembali</th></tr>
-            </thead>
-            <tbody>
-                {% for data in rekap_rombongan %}
-                <tr>
-                    <td class="fw-bold">{{ data.nama }}</td>
-                    <td class="text-center">{{ data.peserta_pulang }}</td>
-                    <td class="text-center">{{ data.peserta_kembali }}</td>
-                </tr>
-                {% else %}
-                <tr><td colspan="3" class="text-center text-muted py-4">Belum ada data rombongan.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header"><h5><i class="fas fa-chart-bar me-2"></i>Ringkasan Pulang Gelombang 2</h5></div>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0">
+                    <thead><tr><th>Nama Rombongan</th><th class="text-center">Jumlah Peserta</th></tr></thead>
+                    <tbody>
+                        {% for data in rekap_rombongan_g2 %}
+                        <tr><td class="fw-bold">{{ data.nama }}</td><td class="text-center">{{ data.peserta_pulang }}</td></tr>
+                        {% else %}
+                        <tr><td colspan="2" class="text-center text-muted py-4">Tidak ada peserta.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 

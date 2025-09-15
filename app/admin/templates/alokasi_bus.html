@@ -312,16 +312,7 @@
 
 <div class="container">
     <div class="stats-container">
-        <div class="stat-badge">
-            <i class="fas fa-users me-2"></i>Total Peserta: {{ peserta_no_bus|length + peserta_in_bus|length }}
         </div>
-        <div class="stat-badge">
-            <i class="fas fa-check-circle me-2"></i>Teralokasi: {{ peserta_in_bus|length }}
-        </div>
-        <div class="stat-badge">
-            <i class="fas fa-clock me-2"></i>Menunggu: {{ peserta_no_bus|length }}
-        </div>
-    </div>
 
     <ul class="nav nav-tabs nav-tabs-custom">
         <li class="nav-item">
@@ -347,9 +338,28 @@
                         <ul id="list-no-bus" class="list-group list-group-modern">
                             {% for p in peserta_no_bus %}
                             <li class="list-group-item list-group-item-modern" data-id="{{ p.id }}">
-                                {% set titik = (p.titik_turun if perjalanan else p.titik_jemput_kembali) %}
-<span>{{ p.santri.nama }} - {{ titik or '–' }}</span>
+                                <div class="flex-grow-1 me-3">
+                                    {% set titik = (p.titik_turun if perjalanan == 'pulang' else p.titik_jemput_kembali) %}
+                                    <span>{{ p.santri.nama }} - {{ titik or '–' }}</span>
+                                    
+                                    {% if perjalanan == 'pulang' and p.status_pulang != 'Tidak Ikut' %}
+                                    <span class="badge bg-primary mt-1">
+                                        <i class="fas fa-calendar-alt me-1"></i>
+                                        {% if p.gelombang_pulang == 1 %}
+                                            Tgl 26 September
+                                        {% elif p.gelombang_pulang == 2 %}
+                                            Tgl 27 September
+                                        {% endif %}
+                                    </span>
+                                    {% endif %}
 
+                                    {% if p.santri.keterangan_manual %}
+                                        <small class="d-block text-info fst-italic mt-1">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            {{ p.santri.keterangan_manual }}
+                                        </small>
+                                    {% endif %}
+                                </div>
                                 <button type="button" class="btn btn-action btn-add add-btn">+</button>
                             </li>
                             {% else %}
@@ -375,9 +385,28 @@
                         <ul id="list-in-bus" class="list-group list-group-modern">
                             {% for p in peserta_in_bus %}
                             <li class="list-group-item list-group-item-modern" data-id="{{ p.id }}">
-                                {% set titik = (p.titik_turun if perjalanan else p.titik_jemput_kembali) %}
-                            <span>{{ p.santri.nama }} - {{ titik or '–' }}</span>
+                                <div class="flex-grow-1 me-3">
+                                    {% set titik = (p.titik_turun if perjalanan == 'pulang' else p.titik_jemput_kembali) %}
+                                    <span>{{ p.santri.nama }} - {{ titik or '–' }}</span>
+                                    
+                                    {% if perjalanan == 'pulang' and p.status_pulang != 'Tidak Ikut' %}
+                                    <span class="badge bg-primary mt-1">
+                                        <i class="fas fa-calendar-alt me-1"></i>
+                                        {% if p.gelombang_pulang == 1 %}
+                                            Tgl 26 September
+                                        {% elif p.gelombang_pulang == 2 %}
+                                            Tgl 27 September
+                                        {% endif %}
+                                    </span>
+                                    {% endif %}
 
+                                    {% if p.santri.keterangan_manual %}
+                                        <small class="d-block text-info fst-italic mt-1">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            {{ p.santri.keterangan_manual }}
+                                        </small>
+                                    {% endif %}
+                                </div>
                                 <button type="button" class="btn btn-action btn-remove remove-btn">×</button>
                                 <input type="hidden" name="peserta_in_bus[]" value="{{ p.id }}">
                             </li>

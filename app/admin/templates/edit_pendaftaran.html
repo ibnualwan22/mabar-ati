@@ -67,6 +67,11 @@
         {{ form.titik_turun.label(class="form-label fw-semibold text-dark") }}
         {{ form.titik_turun(class="form-select", id="titik_turun", disabled=not can_edit_pulang) }}
     </div>
+    <div class="mt-4">
+                            {{ form.gelombang_pulang.label(class="form-label fw-semibold text-dark") }}
+                             <i class="fas fa-layer-group me-1 text-primary"></i>
+                            {{ form.gelombang_pulang(class="form-select", id="gelombang_pulang", disabled=not can_edit_pulang) }}
+                        </div>
 
     <div class="mb-0">
         {{ form.bus_pulang.label(class="form-label fw-semibold text-dark") }}

@@ -164,6 +164,8 @@ class Pendaftaran(db.Model):
     metode_pembayaran_pulang = db.Column(db.String(20))
     bus_pulang_id = db.Column(db.Integer, db.ForeignKey('bus.id'), nullable=True)
     titik_turun = db.Column(db.String(100))
+    gelombang_pulang = db.Column(db.Integer, default=1, nullable=False) # 1=Gelombang 1, 2=Gelombang 2
+
     
     # Detail Perjalanan Kembali
     status_kembali = db.Column(db.String(20), default='Tidak Ikut') # Belum Bayar, Lunas, Tidak Ikut

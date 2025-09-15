@@ -847,6 +847,7 @@ def pendaftaran_rombongan():
                 'titik_turun': form.titik_turun.data,
                 'status_kembali': form.status_kembali.data,
                 'metode_pembayaran_kembali': form.metode_pembayaran_kembali.data,
+                'gelombang_pulang': form.gelombang_pulang.data,
                 'total_biaya': total_biaya
             }
 
@@ -950,6 +951,7 @@ def edit_pendaftaran(pendaftaran_id):
             pendaftaran.status_pulang = form.status_pulang.data
             pendaftaran.metode_pembayaran_pulang = form.metode_pembayaran_pulang.data
             pendaftaran.titik_turun = form.titik_turun.data
+            pendaftaran.gelombang_pulang = form.gelombang_pulang.data
             pendaftaran.bus_pulang_id = form.bus_pulang.data or None
 
         if can_edit_kembali:
@@ -962,7 +964,7 @@ def edit_pendaftaran(pendaftaran_id):
         try:
             db.session.commit()
             flash('Perubahan data pendaftaran berhasil disimpan.', 'success')
-            return redirect(url_for('admin.daftar_peserta', rombongan_id=pendaftaran.rombongan_pulang_id))
+            return redirect(url_for('admin.daftar_peserta_global', rombongan_id=pendaftaran.rombongan_pulang_id))
         except Exception as e:
             db.session.rollback()
             flash(f'Terjadi kesalahan: {e}', 'danger')
@@ -5240,6 +5242,8 @@ def alokasi_bus(bus_id):
 
 # Di dalam file app/admin/routes.py
 
+# Di dalam file app/admin/routes.py
+
 @admin_bp.route('/rekapitulasi-global')
 @login_required
 @role_required('Korpus', 'Korpuspi', 'Korwil')
@@ -5247,67 +5251,64 @@ def rekapitulasi_global():
     active_edisi = get_active_edisi()
     if not active_edisi:
         flash("Tidak ada edisi aktif untuk menampilkan rekapitulasi.", "warning")
-        return render_template('rekapitulasi_global.html', title="Rekapitulasi Global", global_stats={}, rekap_rombongan=[], terdaftar_tidak_ikut=[], belum_terdaftar=[])
+        return render_template('rekapitulasi_global.html', title="Rekapitulasi Global", global_stats={}, rekap_rombongan_g1=[], rekap_rombongan_g2=[], terdaftar_tidak_ikut=[], belum_terdaftar=[])
 
-    # ... (Bagian 1-4 untuk mengambil data tetap sama persis) ...
-    # 1. Ambil semua data pendaftaran yang relevan
-    semua_pendaftaran = Pendaftaran.query.filter_by(edisi_id=active_edisi.id).options(
-        joinedload(Pendaftaran.santri)
-    ).all()
+    # 1. Ambil semua data pendaftaran
+    semua_pendaftaran = Pendaftaran.query.filter_by(edisi_id=active_edisi.id).options(joinedload(Pendaftaran.santri)).all()
+    semua_rombongan = Rombongan.query.filter_by(edisi=active_edisi).order_by(Rombongan.nama_rombongan).all()
+
+    # 2. Pisahkan pendaftar berdasarkan gelombang
+    pendaftar_g1 = [p for p in semua_pendaftaran if p.gelombang_pulang == 1 and p.status_pulang != 'Tidak Ikut']
+    pendaftar_g2 = [p for p in semua_pendaftaran if p.gelombang_pulang == 2 and p.status_pulang != 'Tidak Ikut']
     
-    # 2. Hitung statistik global
-    peserta_ikut_pulang = sum(1 for p in semua_pendaftaran if p.status_pulang != 'Tidak Ikut')
+    # Hitung statistik global untuk kembali (ini tidak berubah)
     peserta_ikut_kembali = sum(1 for p in semua_pendaftaran if p.status_kembali != 'Tidak Ikut')
-    peserta_tidak_ikut_pulang = sum(1 for p in semua_pendaftaran if p.status_pulang == 'Tidak Ikut')
     peserta_tidak_ikut_kembali = sum(1 for p in semua_pendaftaran if p.status_kembali == 'Tidak Ikut')
 
     global_stats = {
-        'pulang': peserta_ikut_pulang,
+        'pulang_g1': len(pendaftar_g1),
+        'pulang_g2': len(pendaftar_g2),
         'kembali': peserta_ikut_kembali,
-        'tidak_pulang': peserta_tidak_ikut_pulang,
         'tidak_kembali': peserta_tidak_ikut_kembali
     }
+
+    # 3. Buat rekap per rombongan untuk setiap gelombang
+    def buat_rekap_rombongan(pendaftar_gelombang):
+        rekap = []
+        for rombongan in semua_rombongan:
+            count = sum(1 for p in pendaftar_gelombang if p.rombongan_pulang_id == rombongan.id)
+            if count > 0: # Hanya tampilkan rombongan yang punya peserta di gelombang ini
+                rekap.append({'nama': rombongan.nama_rombongan, 'peserta_pulang': count})
+        return rekap
+
+    rekap_rombongan_g1 = buat_rekap_rombongan(pendaftar_g1)
+    rekap_rombongan_g2 = buat_rekap_rombongan(pendaftar_g2)
+
+    # 4. Buat format pesan WA untuk setiap gelombang
+    def format_pesan_wa(rekap_list, judul):
+        pesan_lines = [f"*{judul}:*"]
+        if not rekap_list:
+            pesan_lines.append("_Tidak ada peserta terdaftar._")
+        else:
+            for i, data in enumerate(rekap_list, 1):
+                pesan_lines.append(f"{i}. {data['nama']} = {data['peserta_pulang']} peserta")
+        return "\n".join(pesan_lines)
     
-    # 3. Buat rekap per rombongan
-    rekap_rombongan = []
-    semua_rombongan = Rombongan.query.filter_by(edisi=active_edisi).order_by(Rombongan.nama_rombongan).all()
+    pesan_wa_pulang_g1 = format_pesan_wa(rekap_rombongan_g1, "Laporan Peserta Pulang Gelombang 1 (26 Sept)")
+    pesan_wa_pulang_g2 = format_pesan_wa(rekap_rombongan_g2, "Laporan Peserta Pulang Gelombang 2 (27 Sept)")
     
-    for rombongan in semua_rombongan:
-        pendaftar_rombongan = [p for p in semua_pendaftaran if p.rombongan_pulang_id == rombongan.id or p.rombongan_kembali_id == rombongan.id]
-        rekap_rombongan.append({
-            'nama': rombongan.nama_rombongan,
-            'peserta_pulang': sum(1 for p in pendaftar_rombongan if p.status_pulang != 'Tidak Ikut' and p.rombongan_pulang_id == rombongan.id),
-            'peserta_kembali': sum(1 for p in pendaftar_rombongan if p.status_kembali != 'Tidak Ikut' and (p.rombongan_kembali_id == rombongan.id or (p.rombongan_kembali_id is None and p.rombongan_pulang_id == rombongan.id)))
-        })
-        
-    # 4. Ambil daftar santri yang terdaftar tapi tidak ikut
+    # Logika untuk tabel bawah (tidak berubah)
     terdaftar_tidak_ikut = [p for p in semua_pendaftaran if p.status_pulang == 'Tidak Ikut' or p.status_kembali == 'Tidak Ikut']
-    
-    # 5. Ambil daftar santri yang belum terdaftar
     santri_terdaftar_ids = {p.santri_id for p in semua_pendaftaran}
-    belum_terdaftar = Santri.query.filter(
-        Santri.status_santri != 'Izin',
-        Santri.id.notin_(santri_terdaftar_ids)
-    ).order_by(Santri.nama).all()
-
-    # --- ▼▼▼ BLOK BARU: Buat format pesan WhatsApp baru ▼▼▼ ---
-    pesan_wa_pulang_list = ["*Laporan Peserta Pulang:*"]
-    for i, data in enumerate(rekap_rombongan, 1):
-        pesan_wa_pulang_list.append(f"{i}. {data['nama']} = {data['peserta_pulang']} peserta")
-    pesan_wa_pulang = "\n".join(pesan_wa_pulang_list)
-
-    pesan_wa_kembali_list = ["*Laporan Peserta Kembali:*"]
-    for i, data in enumerate(rekap_rombongan, 1):
-        pesan_wa_kembali_list.append(f"{i}. {data['nama']} = {data['peserta_kembali']} peserta")
-    pesan_wa_kembali = "\n".join(pesan_wa_kembali_list)
-    # --- ▲▲▲ AKHIR BLOK BARU ▲▲▲ ---
+    belum_terdaftar = Santri.query.filter(Santri.status_santri != 'Izin', Santri.id.notin_(santri_terdaftar_ids)).order_by(Santri.nama).all()
 
     return render_template('rekapitulasi_global.html',
                            title="Rekapitulasi Global",
                            global_stats=global_stats,
-                           rekap_rombongan=rekap_rombongan,
+                           rekap_rombongan_g1=rekap_rombongan_g1,
+                           rekap_rombongan_g2=rekap_rombongan_g2,
                            terdaftar_tidak_ikut=terdaftar_tidak_ikut,
                            belum_terdaftar=belum_terdaftar,
-                           link_grup_wa="https://chat.whatsapp.com/HGBju7zp1aV1KrfKOBkbWo",
-                           pesan_wa_pulang=pesan_wa_pulang,      # <-- Kirim pesan baru ke template
-                           pesan_wa_kembali=pesan_wa_kembali)  # <-- Kirim pesan baru ke template
+                           pesan_wa_pulang_g1=pesan_wa_pulang_g1,
+                           pesan_wa_pulang_g2=pesan_wa_pulang_g2,
+                           pesan_wa_kembali="Laporan Total Peserta Kembali: " + str(global_stats['kembali']) + " santri.")
