@@ -23,11 +23,11 @@
         
         .cards-wrapper {
             display: grid;
-            gap: 3mm;
             justify-content: center;
-            /* Default grid 3x5 */
+            /* Default grid 3x5 dengan gap kecil */
             grid-template-columns: repeat(3, 1fr);
             grid-template-rows: repeat(5, auto);
+            gap: 2mm;
         }
 
         .card-barang {
@@ -305,15 +305,42 @@
         .cards-wrapper.color-24 .card-barang { background: linear-gradient(135deg, #1e130c 0%, #9a8478 100%); }
         .cards-wrapper.color-25 .card-barang { background: linear-gradient(135deg, #2d1b69 0%, #11998e 100%); }
 
-        /* Grid variations + auto grid */
-        .grid-auto { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(5, auto); }
-        .grid-2x3 { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(3, auto); }
-        .grid-2x4 { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(4, auto); }
+        /* Grid variations - TANPA GAP UNTUK 2x3 dan 2x4 */
+        .grid-2x3 { 
+            grid-template-columns: repeat(2, 1fr); 
+            grid-template-rows: repeat(3, auto); 
+            gap: 0;
+        }
         
-        /* Grid auto berdasarkan ukuran kertas */
-        .grid-auto.paper-a4 { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(5, auto); }
-        .grid-auto.paper-a3 { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(6, auto); }
-        .grid-auto.paper-f4 { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(5, auto); }
+        .grid-2x4 { 
+            grid-template-columns: repeat(2, 1fr); 
+            grid-template-rows: repeat(4, auto); 
+            gap: 0;
+        }
+        
+        /* Grid auto dengan gap kecil untuk mencegah tumpang tindih */
+        .grid-auto { 
+            grid-template-columns: repeat(3, 1fr); 
+            grid-template-rows: repeat(5, auto); 
+            gap: 3mm;
+        }
+        
+        /* Grid auto berdasarkan ukuran kertas dengan gap yang sesuai */
+        .grid-auto.paper-a4 { 
+            grid-template-columns: repeat(3, 1fr); 
+            grid-template-rows: repeat(5, 1fr); 
+            gap: 2mm;
+        }
+        .grid-auto.paper-a3 { 
+            grid-template-columns: repeat(4, 1fr); 
+            grid-template-rows: repeat(6, 1fr); 
+            gap: 3mm;
+        }
+        .grid-auto.paper-f4 { 
+            grid-template-columns: repeat(3, 1fr); 
+            grid-template-rows: repeat(6, 1fr); 
+            gap: 2mm;
+        }
 
         /* Paper size styles */
         .paper-a3 { max-width: 1400px; }
@@ -321,17 +348,25 @@
         .paper-f4 { max-width: 1300px; }
 
         /* Responsive font sizing berdasarkan grid */
-        .grid-2x3 .card-barang h5 { font-size: clamp(12pt, 3vw, 18pt); }
-        .grid-2x3 .card-grid strong { font-size: clamp(8pt, 2vw, 12pt); }
-        .grid-2x3 .card-grid p { font-size: clamp(9pt, 2.2vw, 14pt); }
+        .grid-2x3 .card-barang h5 { font-size: clamp(14pt, 3vw, 20pt); }
+        .grid-2x3 .card-grid strong { font-size: clamp(10pt, 2vw, 14pt); }
+        .grid-2x3 .card-grid p { font-size: clamp(11pt, 2.2vw, 16pt); }
 
-        .grid-2x4 .card-barang h5 { font-size: clamp(10pt, 2.5vw, 16pt); }
-        .grid-2x4 .card-grid strong { font-size: clamp(7pt, 1.8vw, 11pt); }
-        .grid-2x4 .card-grid p { font-size: clamp(8pt, 2vw, 13pt); }
+        .grid-2x4 .card-barang h5 { font-size: clamp(12pt, 2.5vw, 18pt); }
+        .grid-2x4 .card-grid strong { font-size: clamp(8pt, 1.8vw, 12pt); }
+        .grid-2x4 .card-grid p { font-size: clamp(9pt, 2vw, 14pt); }
 
         .grid-auto .card-barang h5 { font-size: clamp(9pt, 2.2vw, 15pt); }
         .grid-auto .card-grid strong { font-size: clamp(6pt, 1.6vw, 10pt); }
         .grid-auto .card-grid p { font-size: clamp(7pt, 1.8vw, 12pt); }
+
+        /* Kartu untuk grid 2x3 dan 2x4 tanpa border radius saat tampilan grid */
+        .grid-2x3 .card-barang, 
+        .grid-2x4 .card-barang {
+            border-radius: 0;
+            margin: 0;
+            border: 2px solid #2c3e50;
+        }
 
         .btn-print {
             background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
@@ -404,7 +439,6 @@
                 left: 0 !important;
                 right: 0 !important;
                 bottom: 0 !important;
-                gap: 0 !important;
                 width: 100% !important;
                 height: 100% !important;
                 display: grid !important;
@@ -412,104 +446,96 @@
                 padding: 0 !important;
             }
             
-            /* Ukuran kartu berdasarkan grid untuk A4 */
-            .print-container.paper-a4 .cards-wrapper.grid-2x3 .card-barang { 
-                width: calc((200mm - 4mm) / 2); 
-                height: calc((287mm - 6mm) / 3); 
-                min-height: calc((287mm - 6mm) / 3);
+            /* GRID TANPA GAP untuk 2x3 dan 2x4 */
+            .cards-wrapper.grid-2x3,
+            .cards-wrapper.grid-2x4 {
+                gap: 0 !important;
             }
-            .print-container.paper-a4 .cards-wrapper.grid-2x4 .card-barang { 
-                width: calc((200mm - 6mm) / 2); 
-                height: calc((287mm - 8mm) / 4); 
-                min-height: calc((287mm - 8mm) / 4);
+            
+            /* Grid auto dengan gap minimal */
+            .cards-wrapper.grid-auto {
+                gap: 1mm !important;
             }
-            .print-container.paper-a4 .cards-wrapper.grid-auto .card-barang { 
-                width: calc((200mm - 10mm) / 3); 
-                height: calc((287mm - 10mm) / 5); 
-                min-height: calc((287mm - 10mm) / 5);
+            
+            /* Ukuran kartu untuk grid 2x3 - TANPA GAP */
+            .print-container .cards-wrapper.grid-2x3 .card-barang { 
+                width: 50vw !important;
+                height: calc(100vh / 3) !important;
+                min-height: calc(100vh / 3) !important;
+                margin: 0 !important;
+                border-radius: 0 !important;
+            }
+            
+            /* Ukuran kartu untuk grid 2x4 - TANPA GAP */
+            .print-container .cards-wrapper.grid-2x4 .card-barang { 
+                width: 50vw !important;
+                height: 25vh !important;
+                min-height: 25vh !important;
+                margin: 0 !important;
+                border-radius: 0 !important;
+            }
+            
+            /* Ukuran kartu untuk grid auto - DENGAN GAP MINIMAL */
+            .print-container .cards-wrapper.grid-auto .card-barang { 
+                width: calc((100vw - 4mm) / 3) !important;
+                height: calc((100vh - 8mm) / 5) !important;
+                min-height: calc((100vh - 8mm) / 5) !important;
+                margin: 0 !important;
             }
 
             /* Ukuran kartu berdasarkan grid untuk A3 */
-            .print-container.paper-a3 .cards-wrapper.grid-2x3 .card-barang { 
-                width: calc((287mm - 4mm) / 2); 
-                height: calc((410mm - 6mm) / 3); 
-                min-height: calc((410mm - 6mm) / 3);
-            }
-            .print-container.paper-a3 .cards-wrapper.grid-2x4 .card-barang { 
-                width: calc((287mm - 6mm) / 2); 
-                height: calc((410mm - 8mm) / 4); 
-                min-height: calc((410mm - 8mm) / 4);
-            }
             .print-container.paper-a3 .cards-wrapper.grid-auto .card-barang { 
-                width: calc((287mm - 10mm) / 4); 
-                height: calc((410mm - 10mm) / 6); 
-                min-height: calc((410mm - 10mm) / 6);
-            }
-
-            /* Ukuran kartu berdasarkan grid untuk F4 */
-            .print-container.paper-f4 .cards-wrapper.grid-2x3 .card-barang { 
-                width: calc((205mm - 4mm) / 2); 
-                height: calc((320mm - 6mm) / 3); 
-                min-height: calc((320mm - 6mm) / 3);
-            }
-            .print-container.paper-f4 .cards-wrapper.grid-2x4 .card-barang { 
-                width: calc((205mm - 6mm) / 2); 
-                height: calc((320mm - 8mm) / 4); 
-                min-height: calc((320mm - 8mm) / 4);
-            }
-            .print-container.paper-f4 .cards-wrapper.grid-auto .card-barang { 
-                width: calc((205mm - 10mm) / 3); 
-                height: calc((320mm - 10mm) / 5); 
-                min-height: calc((320mm - 10mm) / 5);
+                width: calc((100vw - 6mm) / 4) !important;
+                height: calc((100vh - 10mm) / 6) !important;
+                min-height: calc((100vh - 10mm) / 6) !important;
             }
             
             .card-barang {
-                margin: 0 !important;
-                border-radius: 0;
-                padding: 3mm;
-                box-sizing: border-box;
-                box-shadow: none;
-                border: 2px solid #2c3e50;
-                page-break-inside: avoid;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-                overflow: hidden;
-                display: flex;
-                flex-direction: column;
+                box-sizing: border-box !important;
+                box-shadow: none !important;
+                border: 2px solid #2c3e50 !important;
+                page-break-inside: avoid !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                overflow: hidden !important;
+                display: flex !important;
+                flex-direction: column !important;
+                padding: 3mm !important;
             }
+            
             .card-barang h5 {
                 font-size: 11pt !important;
-                margin-bottom: 4mm;
-                padding: 2mm 3mm;
-                border-radius: 6px;
+                margin-bottom: 4mm !important;
+                padding: 2mm 3mm !important;
+                border-radius: 6px !important;
                 font-weight: 800 !important;
             }
             .card-grid {
-                gap: 2mm;
+                gap: 2mm !important;
             }
             .card-item {
-                padding: 2mm;
-                border-radius: 4px;
+                padding: 2mm !important;
+                border-radius: 4px !important;
             }
             .card-grid strong {
                 font-size: 8pt !important;
-                margin-bottom: 1mm;
+                margin-bottom: 1mm !important;
                 font-weight: 700 !important;
             }
             .card-grid p {
                 font-size: 9pt !important;
-                line-height: 1.2;
+                line-height: 1.2 !important;
                 font-weight: 600 !important;
             }
             
             /* Ukuran font print berdasarkan grid */
-            .grid-2x3 .card-barang h5 { font-size: 14pt !important; }
-            .grid-2x3 .card-grid strong { font-size: 10pt !important; }
-            .grid-2x3 .card-grid p { font-size: 11pt !important; }
+            .grid-2x3 .card-barang h5 { font-size: 16pt !important; }
+            .grid-2x3 .card-grid strong { font-size: 12pt !important; }
+            .grid-2x3 .card-grid p { font-size: 13pt !important; }
 
-            .grid-2x4 .card-barang h5 { font-size: 12pt !important; }
-            .grid-2x4 .card-grid strong { font-size: 9pt !important; }
-            .grid-2x4 .card-grid p { font-size: 10pt !important; }
+            .grid-2x4 .card-barang h5 { font-size: 14pt !important; }
+            .grid-2x4 .card-grid strong { font-size: 10pt !important; }
+            .grid-2x4 .card-grid p { font-size: 11pt !important; }
         }
         
         @media (max-width: 768px) {
@@ -535,7 +561,7 @@
                 <div class="filter-row">
                     <div class="col">
                         <label for="nama" class="form-label">Nama Pendaftar</label>
-                        <input type="text" name="nama" id="nama" class="form-control" placeholder="Cari Nama..." value="{{ request.args.get('nama', '') }}">
+                        <input type="text" name="nama" id="nama" class="form-control" placeholder="Cari Nama..." value="">
                     </div>
                     <div class="col">
                         <label for="rombongan_id" class="form-label">Rombongan</label>
@@ -578,10 +604,10 @@
                     <label class="form-label fw-bold">Layout Grid</label>
                     <select class="form-select" id="gridSelect">
                         <option value="auto">Auto (Sesuaikan Kertas)</option>
-                        <option value="grid-2x3">2 × 3 (6 kartu) - Tulisan Besar</option>
-                        <option value="grid-2x4">2 × 4 (8 kartu) - Tulisan Sedang</option>
+                        <option value="grid-2x3">2 × 3 (6 kartu) - Tulisan Besar - Tanpa Gap</option>
+                        <option value="grid-2x4">2 × 4 (8 kartu) - Tulisan Sedang - Tanpa Gap</option>
                     </select>
-                    <small class="text-muted">Grid yang lebih kecil menghasilkan tulisan yang lebih besar dan jelas</small>
+                    <small class="text-muted">Grid 2x3 dan 2x4 akan dicetak tanpa gap (seamless). Grid Auto dengan gap minimal.</small>
                 </div>
                 <div>
                     <label class="form-label fw-bold">Ukuran Kertas</label>
@@ -744,7 +770,7 @@
                                 <strong>🚌 Nama Bus</strong>
                                 <p>{{ pendaftar.bus_pulang.nama_armada if pendaftar.bus_pulang else '-' }} - {{ pendaftar.bus_pulang.nomor_lambung or pendaftar.bus_pulang.plat_nomor or '-' }}</p>
                             </div>
-                             </div>
+                        </div>
                     </div>
                 </div>
             {% else %}
@@ -765,17 +791,14 @@
             const paperSelect = document.getElementById('paperSelect');
             let currentSelectedColor = '1';
 
-            // Fungsi untuk update warna
+            // Fungsi untuk update warna dan grid
             function updateColors() {
+                // Reset semua class
                 cardsWrapper.className = 'cards-wrapper color-' + currentSelectedColor;
                 
                 // Tambahkan grid class yang sedang aktif
                 const activeGrid = gridSelect.value;
-                if (activeGrid === 'auto') {
-                    cardsWrapper.classList.add('grid-auto');
-                } else {
-                    cardsWrapper.classList.add(activeGrid);
-                }
+                cardsWrapper.classList.add(activeGrid);
                 
                 // Tambahkan paper class jika diperlukan untuk auto grid
                 if (activeGrid === 'auto') {
@@ -788,12 +811,20 @@
             gridSelect.addEventListener('change', function() {
                 updateColors();
                 updateGridInfo();
+                
+                // Tampilkan informasi grid
+                const selectedGrid = this.value;
+                if (selectedGrid === 'grid-2x3' || selectedGrid === 'grid-2x4') {
+                    console.log(`Grid ${selectedGrid} dipilih - Akan dicetak TANPA GAP`);
+                } else {
+                    console.log('Grid Auto dipilih - Dengan gap minimal untuk mencegah tumpang tindih');
+                }
             });
 
             // Fungsi untuk update info grid
             function updateGridInfo() {
                 const gridInfo = {
-                    'auto': { 'paper-a4': 15, 'paper-a3': 24, 'paper-f4': 15 },
+                    'auto': { 'paper-a4': 15, 'paper-a3': 24, 'paper-f4': 18 },
                     'grid-2x3': 6,
                     'grid-2x4': 8
                 };
@@ -850,21 +881,15 @@
                 option.addEventListener('mouseenter', function() {
                     if (!this.classList.contains('active')) {
                         const tempColor = this.getAttribute('data-color');
-                        const originalClass = cardsWrapper.className;
+                        const currentClasses = cardsWrapper.className;
                         
-                        // Simpan class grid dan paper yang aktif
-                        const gridClass = cardsWrapper.className.match(/grid-\w+/);
-                        const paperClass = cardsWrapper.className.match(/paper-\w+/);
-                        
-                        cardsWrapper.className = 'cards-wrapper color-' + tempColor;
-                        
-                        // Restore grid dan paper classes
-                        if (gridClass) cardsWrapper.classList.add(gridClass[0]);
-                        if (paperClass) cardsWrapper.classList.add(paperClass[0]);
+                        // Ganti hanya class warna
+                        const newClasses = currentClasses.replace(/color-\d+/, 'color-' + tempColor);
+                        cardsWrapper.className = newClasses;
                         
                         const resetPreview = () => {
                             if (!this.matches(':hover')) {
-                                cardsWrapper.className = originalClass;
+                                cardsWrapper.className = currentClasses;
                             }
                         };
                         
@@ -916,7 +941,7 @@
                 optimizedPrint();
             }
             
-            // Number keys untuk quick color change (1-9, kemudian 0 untuk 10-25)
+            // Number keys untuk quick color change (1-9)
             if (e.key >= '1' && e.key <= '9') {
                 const colorOption = document.querySelector(`.color-option[data-color="${e.key}"]`);
                 if (colorOption) {
@@ -943,48 +968,62 @@
                     colorOption.click();
                 }
             }
+            
+            // G untuk toggle grid (1 = auto, 2 = 2x3, 3 = 2x4)
+            if (e.key.toLowerCase() === 'g') {
+                const gridSelect = document.getElementById('gridSelect');
+                const options = gridSelect.options;
+                let currentIndex = gridSelect.selectedIndex;
+                currentIndex = (currentIndex + 1) % options.length;
+                gridSelect.selectedIndex = currentIndex;
+                gridSelect.dispatchEvent(new Event('change'));
+            }
         });
 
-        // Auto-save preferences ke localStorage (jika browser support)
-        if (typeof(Storage) !== "undefined") {
-            // Load saved preferences
-            const savedColor = localStorage.getItem('cardColor');
-            const savedGrid = localStorage.getItem('cardGrid');
-            const savedPaper = localStorage.getItem('cardPaper');
+        // Auto-save preferences ke memory (tidak menggunakan localStorage)
+        let preferences = {
+            color: '1',
+            grid: 'auto',
+            paper: 'paper-a4'
+        };
+
+        // Load preferences on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set default values
+            const gridSelect = document.getElementById('gridSelect');
+            const paperSelect = document.getElementById('paperSelect');
             
-            if (savedColor) {
-                const colorOption = document.querySelector(`.color-option[data-color="${savedColor}"]`);
-                if (colorOption) colorOption.click();
-            }
-            
-            if (savedGrid) {
-                const gridSelect = document.getElementById('gridSelect');
-                gridSelect.value = savedGrid;
+            if (preferences.grid !== gridSelect.value) {
+                gridSelect.value = preferences.grid;
                 gridSelect.dispatchEvent(new Event('change'));
             }
             
-            if (savedPaper) {
-                const paperSelect = document.getElementById('paperSelect');
-                paperSelect.value = savedPaper;
+            if (preferences.paper !== paperSelect.value) {
+                paperSelect.value = preferences.paper;
                 paperSelect.dispatchEvent(new Event('change'));
             }
             
-            // Save preferences on change
-            document.addEventListener('change', function(e) {
-                if (e.target.id === 'gridSelect') {
-                    localStorage.setItem('cardGrid', e.target.value);
-                }
-                if (e.target.id === 'paperSelect') {
-                    localStorage.setItem('cardPaper', e.target.value);
-                }
-            });
-            
-            document.addEventListener('click', function(e) {
-                if (e.target.classList.contains('color-option')) {
-                    localStorage.setItem('cardColor', e.target.getAttribute('data-color'));
-                }
-            });
-        }
+            const colorOption = document.querySelector(`.color-option[data-color="${preferences.color}"]`);
+            if (colorOption && !colorOption.classList.contains('active')) {
+                colorOption.click();
+            }
+        });
+        
+        // Save preferences on change
+        document.addEventListener('change', function(e) {
+            if (e.target.id === 'gridSelect') {
+                preferences.grid = e.target.value;
+            }
+            if (e.target.id === 'paperSelect') {
+                preferences.paper = e.target.value;
+            }
+        });
+        
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('color-option')) {
+                preferences.color = e.target.getAttribute('data-color');
+            }
+        });
     </script>
 
 </body>
