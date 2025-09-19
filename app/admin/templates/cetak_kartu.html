@@ -398,94 +398,193 @@
         }
 
         /* =================== PRINT-ONLY (F4, A4, A3) =================== */
+/* ========================= PRINT-ONLY CSS ========================= */
 @media print {
 
-  /* ---- TUNABLES (ubah di sini kalau masih ada rongga) ---- */
-  :root {
-    /* Margin halaman (printer-safe). Bikin kanan sedikit lebih kecil agar tidak sisa ruang. */
-    --mt: 6mm;      /* top    */
-    --mr: 3mm;      /* right  <- kecilkan kalau sisi kanan masih sisa */
-    --mb: 3mm;      /* bottom */
-    --ml: 7mm;      /* left   */
+  /* ---------- VARIABEL UTAMA (bisa di-tuning) ---------- */
+  :root{
+    /* margin halaman (aman utk kebanyakan printer) */
+    --mt: 3mm;   /* top    */
+    --mr: 3mm;   /* right  */
+    --mb: 2mm;   /* bottom */
+    --ml: 7mm;   /* left   */
 
-    /* Tambahan kompensasi sub-pixel untuk nutup sisa putih (0–0.6mm biasanya aman) */
-    --comp: 0.20mm;
+    /* kompensasi untuk nutup sisa putih */
+    --comp: 0.20mm;   /* horizontal (kanan) */
+    --vcomp: 0.80mm;  /* vertikal (bawah) */
 
-    /* Gap antar kartu (0 untuk 2x3/2x4 “seamless”) */
+    /* gap */
+    --gap-23: 1.6mm;    /* gap grid 2x3 */
+    --gap-24: 1.6mm;    /* gap grid 2x4 */
     --gap-auto-a4:  2mm;
     --gap-auto-a3:  3mm;
     --gap-auto-f4:  2mm;
+
+    /* jumlah baris per halaman utk AUTO 2 kolom */
+    --rows-auto-a4: 5;
+    --rows-auto-a3: 6;
+    --rows-auto-f4: 6;
   }
 
-  /* ---- Reset + kualitas warna ---- */
+  /* ---------- HALAMAN & WARNA ---------- */
   @page { size: auto; margin: var(--mt) var(--mr) var(--mb) var(--ml); }
-  html, body {
-    margin: 0 !important; padding: 0 !important;
-    width: 100% !important; height: 100% !important; background: #fff !important;
-    -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
+
+  html, body{
+    margin:0 !important; padding:0 !important; width:100% !important; height:100% !important;
+    background:#fff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
-  /* Sembunyikan elemen kontrol */
-  .print-button-container, .filter-container, .grid-settings, .color-selector { display: none !important; }
+  /* ---------- SEMBUNYIKAN ELEMEN NON-PRINT ---------- */
+  .print-button-container,
+  .filter-container,
+  .grid-settings,
+  .color-selector,
+  header, nav, footer { display:none !important; }
 
-  /* ---- Container dasar ---- */
-  .print-container {
-    margin: 0 !important; padding: 0 !important;
-    width: 100% !important; height: 100% !important; max-width: none !important;
-    background: transparent !important; box-shadow: none !important; position: static !important;
+  /* ---------- CONTAINER DASAR ---------- */
+  .print-container{
+    margin:0 !important; padding:0 !important; width:100% !important; height:100% !important;
+    max-width:none !important; background:transparent !important; box-shadow:none !important; position:static !important;
   }
 
-  /* ---- Wrapper kartu: pakai mm + kompensasi kanan ---- */
-  .cards-wrapper {
-    display: grid !important; margin: 0 auto !important; padding: 0 !important;
-    /* Lebar efektif halaman = (lebar kertas) - (margin kiri+kanan) + kompensasi */
-    /* Tinggi efektif halaman = (tinggi kertas) - (margin atas+bawah) */
+  .cards-wrapper{
+    display:grid !important; margin:0 auto !important; padding:0 !important;
   }
 
-  /* ==== F4 ==== */
+  /* ---------- PERTAHANKAN WARNA/GRADIENT KARTU ---------- */
+  .card-barang{
+    /* jangan hilangkan background; ambil dari kelas warna yang sudah ada */
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+
+    box-sizing:border-box !important;
+    page-break-inside: avoid !important;
+    overflow: hidden !important;
+    display:flex !important; flex-direction:column !important; justify-content:space-between !important;
+    border:2px solid #2c3e50 !important;
+    padding:3mm !important; box-shadow:none !important;
+  }
+
+  .card-barang h5{ font-size:12pt !important; margin-bottom:3mm !important; padding:2mm 3mm !important; border-radius:6px !important; font-weight:800 !important; }
+  .card-grid{ gap:2mm !important; }
+  .card-item{ padding:2mm !important; border-radius:4px !important; }
+  .card-grid strong{ font-size:9pt !important; margin-bottom:1mm !important; font-weight:700 !important; }
+  .card-grid p{ font-size:10pt !important; line-height:1.2 !important; font-weight:600 !important; }
+
+  /* ======================= F4 (215×330) ======================= */
+  .paper-f4{ width:215mm !important; height:330mm !important; }
   .paper-f4 .cards-wrapper{
-    /* tinggi efektif halaman ditambah kompensasi vertikal */
+    width:  calc(215mm - var(--ml) - var(--mr) + var(--comp)) !important;
     height: calc(330mm - var(--mt) - var(--mb) + var(--vcomp)) !important;
   }
 
-  /* 2x3 TANPA GAP */
+  /* 2×3 (gap tipis) */
+  .paper-f4 .cards-wrapper.grid-2x3{
+    grid-template-columns:repeat(2,1fr);
+    grid-template-rows:repeat(3,1fr);
+    gap:var(--gap-23) !important;
+  }
   .paper-f4 .grid-2x3 .card-barang{
-    /* bagi rata tinggi baris + kompensasi */
-    height: calc((330mm - var(--mt) - var(--mb) + var(--vcomp)) / 3) !important;
+    width:  calc((215mm - var(--ml) - var(--mr) + var(--comp) - var(--gap-23)) / 2) !important;
+    height: calc((330mm - var(--mt) - var(--mb) + var(--vcomp) - 2*var(--gap-23)) / 3) !important;
+    border-radius:6px !important;
   }
 
-  /* 2x4 TANPA GAP */
+  /* 2×4 (gap tipis) */
+  .paper-f4 .cards-wrapper.grid-2x4{
+    grid-template-columns:repeat(2,1fr);
+    grid-template-rows:repeat(4,1fr);
+    gap:var(--gap-24) !important;
+  }
   .paper-f4 .grid-2x4 .card-barang{
-    height: calc((330mm - var(--mt) - var(--mb) + var(--vcomp)) / 4) !important;
+    width:  calc((215mm - var(--ml) - var(--mr) + var(--comp) - var(--gap-24)) / 2) !important;
+    height: calc((330mm - var(--mt) - var(--mb) + var(--vcomp) - 3*var(--gap-24)) / 4) !important;
+    border-radius:6px !important;
   }
 
-  /* AUTO (kalau dipakai di F4) – rapetin gap */
-  .paper-f4 .cards-wrapper.grid-auto{ gap: 1.5mm !important; }
+  /* AUTO = 2 kolom, baris menyesuaikan tinggi halaman */
+  .paper-f4 .cards-wrapper.grid-auto{
+    grid-template-columns:repeat(2,1fr) !important;
+    gap:var(--gap-auto-f4) !important;
+    grid-auto-rows: calc(
+      (330mm - var(--mt) - var(--mb) + var(--vcomp) - (var(--rows-auto-f4) - 1) * var(--gap-auto-f4))
+      / var(--rows-auto-f4)
+    ) !important;
+  }
+
+  /* ======================= A4 (210×297) ======================= */
+  .paper-a4{ width:210mm !important; height:297mm !important; }
+  .paper-a4 .cards-wrapper{
+    width:  calc(210mm - var(--ml) - var(--mr) + var(--comp)) !important;
+    height: calc(297mm - var(--mt) - var(--mb) + var(--vcomp)) !important;
+  }
+  .paper-a4 .cards-wrapper.grid-2x3{
+    grid-template-columns:repeat(2,1fr);
+    grid-template-rows:repeat(3,1fr);
+    gap:var(--gap-23) !important;
+  }
+  .paper-a4 .grid-2x3 .card-barang{
+    width:  calc((210mm - var(--ml) - var(--mr) + var(--comp) - var(--gap-23)) / 2) !important;
+    height: calc((297mm - var(--mt) - var(--mb) + var(--vcomp) - 2*var(--gap-23)) / 3) !important;
+    border-radius:6px !important;
+  }
+  .paper-a4 .cards-wrapper.grid-2x4{
+    grid-template-columns:repeat(2,1fr);
+    grid-template-rows:repeat(4,1fr);
+    gap:var(--gap-24) !important;
+  }
+  .paper-a4 .grid-2x4 .card-barang{
+    width:  calc((210mm - var(--ml) - var(--mr) + var(--comp) - var(--gap-24)) / 2) !important;
+    height: calc((297mm - var(--mt) - var(--mb) + var(--vcomp) - 3*var(--gap-24)) / 4) !important;
+    border-radius:6px !important;
+  }
+  .paper-a4 .cards-wrapper.grid-auto{
+    grid-template-columns:repeat(2,1fr) !important;
+    gap:var(--gap-auto-a4) !important;
+    grid-auto-rows: calc(
+      (297mm - var(--mt) - var(--mb) + var(--vcomp) - (var(--rows-auto-a4) - 1) * var(--gap-auto-a4))
+      / var(--rows-auto-a4)
+    ) !important;
+  }
+
+  /* ======================= A3 (297×420) ======================= */
+  .paper-a3{ width:297mm !important; height:420mm !important; }
+  .paper-a3 .cards-wrapper{
+    width:  calc(297mm - var(--ml) - var(--mr) + var(--comp)) !important;
+    height: calc(420mm - var(--mt) - var(--mb) + var(--vcomp)) !important;
+  }
+  .paper-a3 .cards-wrapper.grid-2x3{
+    grid-template-columns:repeat(2,1fr);
+    grid-template-rows:repeat(3,1fr);
+    gap:var(--gap-23) !important;
+  }
+  .paper-a3 .grid-2x3 .card-barang{
+    width:  calc((297mm - var(--ml) - var(--mr) + var(--comp) - var(--gap-23)) / 2) !important;
+    height: calc((420mm - var(--mt) - var(--mb) + var(--vcomp) - 2*var(--gap-23)) / 3) !important;
+    border-radius:6px !important;
+  }
+  .paper-a3 .cards-wrapper.grid-2x4{
+    grid-template-columns:repeat(2,1fr);
+    grid-template-rows:repeat(4,1fr);
+    gap:var(--gap-24) !important;
+  }
+  .paper-a3 .grid-2x4 .card-barang{
+    width:  calc((297mm - var(--ml) - var(--mr) + var(--comp) - var(--gap-24)) / 2) !important;
+    height: calc((420mm - var(--mt) - var(--mb) + var(--vcomp) - 3*var(--gap-24)) / 4) !important;
+    border-radius:6px !important;
+  }
+  .paper-a3 .cards-wrapper.grid-auto{
+    grid-template-columns:repeat(2,1fr) !important;
+    gap:var(--gap-auto-a3) !important;
+    grid-auto-rows: calc(
+      (420mm - var(--mt) - var(--mb) + var(--vcomp) - (var(--rows-auto-a3) - 1) * var(--gap-auto-a3))
+      / var(--rows-auto-a3)
+    ) !important;
+  }
 }
 
-  /* =================== A4 (210×297 mm) =================== */
-  .paper-a4 { width: 210mm !important; height: 297mm !important; }
-  .paper-a4 .cards-wrapper {
-    width: calc(210mm - var(--ml) - var(--mr) + var(--comp)) !important;
-    height: calc(297mm - var(--mt) - var(--mb)) !important;
-  }
-  .paper-a4 .cards-wrapper.grid-auto {
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(5, 1fr);
-    gap: var(--gap-auto-a4) !important;
-  }
-
-  /* =================== A3 (297×420 mm) =================== */
-  .paper-a3 { width: 297mm !important; height: 420mm !important; }
-  .paper-a3 .cards-wrapper {
-    width: calc(297mm - var(--ml) - var(--mr) + var(--comp)) !important;
-    height: calc(420mm - var(--mt) - var(--mb)) !important;
-  }
-  .paper-a3 .cards-wrapper.grid-auto {
-    grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: repeat(6, 1fr);
-    gap: var(--gap-auto-a3) !important;
-  }
 
   /* ---- Komponen kartu ---- */
   .card-barang {
