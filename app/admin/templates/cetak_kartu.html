@@ -662,6 +662,22 @@
                         </select>
                     </div>
                     <div class="col">
+            <label for="bus_id" class="form-label">Bus</label>
+            <select name="bus_id" id="bus_id" class="form-select">
+                <option value="">-- Semua Bus --</option>
+                <option value="belum_terdaftar" {% if request.args.get('bus_id') == 'belum_terdaftar' %}selected{% endif %}>
+                    Belum Terdaftar di Bus
+                </option>
+                {% if bus_list_for_filter %}
+                    {% for bus in bus_list_for_filter %}
+                        <option value="{{ bus.id }}" {% if request.args.get('bus_id')|string == bus.id|string %}selected{% endif %}>
+                            {{ bus.nama_armada }} - {{ bus.nomor_lambung or bus.plat_nomor }}
+                        </option>
+                    {% endfor %}
+                {% endif %}
+            </select>
+        </div>
+                    <div class="col">
                         <button type="submit" class="btn btn-primary">Terapkan</button>
                     </div>
                 </div>
@@ -1094,6 +1110,47 @@
             if (e.target.classList.contains('color-option')) {
                 preferences.color = e.target.getAttribute('data-color');
             }
+        });
+        const rombonganSelect = document.getElementById('rombongan_id');
+        const busSelect = document.getElementById('bus_id');
+
+        rombonganSelect.addEventListener('change', function() {
+            const rombonganId = this.value;
+            
+            // Nonaktifkan & tampilkan status loading
+            busSelect.disabled = true;
+            busSelect.innerHTML = '<option value="">Memuat bus...</option>';
+
+            if (!rombonganId) {
+                busSelect.innerHTML = '<option value="">-- Pilih Rombongan Dulu --</option>';
+                // busSelect.disabled = true; // biarkan disable jika tidak ada rombongan
+                return;
+            }
+
+            // Panggil API yang kita buat tadi
+            fetch(`/admin/api/rombongan/${rombonganId}/buses`)
+                .then(response => response.json())
+                .then(data => {
+                    // Kosongkan opsi lama
+                    busSelect.innerHTML = '';
+                    
+                    // Tambahkan opsi default
+                    busSelect.add(new Option('-- Semua Bus --', ''));
+                    busSelect.add(new Option('Belum Terdaftar di Bus', 'belum_terdaftar'));
+                    
+                    // Tambahkan bus dari data API
+                    data.forEach(bus => {
+                        busSelect.add(new Option(bus.nama, bus.id));
+                    });
+                    
+                    // Aktifkan kembali dropdown
+                    busSelect.disabled = false;
+                })
+                .catch(error => {
+                    console.error('Error fetching buses:', error);
+                    busSelect.innerHTML = '<option value="">Gagal memuat</option>';
+                    busSelect.disabled = false;
+                });
         });
     </script>
 
