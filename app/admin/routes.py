@@ -22,6 +22,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.pdfgen import canvas
 import locale
 import pandas as pd
+import re
 
 
 
@@ -2902,26 +2903,295 @@ def detail_bus(bus_id):
         if bus.rombongan not in current_user.active_managed_rombongan:
             abort(403)
 
-     # Ambil semua pendaftar untuk bus ini
+    # Ambil semua pendaftar untuk bus ini
     peserta_pulang = Pendaftaran.query.filter_by(bus_pulang_id=bus.id).all()
     peserta_kembali = Pendaftaran.query.filter_by(bus_kembali_id=bus.id).all()
-    
-    # --- PENGELOMPOKAN BERDASARKAN TITIK TURUN ---
+
+    # --- Helper penentu titik (ikuti pola alokasi) ---
+    def _titik_jemput_kembali(p):
+        """
+        Kembali/berangkat: utamakan titik jemput/naik pendaftar.
+        Jika kosong, fallback ke rombongan_kembali; kalau itu None, fallback ke rombongan_pulang.
+        Terakhir, pakai nama/default titik rombongan bila ada; kalau semua kosong, kembalikan 'Tidak diketahui'.
+        """
+        # kandidat field titik jemput di pendaftar (sesuaikan dengan skema yang kamu pakai)
+        for attr in ('titik_jemput', 'titik_naik', 'titik_jemput_kembali'):
+            val = getattr(p, attr, None)
+            if val:
+                return val
+
+        # fallback rombongan
+        rom = getattr(p, 'rombongan_kembali', None) or getattr(p, 'rombongan_pulang', None)
+        for attr in ('titik_default', 'nama_titik_default'):
+            if rom and getattr(rom, attr, None):
+                return getattr(rom, attr)
+
+        return 'Tidak diketahui'
+
+    def _titik_turun_pulang(p):
+        """
+        Pulang: utamakan titik turun pendaftar (atau varian namanya),
+        lalu fallback ke titik default rombongan_pulang bila ada; sisanya 'Tidak diketahui'.
+        """
+        for attr in ('titik_turun', 'titik_turun_pulang'):
+            val = getattr(p, attr, None)
+            if val:
+                return val
+
+        rom = getattr(p, 'rombongan_pulang', None)
+        for attr in ('titik_default', 'nama_titik_default'):
+            if rom and getattr(rom, attr, None):
+                return getattr(rom, attr)
+
+        return 'Tidak diketahui'
+    # --------------------------------------------------
+
+    # --- PENGELOMPOKAN BERDASARKAN TITIK TURUN (PULANG) ---
     grouped_peserta_pulang = defaultdict(list)
     for p in peserta_pulang:
-        grouped_peserta_pulang[p.titik_turun].append(p)
-    # -----------------------------------------------
+        key = _titik_turun_pulang(p)
+        grouped_peserta_pulang[key].append(p)
 
+    # --- PENGELOMPOKAN BERDASARKAN TITIK JEMPUT (KEMBALI) ---
     grouped_peserta_kembali = defaultdict(list)
     for p in peserta_kembali:
-        grouped_peserta_kembali[p.titik_turun].append(p)
+        key = _titik_jemput_kembali(p)
+        grouped_peserta_kembali[key].append(p)
 
-    return render_template('detail_bus.html', 
-                           bus=bus, 
-                           grouped_peserta_pulang=grouped_peserta_pulang, # Kirim data terkelompok
-                           grouped_peserta_kembali=grouped_peserta_kembali,
-                           jumlah_peserta_pulang=len(peserta_pulang),
-                           jumlah_peserta_kembali=len(peserta_kembali))
+    return render_template(
+        'detail_bus.html',
+        bus=bus,
+        grouped_peserta_pulang=grouped_peserta_pulang,
+        grouped_peserta_kembali=grouped_peserta_kembali,
+        jumlah_peserta_pulang=len(peserta_pulang),
+        jumlah_peserta_kembali=len(peserta_kembali),
+    )
+
+def _resolve_titik(pendaftar, jenis):
+    """
+    Ikuti pola alokasi_bus:
+    - pulang  -> titik turun (drop-off)
+    - kembali -> titik jemput/naik (pick-up)
+      Jika rombongan_kembali kosong, fallback ke rombongan_pulang.
+    """
+    if jenis == 'pulang':
+        # Prioritas field yang umum dipakai untuk pulang
+        return (
+            getattr(pendaftar, 'titik_turun', None)
+            or getattr(pendaftar, 'titik_turun_pulang', None)
+            # fallback default titik dari rombongan pulang (jika ada)
+            or getattr(getattr(pendaftar, 'rombongan_pulang', None), 'titik_default', None)
+            or getattr(getattr(pendaftar, 'rombongan_pulang', None), 'nama_titik_default', None)
+            or 'Tidak ditentukan'
+        )
+    else:
+        # kembali / berangkat
+        # Utamakan field titik jemput/naik
+        titik = (
+            getattr(pendaftar, 'titik_jemput', None)
+            or getattr(pendaftar, 'titik_naik', None)
+            or getattr(pendaftar, 'titik_jemput_kembali', None)
+        )
+        if titik:
+            return titik
+
+        # Fallback rombongan: pakai rombongan_kembali, kalau kosong pakai rombongan_pulang
+        rom = getattr(pendaftar, 'rombongan_kembali', None) or getattr(pendaftar, 'rombongan_pulang', None)
+        return (
+            getattr(rom, 'titik_default', None)
+            or getattr(rom, 'nama_titik_default', None)
+            or 'Tidak ditentukan'
+        )
+
+
+@admin_bp.route('/export-bus-excel/<int:bus_id>/<jenis>')
+@login_required
+@role_required('Korpus', 'Korda', 'Korwil', 'Korpuspi', 'Sekretaris', 'Bendahara Pusat')
+def export_bus_excel(bus_id, jenis):
+    """
+    Export data peserta bus ke Excel berdasarkan model Santri
+    jenis: 'pulang' atau 'berangkat'
+    """
+    try:
+        # Ambil data bus
+        bus = Bus.query.get_or_404(bus_id)
+        
+        # Cek akses berdasarkan role
+        if current_user.role.name in ['Korda', 'Korwil']:
+            if bus.rombongan not in current_user.active_managed_rombongan:
+                flash("Anda tidak memiliki akses ke bus ini.", "error")
+                return redirect(url_for('admin.manajemen_peserta_bus'))
+        
+        # Tentukan data peserta berdasarkan jenis
+        if jenis == 'pulang':
+            peserta_list = bus.pendaftar_pulang
+            jenis_label = 'Pulang'
+        elif jenis == 'berangkat':
+            peserta_list = bus.pendaftar_kembali  
+            jenis_label = 'Berangkat'
+        else:
+            flash("Jenis export tidak valid.", "error")
+            return redirect(url_for('admin.detail_bus', bus_id=bus_id))
+        
+        if not peserta_list:
+            flash(f"Tidak ada data peserta {jenis_label.lower()} untuk diekspor.", "warning")
+            return redirect(url_for('admin.detail_bus', bus_id=bus_id))
+        
+        # Siapkan data untuk Excel
+        data_excel = []
+        
+        for peserta in peserta_list:
+            titik_lokasi = _resolve_titik(peserta, jenis)  # <— ganti baris lama
+
+            santri = getattr(peserta, 'santri', None)
+
+            nama_bus = bus.nama_armada
+            if bus.nomor_lambung:
+                nama_bus += f" - {bus.nomor_lambung}"
+
+            row_data = {
+                'Nama Santri': santri.nama if santri else getattr(peserta, 'nama_lengkap', 'N/A'),
+                'Jenis Kelamin': santri.jenis_kelamin if santri else 'Tidak diketahui',
+                'No. WA Wali': santri.no_hp_wali if (santri and santri.no_hp_wali) else 'Tidak ada',
+                'Titik Jemput/Turun': titik_lokasi,
+                'Nama Bus': nama_bus,
+                '_sort_titik': titik_lokasi,
+                '_sort_nama': santri.nama if santri else getattr(peserta, 'nama_lengkap', 'N/A')
+            }
+
+            data_excel.append(row_data)
+
+        
+        # Urutkan berdasarkan titik lokasi, kemudian nama santri
+        data_excel.sort(key=lambda x: (x['_sort_titik'], x['_sort_nama']))
+        
+        # Hapus field sorting dan tambahkan nomor urut
+        for idx, item in enumerate(data_excel, 1):
+            item['No'] = idx
+            del item['_sort_titik']
+            del item['_sort_nama']
+        
+        # Reorder kolom
+        kolom_urutan = ['No', 'Nama Santri', 'Jenis Kelamin', 'No. WA Wali', 'Titik Jemput/Turun', 'Nama Bus']
+        data_final = []
+        for item in data_excel:
+            row_final = {col: item[col] for col in kolom_urutan}
+            data_final.append(row_final)
+        
+        # Buat DataFrame
+        df = pd.DataFrame(data_final)
+        
+        # Buat file Excel dalam memory
+        excel_buffer = BytesIO()
+        
+        with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+            # Tulis data ke sheet
+            sheet_name = f'Santri {jenis_label}'
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
+            
+            # Ambil worksheet untuk formatting
+            worksheet = writer.sheets[sheet_name]
+            
+            # Tambahkan header informasi bus
+            worksheet.insert_rows(1, 5)  # Insert 5 baris di atas
+            
+            # Informasi bus
+            bus_info = f"{bus.nama_armada}"
+            if bus.nomor_lambung:
+                bus_info += f" - {bus.nomor_lambung}"
+            
+            worksheet['A1'] = f"DAFTAR SANTRI BUS - {jenis_label.upper()}"
+            worksheet['A2'] = f"Nama Bus: {bus_info}"
+            worksheet['A3'] = f"Rombongan: {bus.rombongan.nama_rombongan}"
+            worksheet['A4'] = f"Jumlah Santri: {len(data_final)} orang"
+            worksheet['A5'] = f"Tanggal Export: {datetime.now().strftime('%d/%m/%Y %H:%M WIB')}"
+            
+            # Style menggunakan openpyxl
+            from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+            
+            # Font dan style
+            header_font = Font(bold=True, size=14, color="FFFFFF")
+            info_font = Font(bold=True, size=11, color="1a73e8")
+            table_header_font = Font(bold=True, size=10, color="FFFFFF")
+            
+            # Fill colors
+            header_fill = PatternFill(start_color="1a73e8", end_color="4285f4", fill_type="solid")
+            table_header_fill = PatternFill(start_color="4285f4", end_color="4285f4", fill_type="solid")
+            
+            # Border
+            thin_border = Border(
+                left=Side(style='thin'),
+                right=Side(style='thin'),
+                top=Side(style='thin'),
+                bottom=Side(style='thin')
+            )
+            
+            # Style header informasi
+            worksheet['A1'].font = header_font
+            worksheet['A1'].fill = header_fill
+            worksheet['A1'].alignment = Alignment(horizontal="center", vertical="center")
+            
+            for row in range(2, 6):
+                worksheet[f'A{row}'].font = info_font
+                worksheet[f'A{row}'].alignment = Alignment(horizontal="left", vertical="center")
+            
+            # Merge cells untuk header utama
+            worksheet.merge_cells('A1:F1')
+            
+            # Style header tabel (baris ke-6 setelah insert)
+            header_row = 6
+            for col_num, cell in enumerate(worksheet[header_row], 1):
+                if cell.value:
+                    cell.fill = table_header_fill
+                    cell.font = table_header_font
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+                    cell.border = thin_border
+            
+            # Style data rows
+            for row in worksheet.iter_rows(min_row=header_row+1, max_row=worksheet.max_row, min_col=1, max_col=7):
+                for cell in row:
+                    cell.border = thin_border
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+                    if cell.column == 2:  # Nama santri - align left
+                        cell.alignment = Alignment(horizontal="left", vertical="center")
+                    elif cell.column == 5:  # Titik jemput/turun - align left
+                        cell.alignment = Alignment(horizontal="left", vertical="center")
+            
+            # Auto-width untuk kolom
+            column_widths = {
+                'A': 5,   # No
+                'B': 25,  # Nama Santri
+                'C': 12,  # Jenis Kelamin
+                'D': 15,  # No. WA Wali
+                'E': 20,  # Titik Jemput/Turun
+                'F': 20,  # Nama Bus
+            }
+            
+            for col_letter, width in column_widths.items():
+                worksheet.column_dimensions[col_letter].width = width
+        
+        excel_buffer.seek(0)
+        
+        # Generate nama file
+        nama_file_base = bus.nama_armada.replace(' ', '_')
+        if bus.nomor_lambung:
+            nama_file_base += f"_{bus.nomor_lambung}"
+        
+        # Clean nama file dari karakter yang tidak diinginkan
+        nama_file_base = re.sub(r'[^\w\-_\.]', '', nama_file_base)
+        nama_file = f"{nama_file_base}_{jenis}_{datetime.now().strftime('%d%m%Y_%H%M')}.xlsx"
+        
+        return send_file(
+            excel_buffer,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=nama_file
+        )
+        
+    except Exception as e:
+        flash(f"Terjadi kesalahan saat mengekspor data: {str(e)}", "error")
+        return redirect(url_for('admin.detail_bus', bus_id=bus_id))
+
 
 @admin_bp.route('/keuangan')
 @login_required
@@ -5299,6 +5569,8 @@ def manajemen_peserta_bus():
                            semua_rombongan=semua_rombongan,
                            active_edisi=active_edisi,
                            bus_form=bus_form) # Kirim bus_form ke template
+
+
 
 @admin_bp.route('/alokasi-bus/<int:bus_id>', methods=['GET', 'POST'])
 @login_required

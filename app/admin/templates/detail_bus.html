@@ -306,6 +306,124 @@
             padding: 1rem;
         }
     }
+
+    .export-section {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border: 2px solid #e2e8f0;
+    }
+
+    .export-title {
+        color: var(--primary-blue);
+        font-weight: 700;
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .export-title::before {
+        content: '📊';
+        font-size: 1.5rem;
+    }
+
+    .btn-export {
+        background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        margin: 0.25rem;
+    }
+
+    .btn-export::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        transition: left 0.5s ease;
+    }
+
+    .btn-export:hover::before {
+        left: 100%;
+    }
+
+    .btn-export:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(22, 163, 74, 0.3);
+        color: white;
+        text-decoration: none;
+    }
+
+    .btn-export:active {
+        transform: translateY(0);
+    }
+
+    .btn-export-pulang {
+        background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+    }
+
+    .btn-export-pulang:hover {
+        box-shadow: 0 8px 25px rgba(220, 38, 38, 0.3);
+        color: white;
+    }
+
+    .btn-export-berangkat {
+        background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+    }
+
+    .btn-export-berangkat:hover {
+        box-shadow: 0 8px 25px rgba(37, 99, 235, 0.3);
+        color: white;
+    }
+
+    .export-icon {
+        font-size: 1.1rem;
+    }
+
+    .export-stats {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .export-stat {
+        background: white;
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+        border: 2px solid #e5e7eb;
+        font-size: 0.9rem;
+        color: #6b7280;
+    }
+
+    .export-stat-number {
+        font-weight: 700;
+        color: var(--primary-blue);
+        font-size: 1.1rem;
+    }
+
+    @media (max-width: 768px) {
+        .btn-export {
+            width: 100%;
+            justify-content: center;
+            margin: 0.25rem 0;
+        }
+    }
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -363,6 +481,14 @@
             Manifest Perjalanan Pulang
             <small class="text-muted">(Meninggalkan Pondok)</small>
         </h5>
+        <div class="col-md-6">
+            <a href="{{ url_for('admin.export_bus_excel', bus_id=bus.id, jenis='pulang') }}" 
+               class="btn btn-export btn-export-pulang {% if not bus.pendaftar_pulang %}disabled{% endif %}"
+               {% if not bus.pendaftar_pulang %}onclick="return false;" style="opacity: 0.5; cursor: not-allowed;"{% endif %}>
+                <i class="fas fa-file-excel export-icon"></i>
+                Export Peserta Pulang
+            </a>
+        </div>
     </div>
     <div class="card-body">
         {% if grouped_peserta_pulang %}
@@ -429,6 +555,14 @@
             Manifest Perjalanan Kembali
             <small class="text-muted">(Menuju Pondok)</small>
         </h5>
+        <div class="col-md-6">
+            <a href="{{ url_for('admin.export_bus_excel', bus_id=bus.id, jenis='berangkat') }}" 
+               class="btn btn-export btn-export-berangkat {% if not bus.pendaftar_kembali %}disabled{% endif %}"
+               {% if not bus.pendaftar_kembali %}onclick="return false;" style="opacity: 0.5; cursor: not-allowed;"{% endif %}>
+                <i class="fas fa-file-excel export-icon"></i>
+                Export Peserta Berangkat
+            </a>
+        </div>
     </div>
         {% if grouped_peserta_kembali %}
             {% for titik_jemput, pendaftar_list in grouped_peserta_kembali.items()|sort %}
