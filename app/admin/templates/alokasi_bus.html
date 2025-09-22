@@ -334,11 +334,33 @@
                     <div class="allocation-card-header">
                         Peserta Belum Dapat Bus ({{ peserta_no_bus|length }})
                     </div>
+                    <div class="p-3 border-bottom">
+        <div class="row g-2">
+            <div class="col-md-6">
+                <input type="text" id="nama-filter" class="form-control" placeholder="🔍 Cari nama santri...">
+            </div>
+            <div class="col-md-6">
+                {% set unique_titik = [] %}
+                {% for p in (peserta_no_bus + peserta_in_bus) %}
+                    {% set titik = (p.titik_turun if perjalanan == 'pulang' else p.titik_jemput_kembali) %}
+                    {% if titik and titik not in unique_titik %}
+                        {% if unique_titik.append(titik) %}{% endif %}
+                    {% endif %}
+                {% endfor %}
+                <select id="titik-filter" class="form-select">
+                    <option value="">-- Semua Titik Turun/Jemput --</option>
+                    {% for titik in unique_titik|sort %}
+                        <option value="{{ titik }}">{{ titik }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
                     <div class="list-container scrollbar-custom">
                         <ul id="list-no-bus" class="list-group list-group-modern">
                             {% for p in peserta_no_bus %}
-                            <li class="list-group-item list-group-item-modern" data-id="{{ p.id }}">
-                                <div class="flex-grow-1 me-3">
+{% set titik = (p.titik_turun if perjalanan == 'pulang' else p.titik_jemput_kembali) or '' %}
+<li class="list-group-item list-group-item-modern" data-id="{{ p.id }}" data-nama="{{ p.santri.nama|lower }}" data-titik="{{ titik }}">                                <div class="flex-grow-1 me-3">
                                     {% set titik = (p.titik_turun if perjalanan == 'pulang' else p.titik_jemput_kembali) %}
                                     <span>{{ p.santri.nama }} - {{ titik or '–' }}</span>
                                     
@@ -384,7 +406,8 @@
                     <div class="list-container scrollbar-custom">
                         <ul id="list-in-bus" class="list-group list-group-modern">
                             {% for p in peserta_in_bus %}
-                            <li class="list-group-item list-group-item-modern" data-id="{{ p.id }}">
+                            {% set titik = (p.titik_turun if perjalanan == 'pulang' else p.titik_jemput_kembali) or '' %}
+<li class="list-group-item list-group-item-modern" data-id="{{ p.id }}" data-nama="{{ p.santri.nama|lower }}" data-titik="{{ titik }}">
                                 <div class="flex-grow-1 me-3">
                                     {% set titik = (p.titik_turun if perjalanan == 'pulang' else p.titik_jemput_kembali) %}
                                     <span>{{ p.santri.nama }} - {{ titik or '–' }}</span>
@@ -432,61 +455,93 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // --- Elemen-elemen yang sudah ada ---
     const listNoBus = document.getElementById('list-no-bus');
     const listInBus = document.getElementById('list-in-bus');
     const jumlahDiBus = document.getElementById('jumlah-di-bus');
     const capacityIndicator = document.getElementById('capacity-indicator');
     const kuota = parseInt("{{ bus.kuota }}");
 
+    // --- Elemen-elemen BARU untuk filter ---
+    const namaFilter = document.getElementById('nama-filter');
+    const titikFilter = document.getElementById('titik-filter');
+
+    // --- Fungsi BARU untuk menjalankan filter ---
+    function applyFilters() {
+        const namaValue = namaFilter.value.toLowerCase().trim();
+        const titikValue = titikFilter.value;
+
+        // Fungsi generik untuk memfilter list manapun
+        const filterList = (listElement) => {
+            const items = listElement.querySelectorAll('.list-group-item-modern');
+            let visibleCount = 0;
+
+            items.forEach(item => {
+                const namaSantri = item.dataset.nama || '';
+                const titikSantri = item.dataset.titik || '';
+
+                const namaMatch = namaSantri.includes(namaValue);
+                const titikMatch = (titikValue === '' || titikSantri === titikValue);
+
+                if (namaMatch && titikMatch) {
+                    item.style.display = 'flex'; // Gunakan flex agar sejajar
+                    visibleCount++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+             // Tampilkan pesan jika tidak ada hasil
+            const emptyState = listElement.querySelector('.empty-state');
+            if (emptyState && items.length > 0) {
+                 if(visibleCount === 0){
+                    emptyState.innerHTML = `<div class="empty-state-icon">🧐</div><p>Tidak ada santri yang cocok dengan filter.</p>`;
+                    emptyState.style.display = 'block';
+                } else {
+                    emptyState.style.display = 'none';
+                }
+            }
+        };
+
+        // Terapkan filter ke kedua list
+        filterList(listNoBus);
+        filterList(listInBus);
+    }
+    
+    // Tambahkan event listener ke input filter
+    namaFilter.addEventListener('input', applyFilters);
+    titikFilter.addEventListener('change', applyFilters);
+
+
+    // --- Logika yang sudah ada sebelumnya (tidak diubah) ---
     function updateCounter() {
         const count = listInBus.querySelectorAll('.list-group-item-modern').length;
         jumlahDiBus.textContent = count;
         
-        // Update capacity indicator
         if (count > kuota) {
             capacityIndicator.classList.add('over-capacity');
         } else {
             capacityIndicator.classList.remove('over-capacity');
         }
 
-        // Show/hide empty states
         const emptyBusState = document.getElementById('empty-bus-state');
-        if (count === 0 && !emptyBusState) {
-            listInBus.innerHTML = `
-                <div class="empty-state" id="empty-bus-state">
-                    <div class="empty-state-icon">🚌</div>
-                    <p>Belum ada peserta di bus ini</p>
-                </div>
-            `;
+        if (count === 0 && emptyBusState) {
+            emptyBusState.style.display = 'block';
         } else if (count > 0 && emptyBusState) {
-            emptyBusState.remove();
+            emptyBusState.style.display = 'none';
         }
     }
 
     listNoBus.addEventListener('click', function(e) {
         if (e.target.classList.contains('add-btn')) {
             const li = e.target.parentElement;
-            
-            // Change button
             e.target.className = 'btn btn-action btn-remove remove-btn';
             e.target.textContent = '×';
-            
-            // Add hidden input
             const input = document.createElement('input');
             input.type = 'hidden';
             input.name = 'peserta_in_bus[]';
             input.value = li.dataset.id;
             li.appendChild(input);
-            
-            // Move to bus list
             listInBus.appendChild(li);
-            
-            // Remove empty state if exists
-            const emptyBusState = document.getElementById('empty-bus-state');
-            if (emptyBusState) {
-                emptyBusState.remove();
-            }
-            
             updateCounter();
         }
     });
@@ -494,24 +549,16 @@ document.addEventListener('DOMContentLoaded', function() {
     listInBus.addEventListener('click', function(e) {
         if (e.target.classList.contains('remove-btn')) {
             const li = e.target.parentElement;
-            
-            // Change button
             e.target.className = 'btn btn-action btn-add add-btn';
             e.target.textContent = '+';
-            
-            // Remove hidden input
             const input = li.querySelector('input');
-            if (input) {
-                input.remove();
-            }
-            
-            // Move back to no bus list
+            if (input) input.remove();
             listNoBus.appendChild(li);
             updateCounter();
+            applyFilters(); // Panggil filter lagi agar item yg dipindah bisa terfilter
         }
     });
 
-    // Initial counter update
     updateCounter();
 });
 </script>
