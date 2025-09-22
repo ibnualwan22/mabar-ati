@@ -256,99 +256,34 @@ document.addEventListener('DOMContentLoaded', function() {
     const rombonganKembaliSelect = document.getElementById('rombongan_kembali');
     const busKembaliSelect = document.getElementById('bus_kembali');
     const titikJemputSelect = document.getElementById('titik_jemput_kembali');
-    const busPulangSelect = document.getElementById('bus_pulang');
-    const loadingOverlay = document.getElementById('loadingOverlay');
     const form = document.querySelector('form');
+    const loadingOverlay = document.getElementById('loadingOverlay');
 
-    // Data awal dari server
-     const initialDataJsonString = '{{ initial_data_json | safe }}';
-    const initialData = JSON.parse(initialDataJsonString);
+    // Data awal dari server untuk pembanding
+    const initialData = JSON.parse('{{ initial_data_json | safe }}');
 
-    console.log('Initial data:', initialData);
-
-    // Show loading function
-    function showLoading() {
-        if (loadingOverlay) {
-            loadingOverlay.classList.remove('d-none');
-        }
-    }
-
-    // Hide loading function
-    function hideLoading() {
-        if (loadingOverlay) {
-            loadingOverlay.classList.add('d-none');
-        }
-    }
-
-    // Add loading state to selects
     function setSelectLoading(selectElement, isLoading) {
         if (!selectElement) return;
-        
+        selectElement.disabled = isLoading;
         if (isLoading) {
-            selectElement.disabled = true;
             selectElement.innerHTML = '<option value="">Memuat...</option>';
-        } else {
-            selectElement.disabled = false;
         }
     }
 
-    // Update bus pulang dengan sisa kuota (menggunakan API yang sama)
-    function updateBusPulangWithQuota() {
-        if (!initialData.rombonganPulangId || !busPulangSelect) return;
-
-        // Ambil data detail rombongan pulang
-        fetch(`/admin/api/rombongan-detail/${initialData.rombonganPulangId}`)
-            .then(res => {
-                if (!res.ok) throw new Error('Network response was not ok');
-                return res.json();
-            })
-            .then(data => {
-                console.log('Bus Pulang data:', data);
-                
-                // Update pilihan Bus Pulang dengan sisa kuota
-                if (data.buses) {
-                    const busChoices = data.buses.map(bus => {
-                        const displayName = `${bus.nama_armada}`;
-                        const identifier = bus.nomor_lambung || bus.plat_nomor;
-                        const quota = bus.sisa_kuota_pulang !== undefined ? `(Sisa: ${bus.sisa_kuota_pulang})` : '';
-                        const disabled = (bus.sisa_kuota_pulang !== undefined && bus.sisa_kuota_pulang <= 0) ? 'disabled' : '';
-                        return `<option value="${bus.id}" ${disabled}>${displayName} - ${identifier} ${quota}</option>`;
-                    }).join('');
-                    
-                    busPulangSelect.innerHTML = '<option value="">-- Pilih Bus --</option>' + busChoices;
-                    
-                    // Set nilai yang sudah ada sebelumnya
-                    if (initialData.busPulangId) {
-                        busPulangSelect.value = initialData.busPulangId;
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching bus pulang:', error);
-            });
-    }
-
-    function updateKembaliOptions(rombonganId) {
-        // Show loading state
-        setSelectLoading(busKembaliSelect, true);
-        setSelectLoading(titikJemputSelect, true);
-
+    // Fungsi ini akan dipanggil saat Rombongan Kembali diubah
+    function updateKembaliOptions(rombonganId, isInitialLoad = false) {
         // Jika pilihan dikosongkan, gunakan rombongan pulang sebagai default
-        let targetRombonganId = rombonganId;
-        if (!targetRombonganId) {
-            targetRombonganId = initialData.rombonganPulangId;
-        }
+        let targetRombonganId = rombonganId || initialData.rombonganPulangId;
         
         if (!targetRombonganId) {
             if (busKembaliSelect) busKembaliSelect.innerHTML = '<option value="">-- Pilih Rombongan Dulu --</option>';
             if (titikJemputSelect) titikJemputSelect.innerHTML = '<option value="">-- Pilih Rombongan Dulu --</option>';
-            setSelectLoading(busKembaliSelect, false);
-            setSelectLoading(titikJemputSelect, false);
             return;
         }
-        
-        console.log('Fetching kembali options for rombongan:', targetRombonganId);
-        
+
+        setSelectLoading(busKembaliSelect, true);
+        setSelectLoading(titikJemputSelect, true);
+
         // Ambil data detail rombongan dari API
         fetch(`/admin/api/rombongan-detail/${targetRombonganId}`)
             .then(res => {
@@ -356,16 +291,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 return res.json();
             })
             .then(data => {
-                console.log('Kembali data:', data);
-                
                 // Update pilihan Bus Kembali
                 if (busKembaliSelect && data.buses) {
                     const busChoices = data.buses.map(bus => {
-                        const displayName = `${bus.nama_armada}`;
-                        const identifier = bus.nomor_lambung || bus.plat_nomor;
-                        const quota = bus.sisa_kuota_kembali !== undefined ? `(Sisa: ${bus.sisa_kuota_kembali})` : '';
-                        const disabled = (bus.sisa_kuota_kembali !== undefined && bus.sisa_kuota_kembali <= 0) ? 'disabled' : '';
-                        return `<option value="${bus.id}" ${disabled}>${displayName} - ${identifier} ${quota}</option>`;
+                        const sisaKuota = bus.sisa_kuota_kembali !== undefined ? `(Sisa: ${bus.sisa_kuota_kembali})` : '';
+                        return `<option value="${bus.id}">${bus.nama_armada} ${sisaKuota}</option>`;
                     }).join('');
                     busKembaliSelect.innerHTML = '<option value="">-- Pilih Bus --</option>' + busChoices;
                 }
@@ -378,26 +308,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     titikJemputSelect.innerHTML = '<option value="">-- Pilih Titik Jemput --</option>' + titikChoices;
                 }
 
-                // Set nilai yang sudah ada sebelumnya
-                if (initialData.busKembaliId && busKembaliSelect) {
-                    busKembaliSelect.value = initialData.busKembaliId;
+                // INI BAGIAN PENTING:
+                // Hanya set nilai awal saat halaman pertama kali dimuat.
+                // Jika tidak, pilihan pengguna akan selalu kembali ke nilai awal.
+                if (isInitialLoad) {
+                    if (initialData.busKembaliId && busKembaliSelect) {
+                        busKembaliSelect.value = initialData.busKembaliId;
+                    }
+                    if (initialData.titikJemputKembali && titikJemputSelect) {
+                        titikJemputSelect.value = initialData.titikJemputKembali;
+                    }
                 }
-                
-                if (initialData.titikJemputKembali && titikJemputSelect) {
-                    titikJemputSelect.value = initialData.titikJemputKembali;
-                }
-
-                // Remove loading state
-                setSelectLoading(busKembaliSelect, false);
-                setSelectLoading(titikJemputSelect, false);
             })
             .catch(error => {
                 console.error('Error fetching rombongan details:', error);
-                
-                // Show error state
-                if (busKembaliSelect) busKembaliSelect.innerHTML = '<option value="">-- Error memuat data --</option>';
-                if (titikJemputSelect) titikJemputSelect.innerHTML = '<option value="">-- Error memuat data --</option>';
-                
+                if (busKembaliSelect) busKembaliSelect.innerHTML = '<option value="">-- Error --</option>';
+                if (titikJemputSelect) titikJemputSelect.innerHTML = '<option value="">-- Error --</option>';
+            })
+            .finally(() => {
                 setSelectLoading(busKembaliSelect, false);
                 setSelectLoading(titikJemputSelect, false);
             });
@@ -406,53 +334,22 @@ document.addEventListener('DOMContentLoaded', function() {
     // Event listener untuk mengubah pilihan saat rombongan kembali diganti
     if (rombonganKembaliSelect) {
         rombonganKembaliSelect.addEventListener('change', function() {
-            console.log('Rombongan kembali changed to:', this.value);
-            updateKembaliOptions(this.value);
+            // Panggil fungsi update, dan tandai ini BUKAN load awal (isInitialLoad = false)
+            updateKembaliOptions(this.value, false);
         });
     }
     
-    // Form submission with loading state
+    // Form submission
     if (form) {
-        form.addEventListener('submit', function(e) {
-            showLoading();
-            
-            // Optional: Add form validation
-            if (!form.checkValidity()) {
-                e.preventDefault();
-                e.stopPropagation();
-                hideLoading();
-            }
-            
-            form.classList.add('was-validated');
+        form.addEventListener('submit', function() {
+            if(loadingOverlay) loadingOverlay.classList.remove('d-none');
         });
     }
     
     // Initialize saat halaman dimuat
-    console.log('Initializing page...');
-    
-    // Update bus pulang dengan sisa kuota
-    updateBusPulangWithQuota();
-    
-    // Update options untuk kembali
-    const rombonganKembaliTerpilih = initialData.rombonganKembaliId || initialData.rombonganPulangId;
-    updateKembaliOptions(rombonganKembaliTerpilih);
-
-    // Add smooth animations to form elements
-    const formElements = document.querySelectorAll('.form-select, .form-control');
-    formElements.forEach(element => {
-        element.addEventListener('focus', function() {
-            if (this.parentElement) {
-                this.parentElement.style.transform = 'scale(1.02)';
-                this.parentElement.style.transition = 'transform 0.2s ease';
-            }
-        });
-        
-        element.addEventListener('blur', function() {
-            if (this.parentElement) {
-                this.parentElement.style.transform = 'scale(1)';
-            }
-        });
-    });
+    // Panggil fungsi update, dan tandai ini ADALAH load awal (isInitialLoad = true)
+    const rombonganKembaliTerpilih = initialData.rombonganKembaliId || '';
+    updateKembaliOptions(rombonganKembaliTerpilih, true);
 });
 </script>
 {% endblock %}

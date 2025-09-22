@@ -895,55 +895,51 @@ def pendaftaran_rombongan():
 
 # Di dalam file app/admin/routes.py
 
+
 @admin_bp.route('/pendaftaran/<int:pendaftaran_id>/edit', methods=['GET', 'POST'])
 @login_required
 @role_required('Korpus', 'Korwil', 'Korda', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
 def edit_pendaftaran(pendaftaran_id):
     pendaftaran = Pendaftaran.query.get_or_404(pendaftaran_id)
-    form = PendaftaranEditForm(obj=pendaftaran)
     
-    # --- LOGIKA HAK AKSES BARU ---
-    can_edit_pulang = False
-    can_edit_kembali = False
-    
-    if current_user.role.name in ['Korpus', 'Korwil', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi']:
-        can_edit_pulang = True
-        can_edit_kembali = True
-    elif current_user.role.name == 'Korda':
+    # --- PERBAIKAN UTAMA ADA DI SINI ---
+    # Kita pisahkan inisialisasi form menggunakan if/else standar
+    if request.method == 'POST':
+        # Saat submit, form diisi dari data request yang masuk
+        form = PendaftaranEditForm(request.form)
+    else:
+        # Saat halaman dibuka (GET), form diisi dari objek pendaftaran dari database
+        form = PendaftaranEditForm(obj=pendaftaran)
+    # --- AKHIR PERBAIKAN ---
+
+    # --- PENENTUAN HAK AKSES ---
+    # (Logika ini tetap sama)
+    can_edit_pulang = current_user.role.name in ['Korpus', 'Korwil', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi']
+    can_edit_kembali = current_user.role.name in ['Korpus', 'Korwil', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi']
+
+    if current_user.role.name == 'Korda':
         managed_ids = {r.id for r in current_user.active_managed_rombongan}
         if pendaftaran.rombongan_pulang_id in managed_ids:
             can_edit_pulang = True
-        if pendaftaran.rombongan_kembali_id in managed_ids:
+        if pendaftaran.rombongan_pulang_id in managed_ids or (pendaftaran.rombongan_kembali_id and pendaftaran.rombongan_kembali_id in managed_ids):
             can_edit_kembali = True
-
+            
     if not can_edit_pulang and not can_edit_kembali:
         flash('Anda tidak memiliki hak akses untuk mengedit pendaftaran ini.', 'danger')
         return redirect(url_for('admin.daftar_peserta_global'))
-    
-    
 
-    # Mengisi pilihan dropdown secara dinamis
+    # --- PENGISIAN DROPDOWN SEBELUM VALIDASI (KUNCI PERBAIKAN) ---
+    # 1. Mengisi pilihan untuk dropdown bagian PULANG
     if pendaftaran.rombongan_pulang:
         form.titik_turun.choices = [(t.titik_turun, t.titik_turun) for t in pendaftaran.rombongan_pulang.tarifs]
         form.bus_pulang.choices = [("", "-- Pilih Bus --")] + [(b.id, f"{b.nama_armada} - {b.nomor_lambung or b.plat_nomor}") for b in pendaftaran.rombongan_pulang.buses]
     
-    rombongan_kembali_terpilih = pendaftaran.rombongan_kembali or pendaftaran.rombongan_pulang
-    if rombongan_kembali_terpilih:
-        form.titik_jemput_kembali.choices = [(t.titik_turun, t.titik_turun) for t in rombongan_kembali_terpilih.tarifs]
-        form.bus_kembali.choices = [("", "-- Pilih Bus --")] + [(b.id, f"{b.nama_armada} - {b.nomor_lambung or b.plat_nomor}") for b in rombongan_kembali_terpilih.buses]
-    
-    
-    initial_data_dict = {
-        'rombonganPulangId': pendaftaran.rombongan_pulang_id,
-        'rombonganKembaliId': pendaftaran.rombongan_kembali_id,
-        'busPulangId': pendaftaran.bus_pulang_id,
-        'busKembaliId': pendaftaran.bus_kembali_id,
-        'titikTurun': pendaftaran.titik_turun or '',
-        'titikJemputKembali': pendaftaran.titik_jemput_kembali or ''
-    }
-    # Ubah dictionary menjadi string JSON
-    initial_data_json = json.dumps(initial_data_dict)
-
+    # 2. Mengisi pilihan untuk dropdown bagian KEMBALI
+    rombongan_kembali_obj = form.rombongan_kembali.data or pendaftaran.rombongan_kembali or pendaftaran.rombongan_pulang
+    if rombongan_kembali_obj:
+        form.titik_jemput_kembali.choices = [(t.titik_turun, t.titik_turun) for t in rombongan_kembali_obj.tarifs]
+        form.bus_kembali.choices = [("", "-- Pilih Bus --")] + [(b.id, f"{b.nama_armada} - {b.nomor_lambung or b.plat_nomor}") for b in rombongan_kembali_obj.buses]
+    # --- AKHIR BAGIAN PENTING ---
 
     if form.validate_on_submit():
         # Hanya simpan data yang berhak diubah oleh user
@@ -951,7 +947,7 @@ def edit_pendaftaran(pendaftaran_id):
             pendaftaran.status_pulang = form.status_pulang.data
             pendaftaran.metode_pembayaran_pulang = form.metode_pembayaran_pulang.data
             pendaftaran.titik_turun = form.titik_turun.data
-            pendaftaran.gelombang_pulang = form.gelombang_pulang.data
+            pendaftaran.gelombang_pulang = form.gelombang_pulang.data # <-- Tambahkan ini
             pendaftaran.bus_pulang_id = form.bus_pulang.data or None
 
         if can_edit_kembali:
@@ -960,6 +956,9 @@ def edit_pendaftaran(pendaftaran_id):
             pendaftaran.metode_pembayaran_kembali = form.metode_pembayaran_kembali.data
             pendaftaran.titik_jemput_kembali = form.titik_jemput_kembali.data
             pendaftaran.bus_kembali_id = form.bus_kembali.data or None
+        
+        # Hitung ulang total biaya jika diperlukan (opsional, tapi disarankan)
+        # Anda bisa menambahkan fungsi kalkulasi biaya di sini jika ada
 
         try:
             db.session.commit()
@@ -967,10 +966,33 @@ def edit_pendaftaran(pendaftaran_id):
             return redirect(url_for('admin.daftar_peserta_global', rombongan_id=pendaftaran.rombongan_pulang_id))
         except Exception as e:
             db.session.rollback()
-            flash(f'Terjadi kesalahan: {e}', 'danger')
+            flash(f'Terjadi kesalahan saat menyimpan: {e}', 'danger')
 
-    return render_template('edit_pendaftaran.html', form=form, pendaftaran=pendaftaran,
-                           can_edit_pulang=can_edit_pulang, can_edit_kembali=can_edit_kembali)
+    # Isi form dengan data dari DB saat request GET pertama kali
+    if request.method == 'GET':
+        form.gelombang_pulang.data = pendaftaran.gelombang_pulang # <-- Tambahkan ini
+        form.bus_pulang.data = pendaftaran.bus_pulang_id
+        form.bus_kembali.data = pendaftaran.bus_kembali_id
+        # Field lain sudah terisi otomatis dari `obj=pendaftaran`
+
+    # Siapkan data untuk JavaScript
+    initial_data_dict = {
+        'rombonganPulangId': pendaftaran.rombongan_pulang_id,
+        'rombonganKembaliId': pendaftaran.rombongan_kembali_id,
+        'busPulangId': pendaftaran.bus_pulang_id,
+        'busKembaliId': pendaftaran.bus_kembali_id,
+        'titikTurun': pendaftaran.titik_turun or '',
+        'titikJemputKembali': pendaftaran.titik_jemput_kembali or ''
+    }
+    initial_data_json = json.dumps(initial_data_dict)
+
+    return render_template('edit_pendaftaran.html', 
+                           form=form, 
+                           pendaftaran=pendaftaran, 
+                           title="Edit Detail Pendaftaran",
+                           can_edit_pulang=can_edit_pulang, 
+                           can_edit_kembali=can_edit_kembali,
+                           initial_data_json=initial_data_json)
 
 @admin_bp.route('/pendaftaran/hapus/<int:pendaftaran_id>', methods=['POST'])
 @login_required
@@ -5413,3 +5435,54 @@ def rekapitulasi_global():
                            pesan_wa_pulang_g1=pesan_wa_pulang_g1,
                            pesan_wa_pulang_g2=pesan_wa_pulang_g2,
                            pesan_wa_kembali="Laporan Total Peserta Kembali: " + str(global_stats['kembali']) + " santri.")
+                           
+def calculate_and_update_biaya(pendaftaran_obj):
+    """Menghitung dan memperbarui total biaya pada objek pendaftaran."""
+    biaya_pulang = 0
+    biaya_kembali = 0
+    FEE_PONDOK = 10000
+
+    # Hitung biaya pulang
+    if pendaftaran_obj.status_pulang != 'Tidak Ikut' and pendaftaran_obj.rombongan_pulang and pendaftaran_obj.titik_turun:
+        tarif_pulang = Tarif.query.filter_by(
+            rombongan_id=pendaftaran_obj.rombongan_pulang_id,
+            titik_turun=pendaftaran_obj.titik_turun
+        ).first()
+        if tarif_pulang:
+            biaya_pulang = tarif_pulang.harga_bus + tarif_pulang.fee_korda + FEE_PONDOK
+
+    # Hitung biaya kembali
+    rombongan_utk_kembali = pendaftaran_obj.rombongan_kembali or pendaftaran_obj.rombongan_pulang
+    titik_jemput = pendaftaran_obj.titik_jemput_kembali or pendaftaran_obj.titik_turun
+    
+    if pendaftaran_obj.status_kembali != 'Tidak Ikut' and rombongan_utk_kembali and titik_jemput:
+        tarif_kembali = Tarif.query.filter_by(
+            rombongan_id=rombongan_utk_kembali.id,
+            titik_turun=titik_jemput
+        ).first()
+        if tarif_kembali:
+            biaya_kembali = tarif_kembali.harga_bus + tarif_kembali.fee_korda + FEE_PONDOK
+            
+    pendaftaran_obj.total_biaya = biaya_pulang + biaya_kembali
+
+@admin_bp.route('/recalculate-all-fees')
+@login_required
+@role_required('Korpus') # Hanya Korpus yang boleh menjalankan ini
+def recalculate_all_fees():
+    active_edisi = get_active_edisi()
+    if not active_edisi:
+        flash('Tidak ada edisi aktif.', 'warning')
+        return redirect(url_for('admin.dashboard'))
+
+    all_pendaftaran = Pendaftaran.query.filter_by(edisi_id=active_edisi.id).all()
+    count = 0
+    for p in all_pendaftaran:
+        old_total = p.total_biaya
+        calculate_and_update_biaya(p)
+        if p.total_biaya != old_total:
+            count += 1
+    
+    db.session.commit()
+    
+    flash(f'Selesai! {count} data pendaftaran telah dihitung ulang dan disinkronkan.', 'success')
+    return redirect(url_for('admin.daftar_peserta_global'))
