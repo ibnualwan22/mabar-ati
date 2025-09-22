@@ -213,224 +213,109 @@ def hapus_user(user_id):
     return redirect(url_for('admin.manajemen_user'))
 
 
-@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
-@admin_bp.route('/dashboard')
+@admin_bp.route('/')
 @login_required
+@role_required('Korpus', 'Korda', 'Korwil', 'Keamanan', 'PJ Acara', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')
 def dashboard():
+    check_and_update_expired_izin()
     active_edisi = get_active_edisi()
+    stats = { 'total_peserta': 0, 'total_izin': 0, 'santri_belum_terdaftar': 0, 
+              'total_pemasukan': 0, 'total_lunas': 0, 'total_belum_lunas': 0, 
+              'pendaftar_terlambat': [], 'total_partisipan': 0 }
+    semua_rombongan = []
+
     if not active_edisi:
-        return render_template('dashboard.html', active_edisi=None)
+        flash("Tidak ada edisi yang aktif. Silakan aktifkan satu edisi di Manajemen Edisi.", "warning")
+        stats['santri_belum_terdaftar'] = Santri.query.filter(Santri.status_santri == 'Aktif', Santri.pendaftarans == None).count()
+        return render_template('dashboard.html', stats=stats, semua_rombongan=semua_rombongan)
 
-    # Tentukan apakah user bisa melihat semua data atau hanya wilayahnya
-    is_full_access = current_user.role.name in ['Korpus', 'Korpuspi']
-    is_regional_access = current_user.role.name in ['Korda', 'Korwil']
+    # --- MULAI KALKULASI JIKA EDISI AKTIF ---
     
-    # Ambil semua rombongan yang dikelola user untuk filter dropdown
-    if is_full_access:
-        all_managed_rombongan = Rombongan.query.filter(
-            Rombongan.edisi_id == active_edisi.id
-        ).order_by(Rombongan.nama_rombongan).all()
-        managed_rombongan_ids = {r.id for r in all_managed_rombongan}
-    else:
-        all_managed_rombongan = current_user.active_managed_rombongan
-        managed_rombongan_ids = {r.id for r in all_managed_rombongan}
+    # 1. Query dasar untuk mengambil semua pendaftaran di edisi aktif
+    pendaftaran_query = Pendaftaran.query.join(
+        Rombongan, Pendaftaran.rombongan_pulang_id == Rombongan.id
+    ).filter(Rombongan.edisi_id == active_edisi.id)
 
-    # Kumpulkan wilayah yang dikelola user untuk filter regional
-    managed_regions = set()
-    if is_regional_access:
-        for r in current_user.active_managed_rombongan:
-            if r.cakupan_wilayah:
-                for w in r.cakupan_wilayah:
-                    managed_regions.add(w.get('label'))
+    # 2. Ambil ID rombongan yang dikelola user
+    managed_rombongan_ids = []
+    if current_user.role.name in ['Korwil', 'Korda']:
+        managed_rombongan_ids = {r.id for r in current_user.active_managed_rombongan} # Gunakan set untuk pencarian cepat
 
-    # --- LOGIKA FILTER ---
-    selected_rombongan_id = request.args.get('rombongan_id', type=int)
-    
-    # Siapkan query dasar untuk pendaftaran
-    pendaftaran_query = Pendaftaran.query.options(
-        joinedload(Pendaftaran.santri),
-        joinedload(Pendaftaran.rombongan_pulang).joinedload(Rombongan.tarifs),
-        joinedload(Pendaftaran.rombongan_kembali).joinedload(Rombongan.tarifs)
-    ).filter(Pendaftaran.edisi_id == active_edisi.id)
-
-    # Terapkan filter berdasarkan hak akses dan pilihan dropdown
-    if is_regional_access:
-        # Untuk regional access, ambil semua peserta yang:
-        # 1. Ikut rombongan yang dikelola (termasuk lintas wilayah)
-        # 2. ATAU berasal dari wilayah yang dikelola
-        pendaftaran_query = pendaftaran_query.filter(
-            or_(
-                Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids),
-                Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids)
+    # 3. Terapkan filter hak akses jika bukan Korpus
+    if current_user.role.name != 'Korpus':
+        if not managed_rombongan_ids:
+            pendaftaran_query = pendaftaran_query.filter(db.false())
+        else:
+            pendaftaran_query = pendaftaran_query.filter(
+                or_(
+                    Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids),
+                    Pendaftaran.rombongan_kembali_id.in_(managed_rombongan_ids)
+                )
             )
-        )
-    elif is_full_access and selected_rombongan_id:
-        pendaftaran_query = pendaftaran_query.filter(
-            or_(
-                Pendaftaran.rombongan_pulang_id == selected_rombongan_id,
-                Pendaftaran.rombongan_kembali_id == selected_rombongan_id
-            )
-        )
-    elif not is_full_access and not is_regional_access:
-        # Untuk role lain, hanya tampilkan data peserta terdaftar tanpa filter lainnya
-        pass
-
-    pendaftar_list = pendaftaran_query.all()
-    registered_santri_ids = {p.santri_id for p in pendaftar_list}
-
-    # --- PERHITUNGAN STATISTIK KARTU RINGKASAN ---
-    stats = {}
     
-    # Base queries untuk berbagai statistik
-    santri_q = Santri.query
-    izin_q = Izin.query.filter(Izin.edisi_id == active_edisi.id)
-    partisipan_q = Partisipan.query.filter(Partisipan.edisi_id == active_edisi.id)
-    wisuda_q = Wisuda.query.filter(Wisuda.edisi_id == active_edisi.id)
-
-    # Apply regional filter untuk santri belum daftar - hanya untuk santri dari wilayah yang dikelola
-    # Ini tetap berdasarkan wilayah asal santri, bukan rombongan
-    if is_regional_access and managed_regions:
-        santri_q = santri_q.filter(Santri.kabupaten.in_(managed_regions))
-        izin_q = izin_q.join(Santri).filter(Santri.kabupaten.in_(managed_regions))
-        partisipan_q = partisipan_q.join(Santri).filter(Santri.kabupaten.in_(managed_regions))
-        wisuda_q = wisuda_q.join(Santri, Santri.nis == Wisuda.santri_nis).filter(Santri.kabupaten.in_(managed_regions))
-
-    # Hitung statistik dasar
-    stats['total_peserta'] = len(pendaftar_list)
+    # 4. Eksekusi query pendaftaran sekali untuk efisiensi
+    pendaftar_list = pendaftaran_query.options(
+        joinedload(Pendaftaran.santri), 
+        joinedload(Pendaftaran.rombongan_pulang), 
+        joinedload(Pendaftaran.rombongan_kembali)
+    ).all()
     
-    # Untuk role selain Korpus/Korpuspi, hanya hitung santri belum daftar dari wilayah yang dikelola
-    if not is_full_access and not is_regional_access:
-        stats['santri_belum_terdaftar'] = 0  # Tidak ditampilkan untuk role lain
-        stats['total_izin'] = 0
-        stats['total_partisipan'] = 0
-        stats['total_wisuda'] = 0
-    else:
-        stats['santri_belum_terdaftar'] = santri_q.filter(
-            Santri.status_santri == 'Aktif',
-            ~Santri.id.in_(registered_santri_ids)
-        ).count()
-        stats['total_izin'] = izin_q.count()
-        stats['total_partisipan'] = partisipan_q.count()
-        stats['total_wisuda'] = wisuda_q.count()
+    # 5. Kalkulasi Statistik Peserta & Keuangan (Akurat untuk Lintas Rombongan)
+    stats['total_peserta'] = len({p.santri_id for p in pendaftar_list})
+    stats['total_izin'] = Izin.query.filter_by(edisi=active_edisi, status='Aktif').count()
+    stats['total_partisipan'] = Partisipan.query.filter_by(edisi_id=active_edisi.id).count()
 
-    # Hitung statistik gelombang pulang dan total kembali - DIPERBAIKI
-    stats['pulang_gelombang_1'] = 0
-    stats['pulang_gelombang_2'] = 0
-    stats['total_kembali'] = 0
-
+    total_pemasukan = 0
+    total_lunas = 0
     for p in pendaftar_list:
-        # STATISTIK PESERTA PULANG
-        if p.status_pulang != 'Tidak Ikut':
-            # Filter untuk regional access: hanya hitung jika ikut rombongan pulang yang dikelola
-            should_count_pulang = True
-            if is_regional_access:
-                should_count_pulang = p.rombongan_pulang_id in managed_rombongan_ids
-            
-            if should_count_pulang:
-                # Tentukan gelombang berdasarkan prioritas
-                gelombang = None
-                if hasattr(p, 'gelombang_pulang') and p.gelombang_pulang:
-                    gelombang = p.gelombang_pulang
-                elif p.rombongan_pulang and hasattr(p.rombongan_pulang, 'gelombang'):
-                    gelombang = p.rombongan_pulang.gelombang
-                
-                # Hitung statistik berdasarkan gelombang
-                if gelombang == 1:
-                    stats['pulang_gelombang_1'] += 1
-                elif gelombang == 2:
-                    stats['pulang_gelombang_2'] += 1
+        # Kalkulasi biaya pulang
+        if p.status_pulang != 'Tidak Ikut' and p.rombongan_pulang_id:
+            if current_user.role.name == 'Korpus' or p.rombongan_pulang_id in managed_rombongan_ids:
+                tarif_pulang = Tarif.query.filter_by(rombongan_id=p.rombongan_pulang_id, titik_turun=p.titik_turun).first()
+                if tarif_pulang:
+                    biaya_pulang = tarif_pulang.harga_bus + tarif_pulang.fee_korda + 10000
+                    total_pemasukan += biaya_pulang
+                    if p.status_pulang == 'Lunas':
+                        total_lunas += biaya_pulang
+        
+        # Kalkulasi biaya kembali
+        if p.status_kembali != 'Tidak Ikut' and p.rombongan_kembali_id:
+            if current_user.role.name == 'Korpus' or p.rombongan_kembali_id in managed_rombongan_ids:
+                tarif_kembali = Tarif.query.filter_by(rombongan_id=p.rombongan_kembali_id, titik_turun=p.titik_jemput_kembali).first()
+                if tarif_kembali:
+                    biaya_kembali = tarif_kembali.harga_bus + tarif_kembali.fee_korda + 10000
+                    total_pemasukan += biaya_kembali
+                    if p.status_kembali == 'Lunas':
+                        total_lunas += biaya_kembali
 
-        # STATISTIK PESERTA KEMBALI - LOGIKA DIPERBAIKI
-        if p.status_kembali != 'Tidak Ikut':
-            should_count_kembali = True
-            
-            if is_regional_access:
-                # Jika ada rombongan kembali eksplisit, gunakan itu
-                if p.rombongan_kembali_id:
-                    should_count_kembali = p.rombongan_kembali_id in managed_rombongan_ids
-                # Jika tidak ada rombongan kembali eksplisit, gunakan rombongan pulang
-                # TAPI hanya jika rombongan pulang juga dikelola
-                elif p.rombongan_pulang_id:
-                    should_count_kembali = p.rombongan_pulang_id in managed_rombongan_ids
-                else:
-                    should_count_kembali = False
-            
-            if should_count_kembali:
-                stats['total_kembali'] += 1
-
-    # --- PERHITUNGAN DATA GRAFIK (hanya untuk yang punya akses penuh atau regional) ---
-    chart_data_alokasi = {'bus': 0, 'korda': 0, 'pondok': 0}
-    chart_data_status = {'lunas': 0, 'belum_lunas': 0}
+    stats['total_pemasukan'] = total_pemasukan
+    stats['total_lunas'] = total_lunas
+    stats['total_belum_lunas'] = total_pemasukan - total_lunas
     
-    if is_full_access or is_regional_access:
-        FEE_PONDOK = 10000
+    # 6. Kalkulasi Santri Belum Terdaftar (berdasarkan hak akses)
+    all_registered_santri_ids = {p.santri_id for p in Pendaftaran.query.join(Rombongan, Pendaftaran.rombongan_pulang_id == Rombongan.id).filter(Rombongan.edisi_id == active_edisi.id)}
+    query_belum_terdaftar = Santri.query.filter(Santri.status_santri == 'Aktif', ~Santri.id.in_(all_registered_santri_ids))
 
-        for p in pendaftar_list:
-            # Kalkulasi biaya pulang - hanya jika rombongan pulang sesuai filter
-            if (p.status_pulang != 'Tidak Ikut' and p.rombongan_pulang and p.titik_turun):
-                # Untuk full access: hitung semua atau hanya selected_rombongan jika ada
-                should_count_pulang = False
-                if is_full_access:
-                    if selected_rombongan_id:
-                        should_count_pulang = p.rombongan_pulang_id == selected_rombongan_id
-                    else:
-                        should_count_pulang = True
-                elif is_regional_access:
-                    should_count_pulang = p.rombongan_pulang_id in managed_rombongan_ids
-                
-                if should_count_pulang:
-                    tarif_pulang = next((t for t in p.rombongan_pulang.tarifs 
-                                      if t.titik_turun == p.titik_turun), None)
-                    if tarif_pulang:
-                        total_biaya_pulang = tarif_pulang.harga_bus + tarif_pulang.fee_korda + FEE_PONDOK
-                        chart_data_alokasi['bus'] += tarif_pulang.harga_bus
-                        chart_data_alokasi['korda'] += tarif_pulang.fee_korda
-                        chart_data_alokasi['pondok'] += FEE_PONDOK
-                        if p.status_pulang == 'Lunas':
-                            chart_data_status['lunas'] += total_biaya_pulang
-            
-            # Kalkulasi biaya kembali - hanya jika rombongan kembali sesuai filter
-            if p.status_kembali != 'Tidak Ikut':
-                rombongan_utk_kembali = p.rombongan_kembali or p.rombongan_pulang
-                titik_jemput = p.titik_jemput_kembali or p.titik_turun
-                
-                if rombongan_utk_kembali and titik_jemput:
-                    # Untuk full access: hitung semua atau hanya selected_rombongan jika ada
-                    should_count_kembali = False
-                    if is_full_access:
-                        if selected_rombongan_id:
-                            should_count_kembali = rombongan_utk_kembali.id == selected_rombongan_id
-                        else:
-                            should_count_kembali = True
-                    elif is_regional_access:
-                        should_count_kembali = rombongan_utk_kembali.id in managed_rombongan_ids
-                    
-                    if should_count_kembali:
-                        tarif_kembali = next((t for t in rombongan_utk_kembali.tarifs 
-                                           if t.titik_turun == titik_jemput), None)
-                        if tarif_kembali:
-                            total_biaya_kembali = tarif_kembali.harga_bus + tarif_kembali.fee_korda + FEE_PONDOK
-                            chart_data_alokasi['bus'] += tarif_kembali.harga_bus
-                            chart_data_alokasi['korda'] += tarif_kembali.fee_korda
-                            chart_data_alokasi['pondok'] += FEE_PONDOK
-                            if p.status_kembali == 'Lunas':
-                                chart_data_status['lunas'] += total_biaya_kembali
+    if current_user.role.name in ['Korwil', 'Korda']:
+        managed_regions = {w.get('label') for r in current_user.active_managed_rombongan if r.cakupan_wilayah for w in r.cakupan_wilayah}
+        if managed_regions:
+            query_belum_terdaftar = query_belum_terdaftar.filter(Santri.kabupaten.in_(list(managed_regions)))
+        else:
+            query_belum_terdaftar = query_belum_terdaftar.filter(db.false())
+    
+    stats['santri_belum_terdaftar'] = query_belum_terdaftar.count()
 
-        total_pemasukan = sum(chart_data_alokasi.values())
-        chart_data_status['belum_lunas'] = total_pemasukan - chart_data_status['lunas']
+    # 7. Ambil data rombongan sesuai hak akses (untuk tabel ringkasan)
+    rombongan_query = Rombongan.query.filter_by(edisi=active_edisi)
+    if current_user.role.name in ['Korwil', 'Korda']:
+        if not managed_rombongan_ids:
+            rombongan_query = rombongan_query.filter(db.false())
+        else:
+            rombongan_query = rombongan_query.filter(Rombongan.id.in_(managed_rombongan_ids))
+    semua_rombongan = rombongan_query.order_by(Rombongan.nama_rombongan).all()
 
-    return render_template('dashboard.html', 
-                           active_edisi=active_edisi,
-                           stats=stats,
-                           semua_rombongan=all_managed_rombongan,
-                           selected_rombongan_id=selected_rombongan_id,
-                           chart_data_alokasi=chart_data_alokasi,
-                           chart_data_status=chart_data_status,
-                           managed_regions=list(managed_regions) if managed_regions else [],
-                           is_full_access=is_full_access,
-                           is_regional_access=is_regional_access,
-                           show_filter=is_full_access or is_regional_access
-                           )
+    return render_template('dashboard.html', stats=stats, semua_rombongan=semua_rombongan)
+
 @admin_bp.route('/rombongan')
 @login_required
 @role_required('Korpus', 'Korwil', 'Korda', 'Bendahara Pusat', 'Sekretaris', 'Korpuspi')

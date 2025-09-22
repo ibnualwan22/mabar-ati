@@ -8,10 +8,6 @@
     .stat-card-link .card:hover { transform: translateY(-5px); box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
     .stat-card { transition: all 0.3s ease; height: 100%;}
     .stat-number { font-size: 2.2rem; font-weight: 700; }
-    .chart-container { position: relative; height: 300px; width: 100%; }
-    .gelombang-card { border-left: 4px solid; }
-    .gelombang-1 { border-left-color: #007bff !important; }
-    .gelombang-2 { border-left-color: #28a745 !important; }
 </style>
 
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -19,38 +15,54 @@
 </div>
 
 {% if not active_edisi %}
-    <div class="alert alert-warning">Tidak ada edisi yang aktif. Silakan aktifkan satu edisi di Manajemen Edisi.</div>
+    <div class="alert alert-warning">Tidak ada edisi yang aktif. Silakan aktifkan satu edisi di Manajemen Edisi untuk melihat data.</div>
 {% else %}
-    <!-- Kartu Statistik Utama -->
+    {% if stats.pendaftar_terlambat %}
+    <div class="alert alert-warning">
+        <h5 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Perhatian: Ada {{ stats.pendaftar_terlambat|length }} Santri Terlambat Membayar!</h5>
+        <p>Berikut adalah daftar santri yang belum lunas dan sudah melewati batas pembayaran:</p>
+        <ul>
+            {% for p in stats.pendaftar_terlambat %}
+            <li><strong>{{ p.santri.nama }}</strong> (Rombongan: {{ p.rombongan_pulang.nama_rombongan if p.rombongan_pulang else p.rombongan_kembali.nama_rombongan }})</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
     <div class="row g-4 mb-4">
-        <div class="col-lg col-md-6">
+        <div class="col-lg-3 col-md-6">
             <a href="{{ url_for('admin.daftar_peserta_global') }}" class="stat-card-link">
                 <div class="card shadow-sm stat-card">
                     <div class="card-body text-center">
-                        <h6 class="card-subtitle mb-2 text-muted">Peserta Terdaftar</h6>
+                        <h6 class="card-subtitle mb-2 text-muted">Peserta Rombongan</h6>
                         <p class="card-text stat-number text-primary">{{ stats.total_peserta }}</p>
                     </div>
                 </div>
             </a>
         </div>
-        
-        {% if is_full_access or is_regional_access %}
-        <div class="col-lg col-md-6">
-            {% if current_user.role.name in ['Korwil', 'Korda'] %}
-                <a href="{{ url_for('admin.manajemen_santri_wilayah', rombongan_id='belum_terdaftar', alamat=managed_regions) }}" class="stat-card-link">
-            {% else %}
-                <a href="{{ url_for('admin.manajemen_santri_wilayah', rombongan_id='belum_terdaftar') }}" class="stat-card-link">
+        <div class="col-lg-3 col-md-6">
+    {% if current_user.role.name in ['Korwil', 'Korda'] %}
+        {% set managed_regions = [] %}
+        {% for rombongan in current_user.active_managed_rombongan %}
+            {% if rombongan.cakupan_wilayah %}
+                {% for wilayah in rombongan.cakupan_wilayah %}
+                    {% if managed_regions.append(wilayah.get('label')) %}{% endif %}
+                {% endfor %}
             {% endif %}
+        {% endfor %}
+        <a href="{{ url_for('admin.manajemen_santri_wilayah', rombongan_id='belum_terdaftar', alamat=managed_regions|list) }}" class="stat-card-link">
+    {% else %}
+        <a href="{{ url_for('admin.manajemen_santri_wilayah', rombongan_id='belum_terdaftar') }}" class="stat-card-link">
+    {% endif %}
                 <div class="card shadow-sm stat-card">
                     <div class="card-body text-center">
-                        <h6 class="card-subtitle mb-2 text-muted">Santri Belum Daftar</h6>
+                        <h6 class="card-subtitle mb-2 text-muted">Santri Belum Terdaftar</h6>
                         <p class="card-text stat-number">{{ stats.santri_belum_terdaftar }}</p>
                     </div>
                 </div>
             </a>
         </div>
-        
-        <div class="col-lg col-md-6">
+        <div class="col-lg-3 col-md-6">
             <a href="{{ url_for('admin.perizinan') }}" class="stat-card-link">
                 <div class="card shadow-sm stat-card">
                     <div class="card-body text-center">
@@ -60,8 +72,7 @@
                 </div>
             </a>
         </div>
-        
-        <div class="col-lg col-md-6">
+         <div class="col-lg-3 col-md-6">
             <a href="{{ url_for('admin.data_partisipan') }}" class="stat-card-link">
                 <div class="card shadow-sm stat-card">
                     <div class="card-body text-center">
@@ -71,219 +82,117 @@
                 </div>
             </a>
         </div>
-        
-        <div class="col-lg col-md-6">
-            <a href="{{ url_for('admin.manajemen_wisuda') }}" class="stat-card-link">
-                <div class="card shadow-sm stat-card">
-                    <div class="card-body text-center">
-                        <h6 class="card-subtitle mb-2 text-muted">Total Wisudawan</h6>
-                        <p class="card-text stat-number text-success">{{ stats.total_wisuda }}</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-        {% endif %}
     </div>
 
-    <!-- Kartu Statistik Gelombang -->
-    <div class="row g-4 mb-4">
-        <div class="col-lg-4 col-md-6">
-            <div class="card shadow-sm stat-card gelombang-card gelombang-1">
-                <div class="card-body text-center">
-                    <h6 class="card-subtitle mb-2 text-muted">Pulang Gelombang 1</h6>
-                    <p class="card-text stat-number text-primary">{{ stats.pulang_gelombang_1 }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4 col-md-6">
-            <div class="card shadow-sm stat-card gelombang-card gelombang-2">
-                <div class="card-body text-center">
-                    <h6 class="card-subtitle mb-2 text-muted">Pulang Gelombang 2</h6>
-                    <p class="card-text stat-number text-success">{{ stats.pulang_gelombang_2 }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4 col-md-6">
-            <div class="card shadow-sm stat-card">
-                <div class="card-body text-center">
-                    <h6 class="card-subtitle mb-2 text-muted">Total Kembali</h6>
-                    <p class="card-text stat-number text-warning">{{ stats.total_kembali }}</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {% if show_filter %}
-    <!-- Filter Rombongan -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <form method="GET" id="filterForm">
-                <div class="row align-items-end">
-                    <div class="col-md-10">
-                        <label for="rombongan_id" class="form-label fw-bold">Tampilkan Grafik untuk Rombongan:</label>
-                        <select name="rombongan_id" id="rombongan_id" class="form-select" onchange="this.form.submit()">
-                            {% if is_full_access %}
-                            <option value="">-- Semua Rombongan --</option>
-                            {% else %}
-                            <option value="">-- Semua Rombongan yang Dikelola --</option>
-                            {% endif %}
-                            {% for r in semua_rombongan %}
-                                <option value="{{ r.id }}" {% if r.id == selected_rombongan_id %}selected{% endif %}>
-                                    {{ r.nama_rombongan }}
-                                    {% if r.gelombang %} - Gelombang {{ r.gelombang }}{% endif %}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary w-100">Reset</a>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Grafik (hanya untuk yang punya akses) -->
-    {% if is_full_access or is_regional_access %}
-    <div class="row g-4 mb-4">
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    <strong>Alokasi Dana</strong>
-                    {% if selected_rombongan_id %}
-                        {% for r in semua_rombongan %}
-                            {% if r.id == selected_rombongan_id %}
-                                <small class="text-muted"> - {{ r.nama_rombongan }}</small>
-                            {% endif %}
-                        {% endfor %}
-                    {% elif is_regional_access %}
-                        <small class="text-muted"> - Wilayah yang Dikelola</small>
-                    {% endif %}
-                </div>
-                <div class="card-body d-flex justify-content-center align-items-center">
-                    <div class="chart-container">
-                        <canvas id="alokasiChart"></canvas>
+    <!-- {% if current_user.role.name in ['Korpus', 'Korda'] %}
+<div class="card shadow-sm mb-4">
+    <div class="card-header"><h3>Ringkasan Keuangan</h3></div>
+    <div class="card-body">
+         <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">Total Pemasukan Seharusnya</h6>
+                        <p class="card-text stat-number text-primary">Rp {{ "{:,.0f}".format(stats.total_pemasukan).replace(',', '.') }}</p>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    <strong>Status Pembayaran</strong>
-                    {% if selected_rombongan_id %}
-                        {% for r in semua_rombongan %}
-                            {% if r.id == selected_rombongan_id %}
-                                <small class="text-muted"> - {{ r.nama_rombongan }}</small>
-                            {% endif %}
-                        {% endfor %}
-                    {% elif is_regional_access %}
-                        <small class="text-muted"> - Wilayah yang Dikelola</small>
-                    {% endif %}
+            <div class="col-md-4">
+                <div class="card text-center h-100 border-success">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">Diterima (Lunas)</h6>
+                        <p class="card-text stat-number text-success">Rp {{ "{:,.0f}".format(stats.total_lunas).replace(',', '.') }}</p>
+                    </div>
                 </div>
-                <div class="card-body d-flex justify-content-center align-items-center">
-                    <div class="chart-container">
-                        <canvas id="statusChart"></canvas>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center h-100 border-danger">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">Sisa Tagihan</h6>
+                        <p class="card-text stat-number text-danger">Rp {{ "{:,.0f}".format(stats.total_belum_lunas).replace(',', '.') }}</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    {% endif %}
-    {% endif %}
+</div>
+{% endif %} -->
+{% if current_user.role.name in ['Korpus', 'Korda'] %}
+<div class="alert alert-info d-flex justify-content-between align-items-center shadow-sm p-3 mb-4">
+    <div class="d-flex align-items-center">
+        <i class="fas fa-chart-line fa-2x me-3"></i>
+        <div>
+            <h5 class="alert-heading mb-0">Lihat Laporan Keuangan</h5>
+            <p class="mb-0 text-muted small">Untuk sementara ringkasan keuangan sedang dalam perbaikan. Klik tombol di samping untuk melihat rincian pemasukan dan alokasi dana.</p>
+        </div>
+    </div>
+    <a href="{{ url_for('admin.manajemen_keuangan') }}" class="btn btn-primary">
+        <i class="fas fa-arrow-right me-2"></i>Buka Manajemen Keuangan
+    </a>
+</div>
 {% endif %}
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        {% if show_filter and (is_full_access or is_regional_access) %}
-        const dataAlokasi = {{ chart_data_alokasi | tojson | safe }};
-        const dataStatus = {{ chart_data_status | tojson | safe }};
-        
-        const ctxAlokasi = document.getElementById('alokasiChart');
-        if (ctxAlokasi && (dataAlokasi.bus > 0 || dataAlokasi.korda > 0 || dataAlokasi.pondok > 0)) {
-            new Chart(ctxAlokasi, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Biaya Bus', 'Fee Korda', 'Fee Pondok'],
-                    datasets: [{
-                        label: 'Rp',
-                        data: [dataAlokasi.bus, dataAlokasi.korda, dataAlokasi.pondok],
-                        backgroundColor: ['rgba(63, 81, 181, 0.8)','rgba(255, 152, 0, 0.8)','rgba(76, 175, 80, 0.8)'],
-                        borderColor: '#fff',
-                        borderWidth: 2
-                    }]
-                },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    plugins: { 
-                        legend: { position: 'top' }, 
-                        tooltip: { 
-                            callbacks: { 
-                                label: function(context) { 
-                                    let label = context.label || ''; 
-                                    if (label) { label += ': '; } 
-                                    if (context.parsed !== null) { 
-                                        label += new Intl.NumberFormat('id-ID', { 
-                                            style: 'currency', 
-                                            currency: 'IDR', 
-                                            minimumFractionDigits: 0 
-                                        }).format(context.parsed); 
-                                    } 
-                                    return label; 
-                                } 
-                            } 
-                        } 
-                    } 
-                }
-            });
-        } else if (ctxAlokasi) {
-            ctxAlokasi.getContext('2d').fillText('Tidak ada data', ctxAlokasi.width/2, ctxAlokasi.height/2);
-        }
-        
-        const ctxStatus = document.getElementById('statusChart');
-        if (ctxStatus && (dataStatus.lunas > 0 || dataStatus.belum_lunas > 0)) {
-            new Chart(ctxStatus, {
-                type: 'pie',
-                data: {
-                    labels: ['Lunas', 'Belum Lunas'],
-                    datasets: [{
-                        label: 'Rp',
-                        data: [dataStatus.lunas, dataStatus.belum_lunas],
-                        backgroundColor: ['rgba(33, 150, 243, 0.8)','rgba(244, 67, 54, 0.8)'],
-                        borderColor: '#fff',
-                        borderWidth: 2
-                    }]
-                },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    plugins: { 
-                        legend: { position: 'top' }, 
-                        tooltip: { 
-                            callbacks: { 
-                                label: function(context) { 
-                                    let label = context.label || ''; 
-                                    if (label) { label += ': '; } 
-                                    if (context.parsed !== null) { 
-                                        label += new Intl.NumberFormat('id-ID', { 
-                                            style: 'currency', 
-                                            currency: 'IDR', 
-                                            minimumFractionDigits: 0 
-                                        }).format(context.parsed); 
-                                    } 
-                                    return label; 
-                                } 
-                            } 
-                        } 
-                    } 
-                }
-            });
-        } else if (ctxStatus) {
-            ctxStatus.getContext('2d').fillText('Tidak ada data', ctxStatus.width/2, ctxStatus.height/2);
-        }
-        {% endif %}
-    });
-</script>
+    <div class="card shadow-sm">
+        <div class="card-header"><h3>Ringkasan per Rombongan</h3></div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Nama Rombongan</th>
+                            <th>Peserta Pulang</th>
+                            <th>Peserta Kembali</th>
+                            <th>Lunas</th>
+                            <th>Belum Lunas</th>
+                            <th>Kuota PP</th>
+                            <th>Detail Peserta</th>
+                            <th>Detail Bus</th>
+                            <!-- <th>Total Pemasukan</th> -->
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rombongan in semua_rombongan %}
+                        <tr>
+                            <td><strong>{{ rombongan.nama_rombongan }}</strong></td>
+                            <td>{{ rombongan.pendaftar_pulang|length }}</td>
+                            <td>{{ rombongan.pendaftar_kembali|length }}</td>
+                            <td>{{ (rombongan.pendaftar_pulang|selectattr('status_pulang', 'equalto', 'Lunas')|list|length) + (rombongan.pendaftar_kembali|selectattr('status_kembali', 'equalto', 'Lunas')|list|length) }}</td>
+                            <td>{{ (rombongan.pendaftar_pulang|selectattr('status_pulang', 'equalto', 'Belum Bayar')|list|length) + (rombongan.pendaftar_kembali|selectattr('status_kembali', 'equalto', 'Belum Bayar')|list|length) }}</td>
+                            <td>{{ rombongan.pendaftar_pulang|length + rombongan.pendaftar_kembali|length }} / {{ (rombongan.buses|sum(attribute='kuota') or 0) * 2 }}</td>
+                             <td>
+                            <a href="{{ url_for('admin.daftar_peserta', rombongan_id=rombongan.id) }}" class="btn btn-primary btn-sm">
+                            Lihat Peserta ({{ (rombongan.pendaftar_pulang|length) + (rombongan.pendaftar_kembali|length) }})
+                            </a>
+                            </td>
+                            <td>
+                    {% if rombongan.buses %}
+                    <div class="dropdown">
+                        <button class="btn btn-info btn-sm dropdown-toggle w-100" type="button" data-bs-toggle="dropdown">
+                            Lihat Manifest
+                        </button>
+                        <ul class="dropdown-menu">
+                            {% for bus in rombongan.buses %}
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('admin.detail_bus', bus_id=bus.id) }}">
+                                        {{ bus.nama_armada }} - {{ bus.nomor_lambung or bus.plat_nomor }}
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% else %}
+                    <span class="text-muted">Belum ada bus</span>
+                    {% endif %}
+                </td>
+                            <!-- <td>
+                            {% set total_pemasukan_rombongan = (rombongan.pendaftar_pulang|sum(attribute='total_biaya')) + (rombongan.pendaftar_kembali|sum(attribute='total_biaya')) %}
+                            Rp {{ "{:,.0f}".format(total_pemasukan_rombongan).replace(',', '.') }}
+                            </td>                         -->
+                            {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endif %}
 {% endblock %}
