@@ -4748,29 +4748,28 @@ def salin_rombongan():
 @login_required
 @role_required('Korpus', 'Korda', 'Korwil', 'Korpuspi', 'Sekretaris')
 def cetak_kartu():
-    # 1. Dapatkan edisi yang aktif
     active_edisi = get_active_edisi()
     if not active_edisi:
         flash('Tidak ada edisi perpulangan yang aktif.', 'warning')
         return render_template('admin/cetak_kartu.html', semua_pendaftar=[], rombongan_for_filter=[])
 
-    # 2. Ambil semua parameter filter dari URL
+    # Ambil semua parameter filter dari URL
     nama = request.args.get('nama', '').strip()
     rombongan_id_str = request.args.get('rombongan_id', '')
     jenis_kelamin = request.args.get('jenis_kelamin', '')
-    perjalanan = request.args.get('perjalanan', 'pulang') # Default ke 'pulang' jika tidak dipilih
+    perjalanan = request.args.get('perjalanan', '') # Hapus default agar bisa memilih "Semua"
     bus_id = request.args.get('bus_id', '')
 
-    # 3. Bangun query dasar
+    # Bangun query dasar
     pendaftar_query = Pendaftaran.query.join(Santri).filter(Pendaftaran.edisi_id == active_edisi.id)
 
-    # Terapkan filter berdasarkan hak akses Korda/Korwil
+    # Filter berdasarkan hak akses Korda/Korwil
     if current_user.role.name in ['Korda', 'Korwil']:
         managed_rombongan_ids = {r.id for r in current_user.active_managed_rombongan}
         if managed_rombongan_ids:
             pendaftar_query = pendaftar_query.filter(Pendaftaran.rombongan_pulang_id.in_(managed_rombongan_ids))
 
-    # 4. Terapkan filter satu per satu
+    # Terapkan filter satu per satu
     if nama:
         pendaftar_query = pendaftar_query.filter(Santri.nama.ilike(f'%{nama}%'))
     
@@ -4787,35 +4786,46 @@ def cetak_kartu():
         except (ValueError, TypeError):
             pass
 
+    # --- PERUBAHAN LOGIKA FILTER PERJALANAN ---
     if perjalanan == 'pulang':
+        # Menampilkan SEMUA yang ikut pulang (baik PP maupun pulang saja)
         pendaftar_query = pendaftar_query.filter(Pendaftaran.status_pulang != 'Tidak Ikut')
     elif perjalanan == 'kembali':
-        pendaftar_query = pendaftar_query.filter(Pendaftaran.status_kembali != 'Tidak Ikut')
+        # HANYA menampilkan yang KEMBALI SAJA (yang tidak ikut pulang)
+        pendaftar_query = pendaftar_query.filter(
+            and_(
+                Pendaftaran.status_kembali != 'Tidak Ikut',
+                Pendaftaran.status_pulang == 'Tidak Ikut'
+            )
+        )
+    # Jika filter perjalanan kosong, maka tidak ada filter tambahan, menampilkan semua peserta terdaftar.
     
+    # Filter berdasarkan Bus
     if bus_id:
         if bus_id == 'belum_terdaftar':
+            # Logika ini sekarang juga lebih akurat mengikuti filter perjalanan
             if perjalanan == 'kembali':
                 pendaftar_query = pendaftar_query.filter(Pendaftaran.bus_kembali_id == None)
-            else:
+            else: # Default untuk 'pulang' atau jika perjalanan tidak dipilih
                 pendaftar_query = pendaftar_query.filter(Pendaftaran.bus_pulang_id == None)
         else:
             try:
                 bus_id_int = int(bus_id)
                 if perjalanan == 'kembali':
                     pendaftar_query = pendaftar_query.filter(Pendaftaran.bus_kembali_id == bus_id_int)
-                else:
+                else: # Default untuk 'pulang'
                     pendaftar_query = pendaftar_query.filter(Pendaftaran.bus_pulang_id == bus_id_int)
             except (ValueError, TypeError):
                 pass
 
-    # 5. Eksekusi query
+    # Eksekusi query
     semua_pendaftar = pendaftar_query.options(
         joinedload(Pendaftaran.santri),
         joinedload(Pendaftaran.rombongan_pulang),
         joinedload(Pendaftaran.bus_pulang)
     ).order_by(Santri.nama).all()
 
-    # 6. Siapkan data untuk dropdown filter di template
+    # Siapkan data untuk dropdown filter di template
     rombongan_for_filter = Rombongan.query.filter_by(edisi_id=active_edisi.id).order_by(Rombongan.nama_rombongan).all()
     
     bus_list_for_filter = []
@@ -4824,20 +4834,16 @@ def cetak_kartu():
             rombongan_id = int(rombongan_id_str)
             selected_rombongan = Rombongan.query.get(rombongan_id)
             if selected_rombongan:
-                # ▼▼▼ PERBAIKAN ADA DI BARIS INI ▼▼▼
-                # Mengurutkan list bus menggunakan fungsi sorted() dari Python
                 bus_list_for_filter = sorted(selected_rombongan.buses, key=lambda bus: bus.nama_armada)
         except (ValueError, TypeError):
             pass
 
-    # 7. Render template dengan semua data yang dibutuhkan
     return render_template(
         'cetak_kartu.html',
         semua_pendaftar=semua_pendaftar,
         rombongan_for_filter=rombongan_for_filter,
         bus_list_for_filter=bus_list_for_filter
     )
-
 @admin_bp.route('/api/rombongan/<int:rombongan_id>/buses')
 @login_required
 def get_buses_for_rombongan(rombongan_id):
