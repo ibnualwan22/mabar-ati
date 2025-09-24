@@ -59,9 +59,9 @@ def dashboard():
     
     # --- LOGIKA PENGECEKAN BARU ---
     # Jika bus ini belum punya ID Traccar, alihkan ke halaman untuk menghubungkan
-    if not bus.traccar_device_id:
-        flash("Perangkat Anda belum terhubung. Silakan hubungkan bus Anda dengan perangkat Traccar.", "info")
-        return redirect(url_for('lapangan.hubungkan_perangkat'))
+    # if not bus.traccar_device_id:
+    #     flash("Perangkat Anda belum terhubung. Silakan hubungkan bus Anda dengan perangkat Traccar.", "info")
+    #     return redirect(url_for('lapangan.hubungkan_perangkat'))
     
     active_edisi = get_active_edisi()
     

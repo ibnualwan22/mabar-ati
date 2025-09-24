@@ -55,14 +55,20 @@ def informasi_perpulangan():
     return render_template('informasi.html', active_edisi=active_edisi)
 
 # Pastikan decorator ini ada di atas fungsi lacak_bus
+# app/main/routes.py
+
 @main_bp.route('/lacak-bus/<int:bus_id>')
 def lacak_bus(bus_id):
     bus = Bus.query.get_or_404(bus_id)
-    if not bus.traccar_device_id:
-        flash("Pelacakan tidak tersedia untuk bus ini.", "warning")
+    
+    # Cek apakah ada URL Google Maps yang tersimpan
+    if bus.gmaps_share_url:
+        # Jika ada, langsung alihkan ke URL tersebut
+        return redirect(bus.gmaps_share_url)
+    else:
+        # Jika tidak ada, kembali ke halaman utama dengan pesan error
+        flash("Lokasi real-time untuk bus ini belum tersedia.", "warning")
         return redirect(url_for('main.index'))
-        
-    return render_template('peta_pelacakan.html', bus=bus)
 
 # Pastikan decorator ini ada di atas fungsi traccar_proxy
 @main_bp.route('/api/traccar/positions/<string:device_id>')

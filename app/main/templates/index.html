@@ -281,14 +281,14 @@
             </div>
             
             {# --- PERUBAHAN LOGIKA DI SINI --- #}
-            {% if bus.traccar_device_id %}
-                {# Tombol ini sekarang mengarah ke halaman peta Traccar kita #}
-                <a href="{{ url_for('main.lacak_bus', bus_id=bus.id) }}" target="_blank" class="btn btn-primary btn-sm rounded-pill">
-                    <i class="fas fa-map-marker-alt me-1"></i> Lacak Lokasi
-                </a>
-            {% else %}
-                <span class="badge bg-light text-dark border rounded-pill">Pelacakan Belum Aktif</span>
-            {% endif %}
+            {% if bus.gmaps_share_url %}
+    {# Link tetap ke 'lacak_bus', backend yang akan mengurus redirect #}
+    <a href="{{ url_for('main.lacak_bus', bus_id=bus.id) }}" target="_blank" class="btn btn-primary btn-sm rounded-pill">
+        <i class="fas fa-map-marker-alt me-1"></i> Lihat Lokasi (GMaps)
+    </a>
+{% else %}
+    <span class="badge bg-light text-dark border rounded-pill">Lokasi Belum Tersedia</span>
+{% endif %}
             {# --- AKHIR PERUBAHAN --- #}
 
         </div>
